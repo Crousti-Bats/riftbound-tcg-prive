@@ -84,7 +84,7 @@ Une page `/admin` accessible **uniquement par l'utilisateur** (le propriétaire 
 | Inscription | Uniquement avec un code d'invitation (256 bits, stocké en SHA-256, usage unique, expiration de 24 h à 7 jours, pseudo réservable). Le lien `/inscription#code=…` place le code après le `#`, qui n'est jamais envoyé au serveur |
 | Admin | Une seule façon d'en créer un : `npm run admin:invitation -- --pseudo X --production`, qui demande d'être connecté à Cloudflare. Le site ne peut créer que des invitations `joueur`. L'utilisateur a un seul compte `Crousti` (joueur et admin) |
 | Accès admin | Rôle vérifié côté serveur à chaque requête, avec re-saisie du mot de passe (élévation) valable 15 minutes glissantes et un bouton « Fermer l'accès admin » |
-| Mots de passe | 12 à 128 caractères, PBKDF2-SHA256 à 100 000 itérations (maximum Workers), sel aléatoire, format versionné. **À surveiller** : le plan gratuit limite le CPU à 10 ms par requête, mais Cloudflare tolère des pics. Si les connexions échouent en production (erreur 1102), baisser les itérations (le format le permet) |
+| Mots de passe | 6 à 128 caractères (minimum abaissé de 12 à 6 à la demande de l'utilisateur le 2026-11-08 ; risque accepté : un mot de passe court est vite cassé si la base fuit, mais la limitation des tentatives protège le site), PBKDF2-SHA256 à 100 000 itérations (maximum Workers), sel aléatoire, format versionné. **À surveiller** : le plan gratuit limite le CPU à 10 ms par requête, mais Cloudflare tolère des pics. Si les connexions échouent en production (erreur 1102), baisser les itérations (le format le permet) |
 | Sessions | Jeton de 256 bits dans un cookie `__Host-session` (HttpOnly, Secure, SameSite=Strict). Seule l'empreinte SHA-256 est en base. Durée de 7 jours glissants, 30 jours maximum. La déconnexion et la désactivation du compte suppriment les sessions |
 | Anti force brute | Connexion : 5 échecs par pseudo ou 20 par IP en 15 minutes, puis 429. Inscription : 10 échecs par IP et par heure. Élévation : 5 échecs en 15 minutes |
 | Énumération | Même message et même temps de calcul (hash factice) pour un pseudo inconnu ou un mauvais mot de passe |
@@ -186,7 +186,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 
 1. **Créer ton compte admin en production** (une seule fois, après le merge de l'étape 3). Dans PowerShell, dans le dossier du projet :
    `npm run admin:invitation -- --pseudo Crousti --production`
-   Ouvre le lien affiché (valable 1 h), puis choisis ton mot de passe (12 caractères minimum, idéalement une phrase).
+   Ouvre le lien affiché (valable 1 h), puis choisis ton mot de passe (6 caractères minimum, mais long conseillé pour l'admin).
 2. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
 
 ## 8. Journal

@@ -69,6 +69,6 @@ if (resultat.status !== 0) {
 
 const base = production ? URL_PRODUCTION : URL_LOCALE;
 console.log("\n✅ Invitation ADMIN créée pour le pseudo", pseudo, "— valable 1 heure, utilisable une seule fois.\n");
-console.log("Ouvre ce lien dans ton navigateur, choisis ton mot de passe (12 caractères minimum) :\n");
+console.log("Ouvre ce lien dans ton navigateur, choisis ton mot de passe (6 caractères minimum, plus long conseillé pour un admin) :\n");
 console.log(`   ${base}/inscription#code=${code}\n`);
 console.log("Ne partage pas ce lien. Il ne sera plus jamais affiché.\n");

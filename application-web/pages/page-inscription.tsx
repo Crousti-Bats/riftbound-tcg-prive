@@ -55,12 +55,12 @@ export function PageInscription({ surConnexion }: { surConnexion: () => Promise<
           />
         </label>
         <label>
-          Mot de passe <span className="aide">(12 caractères minimum)</span>
+          Mot de passe <span className="aide">(6 caractères minimum)</span>
           <input
             type="password"
             value={motDePasse}
             onChange={(e) => setMotDePasse(e.target.value)}
-            minLength={12}
+            minLength={6}
             maxLength={128}
             autoComplete="new-password"
             required
@@ -72,7 +72,7 @@ export function PageInscription({ surConnexion }: { surConnexion: () => Promise<
             type="password"
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
-            minLength={12}
+            minLength={6}
             maxLength={128}
             autoComplete="new-password"
             required

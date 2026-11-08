@@ -6,8 +6,8 @@ export const schemaPseudo = z
   .trim()
   .regex(/^[A-Za-z0-9_-]{3,20}$/, "3 à 20 caractères : lettres, chiffres, _ ou -");
 
-/** 12 caractères minimum (recommandation ANSSI / NIST), 128 maximum (évite les calculs abusifs). */
-export const schemaMotDePasse = z.string().min(12, "12 caractères minimum").max(128, "128 caractères maximum");
+/** 6 caractères minimum (choix de l'utilisateur le 2026-11-08, compensé par la limitation des tentatives), 128 maximum (évite les calculs abusifs). */
+export const schemaMotDePasse = z.string().min(6, "6 caractères minimum").max(128, "128 caractères maximum");
 
 /** Code d'invitation : jeton base64url de 32 octets → 43 caractères. */
 export const schemaCodeInvitation = z.string().trim().regex(/^[A-Za-z0-9_-]{20,64}$/, "code invalide");
