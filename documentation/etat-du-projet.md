@@ -3,9 +3,20 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-08
-**Étape en cours :** 1 — Dépôt GitHub, squelette, CI DevSecOps (terminée)
-**Prochaine étape :** 2 — Compte Cloudflare, Worker et D1, premier déploiement automatique depuis la CI
+**Étape en cours :** 2 — Cloudflare, D1, déploiement continu (site en ligne ; il reste à saisir le jeton API dans GitHub, voir §7)
+**Prochaine étape :** 3 — Authentification (invitations, connexion, sessions, limitation des tentatives) et rôle admin
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
+**Site en production :** https://riftbound-tcg.axelgirard.workers.dev
+
+### Infrastructure Cloudflare (aucune de ces valeurs n'est secrète)
+
+| Élément | Valeur |
+|---|---|
+| Compte | `Axelgirard@gmail.com's Account` (ID `14bd3e99e009ec33efebde236223ab6a`) |
+| Worker | `riftbound-tcg` (site + API), URL `riftbound-tcg.axelgirard.workers.dev` |
+| Base D1 | `riftbound-tcg`, ID `efbe0899-7a3f-4f63-aad4-4bd9c540eb2d`, région WEUR, nom dans le code `BASE_DE_DONNEES` |
+| Migrations | `base-de-donnees/migrations/NNNN_description.sql`, appliquées automatiquement au déploiement |
+| GitHub | environnement `production` (déploiement depuis `main` uniquement) : secrets `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID`, variable `CLOUDFLARE_SOUS_DOMAINE=axelgirard` |
 
 ## 0. Reprendre sur un autre PC
 
@@ -46,6 +57,26 @@ Un site privé de collection et d'échange de cartes Riftbound, accessible uniqu
 | Échanges | Proposition, puis acceptation. Transfert atomique via `D1 batch()` après vérification de possession | Pas de duplication de cartes |
 | Code source | GitHub (dépôt public, voir §5), synchronisé entre le PC fixe et le portable | Demandé |
 
+## 2bis. Espace admin et monitoring (demandé le 2026-11-08)
+
+Une page `/admin` accessible **uniquement par l'utilisateur** (le propriétaire du site), pour surveiller le site en quasi temps réel.
+
+**Contrôle d'accès (défense en profondeur)**
+- Colonne `role` dans la table des comptes (`joueur` ou `admin`). Le premier compte admin est créé par une commande en ligne réservée à l'utilisateur. Aucun formulaire public ne peut créer d'admin.
+- Toutes les routes `/api/admin/*` vérifient le rôle **côté serveur**, à chaque requête. Masquer le menu dans l'interface ne suffit pas.
+- Option recommandée à l'étape 10 : protéger aussi `/admin` et `/api/admin/*` avec Cloudflare Access (Zero Trust, gratuit jusqu'à 50 utilisateurs). Il faudrait alors une vérification par e-mail ou par code en plus du mot de passe.
+- Chaque action admin est journalisée dans la table `journal_admin` (qui, quoi, quand).
+
+**Ce que la page affiche (rafraîchie toutes les 5 à 10 secondes)**
+- Joueurs connectés récemment (dernière activité de moins de 5 minutes), nombre total de comptes, invitations en attente.
+- Activité : boosters ouverts (dernière heure et aujourd'hui, par set), échanges proposés, acceptés ou refusés, dernières cartes rares tirées.
+- Sécurité : connexions échouées, comptes ou IP bloqués par la limitation des tentatives, dernières erreurs serveur.
+- Santé : état de l'API et de la base, temps de réponse, âge du cache `cards.json`, version déployée.
+- Quotas gratuits Cloudflare : requêtes Worker et lectures/écritures D1 du jour, comparées aux limites. Ces chiffres viennent de l'API GraphQL Analytics de Cloudflare, avec un jeton en lecture seule stocké en `wrangler secret`, jamais dans le code.
+- Actions : créer ou révoquer une invitation, désactiver un compte, forcer la déconnexion d'un joueur.
+
+**Technique :** pour démarrer, le navigateur interroge le serveur toutes les quelques secondes (« polling »). C'est simple et ça tient dans l'offre gratuite. On pourra passer à du vrai temps réel (WebSocket via Durable Objects) si le besoin se confirme.
+
 ## 3. Données de cartes (analysées le 2026-11-08, release v2026-11-04)
 
 1407 cartes. Raretés présentes dans les données : Common, Uncommon, Rare, Epic, Showcase.
@@ -78,16 +109,27 @@ On classe les variantes à partir de `cardNumber` :
 | Rare+ | 2 | Rare, Epic, Alt Art, Special Alt, Overnumbered, Signée |
 | Rune / Token | 1 | Rune, Rune alt ou Token |
 
-Taux par slot Rare+ (hypothèse initiale, configurable dans un fichier dédié) :
+**Taux de référence, validés par l'utilisateur le 2026-11-08** (ils font foi, à coder dans un fichier de configuration à l'étape 5) :
 
-| Résultat | Proba par slot | Source |
+| Rareté | Fréquence par booster | Soit par display de 24 |
 |---|---|---|
-| Epic | 13,4 % | Officiel : environ 1 booster sur 4 contient une Epic |
-| Alt Art | 4,2 % | Officiel : environ 2 par display de 24 boosters |
-| Overnumbered | 0,69 % | Officiel : environ 1 pour 3 displays |
-| Overnumbered signée | 0,07 % | Officiel : environ 1 Overnumbered sur 10 |
-| Special Alt (sp) | 0,05 % | Estimation (chase card) |
-| Rare | le reste (environ 81,6 %) | |
+| Epic (orange) | 1 booster sur 6 | 4 |
+| Alt Art | 1 booster sur 12 | 2 |
+| Overnumbered | 1 booster sur 72 | 1 pour 3 displays |
+| Overnumbered signée | 1 booster sur 240 | 1 pour 10 displays |
+
+On les convertit en probabilités pour chacun des 2 slots Rare+. Comme il y a 2 slots, « 1 pour N boosters » devient 1/(2N) par slot. Pour l'Epic, on retire d'abord la part du slot Foil (1 %), pour que le total observé reste de 1 sur 6 :
+
+| Résultat | Proba par slot Rare+ | Calcul |
+|---|---|---|
+| Epic | 7,83 % | (1/6 − 0,01) / 2 |
+| Alt Art | 4,17 % | 1/24 |
+| Overnumbered | 0,694 % | 1/144 |
+| Overnumbered signée | 0,208 % | 1/480 |
+| Special Alt (sp) | 0,05 % | estimation, non fournie par l'utilisateur |
+| Rare | 87,05 % | le reste |
+
+Les tests de l'étape 5 simuleront au moins 100 000 boosters et vérifieront ces fréquences **par booster** : Epic environ 16,7 %, Alt environ 8,3 %, Over environ 1,39 %, signée environ 0,42 %.
 
 Slot Foil (estimation communautaire) : 75 % Common, 20 % Uncommon, 4 % Rare, 1 % Epic.
 Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token du set ou une Rune d'Origins.
@@ -104,7 +146,9 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - Les secrets (token Cloudflare) sont uniquement dans GitHub Secrets. Jamais dans le code.
 - En-têtes de sécurité : CSP stricte, HSTS, X-Frame-Options DENY, Referrer-Policy.
 - Rate limiting sur la connexion. Validation des entrées avec Zod. Requêtes SQL paramétrées uniquement.
-- Le déploiement en production se fait automatiquement par la CI au merge sur `main`.
+- Le déploiement en production se fait automatiquement au merge sur `main`, via `.github/workflows/deploiement-production.yml`. Le workflow lance les tests, le build, les migrations D1 `--remote`, puis `wrangler deploy` et vérifie `/api/health`. Il utilise l'environnement GitHub `production`, limité à la branche `main`. Le jeton Cloudflare n'a que les droits Workers et D1.
+- `/api/health` vérifie aussi la base (`SELECT 1`). Si la base est en panne, il répond 503 sans détail interne.
+- Dependabot ignore les versions majeures de TypeScript : TS 7 n'est pas supporté par typescript-eslint (PR #2 à fermer).
 
 ## 6. Feuille de route
 
@@ -112,26 +156,36 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 |---|---|---|
 | 0 | Cadrage, architecture, analyse des données, système de rapports | Terminé |
 | 1 | Outils (Git, Node), dépôt GitHub, squelette du monorepo, CI sécurité | Terminé |
-| 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | À faire |
-| 3 | Authentification : invitations, connexion, sessions, rate limit | À faire |
+| 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | Terminé (il reste à saisir le jeton, voir §7) |
+| 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | À faire |
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | À faire |
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | À faire |
 | 6 | Frontend : ouverture de booster animée, collection, filtres | À faire |
 | 7 | Échanges entre joueurs | À faire |
-| 8 | PWA (installable, hors-ligne partiel), responsive | À faire |
-| 9 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
+| 8 | **Admin : monitoring en quasi temps réel** (voir §2bis) | À faire |
+| 9 | PWA (installable, hors-ligne partiel), responsive | À faire |
+| 10 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
 
 ## 7. Actions manuelles en attente (utilisateur)
 
-1. Créer un compte Cloudflare gratuit (https://dash.cloudflare.com/sign-up), s'il n'existe pas déjà.
-2. Au début de l'étape 2, l'assistant lancera `npx wrangler login`, qui ouvre le navigateur pour autoriser l'accès.
-3. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
+1. **Créer le jeton API Cloudflare pour GitHub.** Sur https://dash.cloudflare.com/profile/api-tokens : Create Token, modèle « Edit Cloudflare Workers ». Ajouter la permission Account / D1 / Edit. Dans Account Resources, choisir son compte. Dans Zone Resources, laisser All zones. Choisir une expiration d'un an, puis Create. Copier le jeton.
+2. **Saisir les valeurs dans GitHub.** Dans une fenêtre PowerShell, depuis le dossier du projet :
+   `gh secret set CLOUDFLARE_API_TOKEN --env production` (coller le jeton quand c'est demandé ; il ne s'affiche pas)
+   `gh secret set CLOUDFLARE_ACCOUNT_ID --env production --body 14bd3e99e009ec33efebde236223ab6a`
+   `gh variable set CLOUDFLARE_SOUS_DOMAINE --env production --body axelgirard`
+3. **Fermer la PR Dependabot #2** (TypeScript 7) : `gh pr close 2 --comment "TS 7 pas encore supporté par typescript-eslint"`.
+4. Merger la PR de l'étape 2. Le workflow « Déploiement production » doit passer au vert.
+5. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
 
 ## 8. Journal
 
 - **2026-11-08 — Étape 0.** Analyse de l'API (1407 cartes, 6 sets), recherche des taux officiels, choix de l'architecture, mise en place des rapports PDF (`outils/generer-rapport-pdf.py`).
 - **2026-11-08 — Étape 1.** Dépôt public `Crousti-Bats/riftbound-tcg-prive` créé. Squelette : Worker Hono (`worker/`, route `/api/health`, en-têtes de sécurité, 3 tests), front React 19 et Vite 8 (`src/`), `@cloudflare/vite-plugin`, TypeScript strict, ESLint. CI et sécurité (CodeQL, Gitleaks, audit, dependency review, Dependabot), ruleset sur `main`. Le lint, les types, les tests et le build passent en local, avec 0 vulnérabilité.
 - **2026-11-08 — Réorganisation.** Les fichiers sont rangés dans des dossiers par fonction, avec des noms explicites en français (voir ci-dessous). Les anciens chemins (`worker/`, `src/`, `docs/`, `tools/`) n'existent plus. Les rapports PDF 00 et 01 citent encore ces anciens chemins, c'est normal : ce sont des archives.
+- **2026-11-08 — Étape 2.** `wrangler login` effectué sur le PC fixe. Base D1 `riftbound-tcg` créée (WEUR), migration `0001_initialisation.sql` (table `parametres`) appliquée en local et en production. Premier déploiement manuel réussi : https://riftbound-tcg.axelgirard.workers.dev/api/health répond `{"status":"ok","base":"ok"}`, avec les en-têtes CSP, HSTS et X-Frame-Options vérifiés. Workflow de déploiement automatique ajouté, environnement GitHub `production` créé (branche `main` uniquement). L'assistant n'a pas le droit d'écrire des secrets GitHub ni de fermer des PR : ces actions reviennent à l'utilisateur (§7). 4 tests passent.
+- **2026-11-08 — Admin.** L'utilisateur demande une page admin de monitoring en quasi temps réel, réservée à lui seul. Ajout du §2bis. La feuille de route passe à 11 étapes : rôle admin à l'étape 3, monitoring à l'étape 8. Étape 3 : ajout d'une règle ESLint contre le SQL non préparé.
+- **2026-11-08 — Taux de drop.** L'utilisateur a fourni les taux de référence : Epic 1/6, Alt 1/12, Over 1/72, Over signée 1/240 boosters. Ils remplacent les estimations initiales (Epic à 13,4 % et signée à 0,07 % par slot, jugées trop élevée et trop faible). Voir §4.
+- Astuce Windows : `pkill` n'existe pas dans Git Bash. Pour arrêter un serveur de dev resté ouvert, utiliser PowerShell `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` puis `Stop-Process`.
 
 ### Arborescence (convention de nommage : français, minuscules, tirets)
 
@@ -148,6 +202,9 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
   entetes-securite.ts                 en-têtes de sécurité des réponses de l'API
   point-entree-api.test.ts            tests automatiques de l'API
   types-cloudflare-generes.d.ts       GÉNÉRÉ par `npm run cf-typegen`, ne pas modifier à la main
+
+base-de-donnees/                      BASE SQLITE CLOUDFLARE D1
+  migrations/0001_initialisation.sql  scripts de création/évolution des tables (numérotés, jamais modifiés après merge)
 
 configuration/                        RÉGLAGES DES OUTILS
   cloudflare-wrangler.jsonc           Cloudflare : nom du service, règles de routage, base D1
@@ -170,6 +227,7 @@ outils/
 .github/                              GITHUB (emplacement imposé)
   workflows/verifications-qualite.yml lint, types, tests, build, audit à chaque PR
   workflows/analyses-securite.yml     CodeQL et Gitleaks à chaque PR et chaque lundi
+  workflows/deploiement-production.yml  mise en ligne automatique après merge sur main
   dependabot.yml                      mises à jour automatiques des dépendances (nom imposé)
   SECURITY.md                         politique de sécurité (nom imposé)
 
