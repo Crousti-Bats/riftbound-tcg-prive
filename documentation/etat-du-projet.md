@@ -3,8 +3,8 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-08
-**Étape en cours :** 2 — Cloudflare, D1, déploiement continu (terminée, déploiement automatique validé)
-**Prochaine étape :** 3 — Authentification (invitations, connexion, sessions, limitation des tentatives) et rôle admin
+**Étape en cours :** 3 — Authentification et rôle admin (code terminé ; l'utilisateur doit encore créer son compte admin en production, voir §7)
+**Prochaine étape :** 4 — Catalogue des cartes (récupération et cache du JSON, API des sets et des cartes)
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -76,6 +76,22 @@ Une page `/admin` accessible **uniquement par l'utilisateur** (le propriétaire 
 - Actions : créer ou révoquer une invitation, désactiver un compte, forcer la déconnexion d'un joueur.
 
 **Technique :** pour démarrer, le navigateur interroge le serveur toutes les quelques secondes (« polling »). C'est simple et ça tient dans l'offre gratuite. On pourra passer à du vrai temps réel (WebSocket via Durable Objects) si le besoin se confirme.
+
+## 2ter. Authentification (étape 3)
+
+| Sujet | Choix |
+|---|---|
+| Inscription | Uniquement avec un code d'invitation (256 bits, stocké en SHA-256, usage unique, expiration de 24 h à 7 jours, pseudo réservable). Le lien `/inscription#code=…` place le code après le `#`, qui n'est jamais envoyé au serveur |
+| Admin | Une seule façon d'en créer un : `npm run admin:invitation -- --pseudo X --production`, qui demande d'être connecté à Cloudflare. Le site ne peut créer que des invitations `joueur`. L'utilisateur a un seul compte `Crousti` (joueur et admin) |
+| Accès admin | Rôle vérifié côté serveur à chaque requête, avec re-saisie du mot de passe (élévation) valable 15 minutes glissantes et un bouton « Fermer l'accès admin » |
+| Mots de passe | 12 à 128 caractères, PBKDF2-SHA256 à 100 000 itérations (maximum Workers), sel aléatoire, format versionné. **À surveiller** : le plan gratuit limite le CPU à 10 ms par requête, mais Cloudflare tolère des pics. Si les connexions échouent en production (erreur 1102), baisser les itérations (le format le permet) |
+| Sessions | Jeton de 256 bits dans un cookie `__Host-session` (HttpOnly, Secure, SameSite=Strict). Seule l'empreinte SHA-256 est en base. Durée de 7 jours glissants, 30 jours maximum. La déconnexion et la désactivation du compte suppriment les sessions |
+| Anti force brute | Connexion : 5 échecs par pseudo ou 20 par IP en 15 minutes, puis 429. Inscription : 10 échecs par IP et par heure. Élévation : 5 échecs en 15 minutes |
+| Énumération | Même message et même temps de calcul (hash factice) pour un pseudo inconnu ou un mauvais mot de passe |
+| CSRF | SameSite=Strict, en-tête `Origin` obligatoire et identique au site pour POST, PUT, PATCH et DELETE, et JSON obligatoire |
+| Entrées | Zod en mode strict : les champs inconnus sont refusés (par exemple, on ne peut pas envoyer `role: "admin"`). Corps limité à 16 Ko |
+| SQL | Uniquement `.prepare("… ? …").bind()`. La règle ESLint `no-restricted-syntax` fait échouer la CI sinon, et elle est elle-même testée |
+| Journal | Table `journal` : inscriptions, connexions réussies, échouées et bloquées, élévations, actions admin |
 
 ## 3. Données de cartes (analysées le 2026-11-08, release v2026-11-04)
 
@@ -157,7 +173,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 0 | Cadrage, architecture, analyse des données, système de rapports | Terminé |
 | 1 | Outils (Git, Node), dépôt GitHub, squelette du monorepo, CI sécurité | Terminé |
 | 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | Terminé |
-| 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | À faire |
+| 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | Terminé |
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | À faire |
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | À faire |
 | 6 | Frontend : ouverture de booster animée, collection, filtres | À faire |
@@ -168,7 +184,10 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 
 ## 7. Actions manuelles en attente (utilisateur)
 
-1. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
+1. **Créer ton compte admin en production** (une seule fois, après le merge de l'étape 3). Dans PowerShell, dans le dossier du projet :
+   `npm run admin:invitation -- --pseudo Crousti --production`
+   Ouvre le lien affiché (valable 1 h), puis choisis ton mot de passe (12 caractères minimum, idéalement une phrase).
+2. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
 
 ## 8. Journal
 
@@ -179,6 +198,9 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Admin.** L'utilisateur demande une page admin de monitoring en quasi temps réel, réservée à lui seul. Ajout du §2bis. La feuille de route passe à 11 étapes : rôle admin à l'étape 3, monitoring à l'étape 8. Étape 3 : ajout d'une règle ESLint contre le SQL non préparé.
 - **2026-11-08 — Taux de drop.** L'utilisateur a fourni les taux de référence : Epic 1/6, Alt 1/12, Over 1/72, Over signée 1/240 boosters. Ils remplacent les estimations initiales (Epic à 13,4 % et signée à 0,07 % par slot, jugées trop élevée et trop faible). Voir §4.
 - **2026-11-08 — Clôture de l'étape 2.** Jeton API Cloudflare créé par l'utilisateur (modèle Edit Cloudflare Workers + D1, expire dans 1 an, **à renouveler vers le 2027-11-08**) et saisi dans l'environnement GitHub `production`. PR #2 fermée. Premier run « Déploiement production » réussi (tests, build, migrations, déploiement, vérification de /api/health).
+- **2026-11-08 — Étape 3.** Authentification complète, détaillée au §2ter. 41 tests automatiques passent (inscription, connexion, sessions, CSRF, injection SQL, limitation, admin, règle ESLint). Parcours de bout en bout validé en local avec curl : invitation admin en ligne de commande, inscription, élévation, création d'invitation, journal, déconnexion. Vitest 5 est incompatible avec `@cloudflare/vitest-pool-workers` (qui demande vitest 4) : les tests utilisent `node:sqlite` avec les vraies migrations.
+- Astuce : PowerShell `Invoke-WebRequest` refuse les cookies `Secure` sur http://localhost (les navigateurs les acceptent). Pour tester l'API en local, utiliser `curl` avec `-b/-c` dans Git Bash.
+- Astuce Bash : les heredocs contenant des apostrophes françaises échouent dans l'outil Bash de l'assistant. Écrire plutôt les scripts dans un fichier.
 - Astuce Windows : `pkill` n'existe pas dans Git Bash. Pour arrêter un serveur de dev resté ouvert, utiliser PowerShell `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` puis `Stop-Process`.
 
 ### Arborescence (convention de nommage : français, minuscules, tirets)
@@ -186,29 +208,51 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 ```
 application-web/                      LE SITE (navigateur : téléphone, tablette, PC)
   index.html                          page HTML de départ (nom imposé par le web et Cloudflare)
-  demarrage-application.tsx           démarre React et affiche l'écran d'accueil
-  ecran-accueil.tsx                   écran principal (pour l'instant : état de l'API)
+  demarrage-application.tsx           démarre React
+  racine-application.tsx              charge le compte connecté et choisit la page à afficher
+  pages/page-connexion.tsx            formulaire de connexion
+  pages/page-inscription.tsx          création de compte avec un code d'invitation (lien /inscription#code=...)
+  pages/page-accueil.tsx              accueil du joueur connecté
+  pages/page-admin.tsx                administration : invitations, comptes, journal
+  outils/appels-api.ts                appels au serveur et messages d'erreur en français
+  outils/navigation.ts                changement de page sans rechargement, format des dates
   styles-globaux.css                  couleurs et mise en page communes
   fichiers-statiques/_headers         en-têtes de sécurité du site (nom imposé par Cloudflare)
 
 serveur-api/                          L'API (Cloudflare Worker, Hono)
-  point-entree-api.ts                 déclare les routes /api/...
+  point-entree-api.ts                 assemble la sécurité (en-têtes, taille max, CSRF, session) et les routes
   entetes-securite.ts                 en-têtes de sécurité des réponses de l'API
-  point-entree-api.test.ts            tests automatiques de l'API
+  types-application.ts                types partagés (compte connecté, rôles)
+  validation-donnees.ts               règles de validation (Zod) de tout ce que le navigateur envoie
+  lecture-requete.ts                  lecture et validation du corps JSON
+  journal-evenements.ts               écriture dans le journal de sécurité et d'admin
+  authentification/sessions.ts        cookie de session, chargement du compte, exigerConnexion, exigerAdmin
+  authentification/routes-authentification.ts   /api/auth : inscription, connexion, déconnexion, moi
+  administration/routes-administration.ts       /api/admin : élévation, invitations, comptes, journal
+  securite/mots-de-passe.ts           hachage PBKDF2-SHA256 (100 000 itérations)
+  securite/jetons-et-empreintes.ts    jetons aléatoires, SHA-256, comparaison en temps constant
+  securite/limitation-tentatives.ts   anti force brute (compteurs dans D1)
+  securite/protection-csrf.ts         refuse les requêtes venant d'un autre site
+  tests/                              tests automatiques (vraie base SQLite en mémoire + vraies migrations)
+    outils/base-d1-de-test.ts         imite D1 avec node:sqlite
+    outils/client-api-de-test.ts      appelle l'API comme un navigateur
   types-cloudflare-generes.d.ts       GÉNÉRÉ par `npm run cf-typegen`, ne pas modifier à la main
 
 base-de-donnees/                      BASE SQLITE CLOUDFLARE D1
-  migrations/0001_initialisation.sql  scripts de création/évolution des tables (numérotés, jamais modifiés après merge)
+  migrations/0001_initialisation.sql  table parametres
+  migrations/0002_comptes_et_sessions.sql  comptes, sessions, invitations, limitations, journal
+  (les migrations sont numérotées et jamais modifiées après le merge : on en ajoute une nouvelle)
 
 configuration/                        RÉGLAGES DES OUTILS
   cloudflare-wrangler.jsonc           Cloudflare : nom du service, règles de routage, base D1
   vite-site-et-api.config.ts          Vite : `npm run dev` et `npm run build`
   tests-vitest.config.ts              Vitest : où sont les tests
   qualite-code-eslint.config.js       ESLint : règles de qualité et de sécurité du code
-  typescript/tsconfig.json            TypeScript : fichier principal, qui renvoie aux 3 suivants
+  typescript/tsconfig.json            TypeScript : fichier principal, qui renvoie aux 4 suivants
   typescript/tsconfig-application-web.json
   typescript/tsconfig-serveur-api.json
   typescript/tsconfig-configuration.json
+  typescript/tsconfig-tests.json
 
 documentation/                        REPRISE DU PROJET
   demande-initiale.md                 ta demande d'origine, mot pour mot
@@ -217,6 +261,7 @@ documentation/                        REPRISE DU PROJET
 
 outils/
   generer-rapport-pdf.py              fabrique le PDF de fin d'étape
+  creer-invitation-admin.mjs          SEUL moyen de créer un compte admin (`npm run admin:invitation`)
 
 .github/                              GITHUB (emplacement imposé)
   workflows/verifications-qualite.yml lint, types, tests, build, audit à chaque PR

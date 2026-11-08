@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SECURITY_HEADERS } from "./entetes-securite";
-import { app } from "./point-entree-api";
+import { SECURITY_HEADERS } from "../entetes-securite";
+import { app } from "../point-entree-api";
 
 /** Fausse base D1 : répond normalement, ou échoue si `enPanne` est vrai. */
 function fausseBase(enPanne = false) {

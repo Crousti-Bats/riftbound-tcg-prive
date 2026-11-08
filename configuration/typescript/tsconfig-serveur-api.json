@@ -14,5 +14,6 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["../../serveur-api"]
+  "include": ["../../serveur-api"],
+  "exclude": ["../../serveur-api/tests"]
 }
