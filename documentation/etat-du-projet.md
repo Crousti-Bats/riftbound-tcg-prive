@@ -1,6 +1,6 @@
 # Riftbound TCG privé — État du projet
 
-Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `docs/PROMPT_INITIAL.md`.
+Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-08
 **Étape en cours :** 1 — Dépôt GitHub, squelette, CI DevSecOps (terminée)
@@ -96,9 +96,9 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
 - Branche `main` protégée par un ruleset « Protection main » : PR obligatoire (0 approbation, on est seul), pas de force-push ni de suppression, merge en squash uniquement, et 4 contrôles requis : `Lint, types, tests, build`, `Audit des dépendances`, `CodeQL (SAST)`, `Gitleaks (secrets)`.
-- `.github/workflows/ci.yml` lance le lint (ESLint), le typecheck (tsc), les tests (Vitest), le build, `npm audit` et la dependency review sur les PR. Il vérifie aussi que `worker/worker-configuration.d.ts` est à jour.
-- `.github/workflows/securite.yml` lance CodeQL (`security-extended`, JS/TS et Actions) et Gitleaks, à chaque PR, à chaque push et chaque lundi.
-- Dependabot (npm et Actions, chaque semaine), alertes et correctifs automatiques activés. Secret scanning et push protection activés. Signalement privé de vulnérabilités activé (voir `SECURITY.md`).
+- `.github/workflows/verifications-qualite.yml` lance le lint (ESLint), le typecheck (tsc), les tests (Vitest), le build, `npm audit` et la dependency review sur les PR. Il vérifie aussi que `serveur-api/types-cloudflare-generes.d.ts` est à jour.
+- `.github/workflows/analyses-securite.yml` lance CodeQL (`security-extended`, JS/TS et Actions) et Gitleaks, à chaque PR, à chaque push et chaque lundi.
+- Dependabot (npm et Actions, chaque semaine), alertes et correctifs automatiques activés. Secret scanning et push protection activés. Signalement privé de vulnérabilités activé (voir `.github/SECURITY.md`).
 - Chaîne d'approvisionnement : versions npm exactes (`.npmrc` `save-exact`), lockfile, `npm ci`, actions épinglées par SHA, `permissions` minimales.
 - Override `minimatch@11.0.5` dans `package.json` : corrige GHSA-g3hv-75wg-m249 (ReDoS, moderate), remonté via eslint 10. On pourra le retirer quand eslint le corrigera.
 - Les secrets (token Cloudflare) sont uniquement dans GitHub Secrets. Jamais dans le code.
@@ -129,17 +129,54 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 
 ## 8. Journal
 
-- **2026-11-08 — Étape 0.** Analyse de l'API (1407 cartes, 6 sets), recherche des taux officiels, choix de l'architecture, mise en place des rapports PDF (`tools/generate_report.py`).
+- **2026-11-08 — Étape 0.** Analyse de l'API (1407 cartes, 6 sets), recherche des taux officiels, choix de l'architecture, mise en place des rapports PDF (`outils/generer-rapport-pdf.py`).
 - **2026-11-08 — Étape 1.** Dépôt public `Crousti-Bats/riftbound-tcg-prive` créé. Squelette : Worker Hono (`worker/`, route `/api/health`, en-têtes de sécurité, 3 tests), front React 19 et Vite 8 (`src/`), `@cloudflare/vite-plugin`, TypeScript strict, ESLint. CI et sécurité (CodeQL, Gitleaks, audit, dependency review, Dependabot), ruleset sur `main`. Le lint, les types, les tests et le build passent en local, avec 0 vulnérabilité.
+- **2026-11-08 — Réorganisation.** Les fichiers sont rangés dans des dossiers par fonction, avec des noms explicites en français (voir ci-dessous). Les anciens chemins (`worker/`, `src/`, `docs/`, `tools/`) n'existent plus. Les rapports PDF 00 et 01 citent encore ces anciens chemins, c'est normal : ce sont des archives.
 
-### Arborescence
+### Arborescence (convention de nommage : français, minuscules, tirets)
 
 ```
-worker/        API (Cloudflare Worker, Hono)       -> index.ts, security.ts, *.test.ts
-src/           Front React (PWA à l'étape 8)       -> main.tsx, App.tsx, styles.css
-public/        Fichiers statiques (_headers = en-têtes de sécurité du front)
-docs/          PROMPT_INITIAL.md, ETAT_PROJET.md, rapports/*.pdf
-tools/         generate_report.py
-.github/       workflows ci.yml + securite.yml, dependabot.yml
-wrangler.jsonc Configuration Cloudflare (D1 ajoutée à l'étape 2)
+application-web/                      LE SITE (navigateur : téléphone, tablette, PC)
+  index.html                          page HTML de départ (nom imposé par le web et Cloudflare)
+  demarrage-application.tsx           démarre React et affiche l'écran d'accueil
+  ecran-accueil.tsx                   écran principal (pour l'instant : état de l'API)
+  styles-globaux.css                  couleurs et mise en page communes
+  fichiers-statiques/_headers         en-têtes de sécurité du site (nom imposé par Cloudflare)
+
+serveur-api/                          L'API (Cloudflare Worker, Hono)
+  point-entree-api.ts                 déclare les routes /api/...
+  entetes-securite.ts                 en-têtes de sécurité des réponses de l'API
+  point-entree-api.test.ts            tests automatiques de l'API
+  types-cloudflare-generes.d.ts       GÉNÉRÉ par `npm run cf-typegen`, ne pas modifier à la main
+
+configuration/                        RÉGLAGES DES OUTILS
+  cloudflare-wrangler.jsonc           Cloudflare : nom du service, règles de routage, base D1
+  vite-site-et-api.config.ts          Vite : `npm run dev` et `npm run build`
+  tests-vitest.config.ts              Vitest : où sont les tests
+  qualite-code-eslint.config.js       ESLint : règles de qualité et de sécurité du code
+  typescript/tsconfig.json            TypeScript : fichier principal, qui renvoie aux 3 suivants
+  typescript/tsconfig-application-web.json
+  typescript/tsconfig-serveur-api.json
+  typescript/tsconfig-configuration.json
+
+documentation/                        REPRISE DU PROJET
+  demande-initiale.md                 ta demande d'origine, mot pour mot
+  etat-du-projet.md                   CE FICHIER : décisions, étape en cours, feuille de route
+  rapports-avancement/*.pdf           un rapport PDF par étape
+
+outils/
+  generer-rapport-pdf.py              fabrique le PDF de fin d'étape
+
+.github/                              GITHUB (emplacement imposé)
+  workflows/verifications-qualite.yml lint, types, tests, build, audit à chaque PR
+  workflows/analyses-securite.yml     CodeQL et Gitleaks à chaque PR et chaque lundi
+  dependabot.yml                      mises à jour automatiques des dépendances (nom imposé)
+  SECURITY.md                         politique de sécurité (nom imposé)
+
+À la racine (emplacement imposé par les outils) :
+  package.json / package-lock.json    dépendances et commandes npm
+  .npmrc                              réglages npm (versions exactes)
+  .gitignore / .gitattributes         ce que Git ignore, fins de ligne
+  README.md                           page d'accueil GitHub
+  CLAUDE.md                           consignes lues par l'assistant à chaque nouvelle conversation
 ```

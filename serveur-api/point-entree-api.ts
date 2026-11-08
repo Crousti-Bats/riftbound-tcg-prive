@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { securityHeaders } from "./security";
+import { securityHeaders } from "./entetes-securite";
 
 export const app = new Hono<{ Bindings: Env }>();
 

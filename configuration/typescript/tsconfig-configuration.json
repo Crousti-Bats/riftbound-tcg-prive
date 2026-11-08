@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "tsBuildInfoFile": "../../node_modules/.tmp/tsconfig-configuration.tsbuildinfo",
     "target": "ES2022",
     "lib": ["ES2023"],
     "module": "ESNext",
@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts"]
+  "include": ["../vite-site-et-api.config.ts", "../tests-vitest.config.ts"]
 }
