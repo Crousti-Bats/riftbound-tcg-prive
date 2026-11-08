@@ -215,6 +215,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Clôture de l'étape 3.** Mot de passe minimum abaissé à 6 caractères (PR #8). Compte admin `Crousti` créé en production avec `npm run admin:invitation`, puis vérifié en base (role=admin, actif=1).
 - **2026-11-08 — Étape 4.** Catalogue terminé (§3bis). 65 tests passent : classification, validation de données hostiles, cache, panne de la source, routes. Validé en local contre la vraie source : 1 407 cartes, premier chargement en 0,86 s, puis 0,05 s. Page Catalogue responsive avec filtres, miniatures WebP et fiche détaillée.
 - **2026-11-08 — Correctif du catalogue vide en production.** Les journaux (`wrangler tail`) montraient les requêtes du catalogue bloquées 13,5 s sans CPU, puis annulées. Un Worker de diagnostic exécuté sur le réseau Cloudflare (`wrangler dev --remote`) a mesuré GitHub entre 3 et 9,5 s, contre 0,16 s pour Hugging Face. Le Cache API fonctionne bien sur workers.dev. Hugging Face devient la source principale, GitHub passe en secours, chaque source a 8 s au plus et la page affiche un message de chargement et d'erreur. 68 tests.
+- **2026-11-08 — Favicon.** Logo de l'utilisateur (spirale orange). Le fond noir devient transparent pour l'onglet. L'icône iPhone et les icônes PWA ont le fond #0b1220. Script `outils/generer-icones.py`. Attention : ne jamais ouvrir puis sauvegarder une image dans VS Code, cela l'enregistre comme du texte et la corrompt (c'est arrivé une fois avec logo-source.png).
 - **2026-11-08 — Filtre par type.** Nouveau filtre `type` (Unité, Sort, Équipement, Légende, Terrain, Rune, Token) dans l'API et sur la page. Il permet notamment de trouver les runes d'Origins, rangées en variante `base`. 70 tests.
 - **2026-11-08 — Terrains et pagination.** Les Battlefields étaient déformés : ils sont maintenant tournés dans la grille et affichés à l'horizontale dans la fiche. Pagination en haut et en bas avec un choix de page. Comparaison avec la galerie officielle : il manque 2 cartes dans la source (voir §3bis). 69 tests.
 - Astuce diagnostic : `Date.now()` n'avance pas pendant le calcul dans un Worker (protection Spectre), donc on ne peut pas mesurer le CPU ainsi. Utiliser le champ `cpuTime` de `wrangler tail --format json`.
@@ -239,6 +240,9 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   outils/navigation.ts                changement de page sans rechargement, format des dates
   styles-globaux.css                  couleurs et mise en page communes
   fichiers-statiques/_headers         en-têtes de sécurité du site (nom imposé par Cloudflare)
+  fichiers-statiques/logo-source.png  logo d'origine fourni par l'utilisateur (spirale orange)
+  fichiers-statiques/favicon.ico      favicon (16, 32, 48 px), GÉNÉRÉ
+  fichiers-statiques/icones/          favicon-32, apple-touch-icon (180), icone-192/512 (PWA), logo transparent, GÉNÉRÉS
 
 serveur-api/                          L'API (Cloudflare Worker, Hono)
   point-entree-api.ts                 assemble la sécurité (en-têtes, taille max, CSRF, session) et les routes
@@ -288,6 +292,7 @@ documentation/                        REPRISE DU PROJET
 outils/
   generer-rapport-pdf.py              fabrique le PDF de fin d'étape
   creer-invitation-admin.mjs          SEUL moyen de créer un compte admin (`npm run admin:invitation`)
+  generer-icones.py                   régénère favicon et icônes depuis logo-source.png (`python outils/generer-icones.py`)
 
 .github/                              GITHUB (emplacement imposé)
   workflows/verifications-qualite.yml lint, types, tests, build, audit à chaque PR
