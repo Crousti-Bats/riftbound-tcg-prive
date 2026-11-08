@@ -89,16 +89,27 @@ On classe les variantes à partir de `cardNumber` :
 | Rare+ | 2 | Rare, Epic, Alt Art, Special Alt, Overnumbered, Signée |
 | Rune / Token | 1 | Rune, Rune alt ou Token |
 
-Taux par slot Rare+ (hypothèse initiale, configurable dans un fichier dédié) :
+**Taux de référence, validés par l'utilisateur le 2026-11-08** (ils font foi, à coder dans un fichier de configuration à l'étape 5) :
 
-| Résultat | Proba par slot | Source |
+| Rareté | Fréquence par booster | Soit par display de 24 |
 |---|---|---|
-| Epic | 13,4 % | Officiel : environ 1 booster sur 4 contient une Epic |
-| Alt Art | 4,2 % | Officiel : environ 2 par display de 24 boosters |
-| Overnumbered | 0,69 % | Officiel : environ 1 pour 3 displays |
-| Overnumbered signée | 0,07 % | Officiel : environ 1 Overnumbered sur 10 |
-| Special Alt (sp) | 0,05 % | Estimation (chase card) |
-| Rare | le reste (environ 81,6 %) | |
+| Epic (orange) | 1 booster sur 6 | 4 |
+| Alt Art | 1 booster sur 12 | 2 |
+| Overnumbered | 1 booster sur 72 | 1 pour 3 displays |
+| Overnumbered signée | 1 booster sur 240 | 1 pour 10 displays |
+
+On les convertit en probabilités pour chacun des 2 slots Rare+. Comme il y a 2 slots, « 1 pour N boosters » devient 1/(2N) par slot. Pour l'Epic, on retire d'abord la part du slot Foil (1 %), pour que le total observé reste de 1 sur 6 :
+
+| Résultat | Proba par slot Rare+ | Calcul |
+|---|---|---|
+| Epic | 7,83 % | (1/6 − 0,01) / 2 |
+| Alt Art | 4,17 % | 1/24 |
+| Overnumbered | 0,694 % | 1/144 |
+| Overnumbered signée | 0,208 % | 1/480 |
+| Special Alt (sp) | 0,05 % | estimation, non fournie par l'utilisateur |
+| Rare | 87,05 % | le reste |
+
+Les tests de l'étape 5 simuleront au moins 100 000 boosters et vérifieront ces fréquences **par booster** : Epic environ 16,7 %, Alt environ 8,3 %, Over environ 1,39 %, signée environ 0,42 %.
 
 Slot Foil (estimation communautaire) : 75 % Common, 20 % Uncommon, 4 % Rare, 1 % Epic.
 Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token du set ou une Rune d'Origins.
@@ -151,6 +162,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Étape 1.** Dépôt public `Crousti-Bats/riftbound-tcg-prive` créé. Squelette : Worker Hono (`worker/`, route `/api/health`, en-têtes de sécurité, 3 tests), front React 19 et Vite 8 (`src/`), `@cloudflare/vite-plugin`, TypeScript strict, ESLint. CI et sécurité (CodeQL, Gitleaks, audit, dependency review, Dependabot), ruleset sur `main`. Le lint, les types, les tests et le build passent en local, avec 0 vulnérabilité.
 - **2026-11-08 — Réorganisation.** Les fichiers sont rangés dans des dossiers par fonction, avec des noms explicites en français (voir ci-dessous). Les anciens chemins (`worker/`, `src/`, `docs/`, `tools/`) n'existent plus. Les rapports PDF 00 et 01 citent encore ces anciens chemins, c'est normal : ce sont des archives.
 - **2026-11-08 — Étape 2.** `wrangler login` effectué sur le PC fixe. Base D1 `riftbound-tcg` créée (WEUR), migration `0001_initialisation.sql` (table `parametres`) appliquée en local et en production. Premier déploiement manuel réussi : https://riftbound-tcg.axelgirard.workers.dev/api/health répond `{"status":"ok","base":"ok"}`, avec les en-têtes CSP, HSTS et X-Frame-Options vérifiés. Workflow de déploiement automatique ajouté, environnement GitHub `production` créé (branche `main` uniquement). L'assistant n'a pas le droit d'écrire des secrets GitHub ni de fermer des PR : ces actions reviennent à l'utilisateur (§7). 4 tests passent.
+- **2026-11-08 — Taux de drop.** L'utilisateur a fourni les taux de référence : Epic 1/6, Alt 1/12, Over 1/72, Over signée 1/240 boosters. Ils remplacent les estimations initiales (Epic à 13,4 % et signée à 0,07 % par slot, jugées trop élevée et trop faible). Voir §4.
 - Astuce Windows : `pkill` n'existe pas dans Git Bash. Pour arrêter un serveur de dev resté ouvert, utiliser PowerShell `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` puis `Stop-Process`.
 
 ### Arborescence (convention de nommage : français, minuscules, tirets)
