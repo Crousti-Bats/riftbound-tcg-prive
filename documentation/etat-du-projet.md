@@ -4,7 +4,7 @@ Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de
 
 **Dernière mise à jour :** 2026-11-08
 **Étape en cours :** 4 — Catalogue des cartes (terminée)
-**Prochaine étape :** 5 — Moteur de boosters (taux de drop, tirage côté serveur, tests statistiques) et timer 1 booster / 10 min, stock max 15
+**Prochaine étape :** 5 — Moteur de boosters (taux de drop, tirage côté serveur, tests statistiques) et timer 1 booster / 10 min, stock max 15. **Pas encore commencée.** Toutes les décisions sont prises (§4) : on peut la lancer directement.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -28,7 +28,9 @@ npm run dev        # site + API en local (http://localhost:5173)
 npm test           # tests
 ```
 
-Pré-requis : Git, Node.js 22 ou plus, GitHub CLI (`gh auth login`), Python avec `pip install reportlab` pour les rapports.
+Pré-requis : Git, Node.js 22 ou plus, GitHub CLI (`gh auth login`), Python avec `pip install reportlab pillow` (rapports PDF et icônes).
+Commandes Cloudflare (création d'admin, base distante, journaux) : lancer une fois `npx wrangler login` sur le nouveau PC. Le déploiement, lui, passe par GitHub et ne demande rien.
+Pour reprendre avec l'assistant : ouvrir le dossier dans VS Code et dire « on reprend ». Il lit `CLAUDE.md`, puis ce fichier.
 Méthode de travail : `git switch -c etape-N`, puis commit, puis `git push`, puis `gh pr create`. On merge quand la CI est verte.
 
 ## 1. Objectif
@@ -157,10 +159,16 @@ On les convertit en probabilités pour chacun des 2 slots Rare+. Comme il y a 2 
 | Alt Art | 4,17 % | 1/24 |
 | Overnumbered | 0,694 % | 1/144 |
 | Overnumbered signée | 0,208 % | 1/480 |
-| Special Alt (sp) | 0,05 % | estimation, non fournie par l'utilisateur |
-| Rare | 87,05 % | le reste |
+| Special Alt (sp) | 0,05 % | 1 booster sur 1 000, soit 1/2000 par slot (validé par l'utilisateur le 2026-11-08) |
+| Ultime (Baron Nashor, Unleashed uniquement) | 0,05 % | 1 booster sur 1 000, soit 1/2000 par slot (validé le 2026-11-08) |
+| Rare | 87,00 % | le reste. Pour un set sans Special ni Ultime, leur part revient aux Rares |
 
-Les tests de l'étape 5 simuleront au moins 100 000 boosters et vérifieront ces fréquences **par booster** : Epic environ 16,7 %, Alt environ 8,3 %, Over environ 1,39 %, signée environ 0,42 %.
+Les tests de l'étape 5 simuleront au moins 100 000 boosters et vérifieront ces fréquences **par booster** : Epic environ 16,7 %, Alt environ 8,3 %, Over environ 1,39 %, signée environ 0,42 %, Special et Ultime environ 0,1 %.
+
+**Autres décisions pour l'étape 5 (validées par l'utilisateur le 2026-11-08) :**
+- Un nouveau joueur reçoit **15 boosters** à l'inscription (stock plein). Ensuite, +1 toutes les 10 minutes, 15 au maximum.
+- Le slot Rune sélectionne sur `type === "Rune"` (les runes d'Origins sont en variante `base`). Pour un set sans rune (Spiritforged, Unleashed), on tire un Token du set, sinon une Rune d'Origins (voir §3bis).
+- Points restant à trancher pendant l'étape : les Legends (Rare) et les Battlefields (Uncommon) entrent-ils dans les slots Rare et Uncommon normaux, et peut-on avoir des doublons dans un même booster.
 
 Slot Foil (estimation communautaire) : 75 % Common, 20 % Uncommon, 4 % Rare, 1 % Epic.
 Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token du set ou une Rune d'Origins.
