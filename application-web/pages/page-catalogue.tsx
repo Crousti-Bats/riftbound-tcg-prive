@@ -101,12 +101,22 @@ export function PageCatalogue() {
 
       {erreur && <p className="message-erreur">{erreur}</p>}
       {!resultat && !erreur && <p className="aide">Chargement du catalogue…</p>}
-      {resultat && <p className="aide">{resultat.total} carte(s)</p>}
+      {resultat && (
+        <div className="barre-resultats">
+          <p className="aide">
+            {resultat.total} carte(s){nbPages > 1 ? ` · ${resultat.parPage} par page` : ""}
+          </p>
+          {nbPages > 1 && <Pagination page={page} nbPages={nbPages} allerA={setPage} />}
+        </div>
+      )}
 
       <section className="grille-cartes">
         {resultat?.cartes.map((carte) => (
           <button key={carte.code} className={`vignette-carte ${classeRarete(carte)}`} onClick={() => setSelection(carte)} title={carte.nom}>
-            <img src={urlImage(carte.image, 300)} alt={carte.nom} loading="lazy" width={300} height={419} />
+            <span className="cadre-carte">
+              {/* Les Battlefields (paysage) sont tournés d'un quart de tour pour rester alignés, sans déformation. */}
+              <img className={carte.orientation === "paysage" ? "image-paysage" : undefined} src={urlImage(carte.image, 300)} alt={carte.nom} loading="lazy" />
+            </span>
             <span className="legende-carte">
               {carte.nom}
               <small>{LIBELLES_VARIANTE[carte.variante] === "Normale" ? LIBELLES_RARETE[carte.rarete] : LIBELLES_VARIANTE[carte.variante]}</small>
@@ -116,15 +126,32 @@ export function PageCatalogue() {
       </section>
 
       {resultat && nbPages > 1 && (
-        <nav className="pagination">
-          <button className="secondaire" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Précédent</button>
-          <span>Page {page} / {nbPages}</span>
-          <button className="secondaire" disabled={page >= nbPages} onClick={() => setPage(page + 1)}>Suivant →</button>
-        </nav>
+        <Pagination
+          page={page}
+          nbPages={nbPages}
+          allerA={(p) => {
+            setPage(p);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
       )}
 
       {selection && <FicheCarte carte={selection} nomSet={sets.find((s) => s.code === selection.set)?.nom ?? selection.set} surFermeture={() => setSelection(null)} />}
     </main>
+  );
+}
+
+function Pagination({ page, nbPages, allerA }: { page: number; nbPages: number; allerA: (page: number) => void }) {
+  return (
+    <nav className="pagination" aria-label="Pages">
+      <button className="secondaire petit" disabled={page <= 1} onClick={() => allerA(page - 1)} aria-label="Page précédente">←</button>
+      <select value={page} onChange={(e) => allerA(Number(e.target.value))} aria-label="Choisir la page">
+        {Array.from({ length: nbPages }, (_, i) => (
+          <option key={i + 1} value={i + 1}>Page {i + 1} / {nbPages}</option>
+        ))}
+      </select>
+      <button className="secondaire petit" disabled={page >= nbPages} onClick={() => allerA(page + 1)} aria-label="Page suivante">→</button>
+    </nav>
   );
 }
 
@@ -137,8 +164,18 @@ function FicheCarte({ carte, nomSet, surFermeture }: { carte: Carte; nomSet: str
 
   return (
     <div className="fond-modale" onClick={surFermeture} role="presentation">
-      <div className="modale" role="dialog" aria-modal="true" aria-label={carte.nom} onClick={(e) => e.stopPropagation()}>
-        <img className={`image-fiche ${classeRarete(carte)}`} src={urlImage(carte.image, 744)} alt={carte.nom} />
+      <div
+        className={`modale ${carte.orientation === "paysage" ? "modale-paysage" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={carte.nom}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          className={`image-fiche ${classeRarete(carte)}`}
+          src={urlImage(carte.image, carte.orientation === "paysage" ? 1039 : 744)}
+          alt={carte.nom}
+        />
         <div className="details-fiche">
           <h2>{carte.nom}{carte.sousTitre ? `, ${carte.sousTitre}` : ""}</h2>
           <p className="aide">{nomSet} · n° {carte.numero}</p>

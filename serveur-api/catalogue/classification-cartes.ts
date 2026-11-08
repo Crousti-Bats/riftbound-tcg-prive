@@ -57,6 +57,12 @@ export function classerVariante(numero: string, rarete: Rarete): Variante | null
   return null;
 }
 
+/** L'URL d'image contient ses dimensions (ex. "...-1039x744.png") : plus large que haute = paysage. */
+export function orientationImage(url: string): "portrait" | "paysage" {
+  const m = /-(\d+)x(\d+)\.\w+$/.exec(url);
+  return m && Number(m[1]) > Number(m[2]) ? "paysage" : "portrait";
+}
+
 export function construireCatalogue(brut: unknown): Catalogue {
   const liste = Array.isArray(brut) ? brut : [];
   const cartes: CarteCatalogue[] = [];
@@ -89,6 +95,7 @@ export function construireCatalogue(brut: unknown): Catalogue {
       type: c.cardType,
       domaines: c.domains ?? [],
       image: c.imageUrl,
+      orientation: orientationImage(c.imageUrl),
       energie: c.energy ?? null,
       puissance: c.power ?? null,
       force: c.might ?? null,

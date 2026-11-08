@@ -27,6 +27,8 @@ export interface CarteCatalogue {
   type: string;
   domaines: string[];
   image: string;
+  /** Les Battlefields sont des images horizontales (1039×744). */
+  orientation: "portrait" | "paysage";
   energie: number | null;
   puissance: number | null;
   force: number | null;
