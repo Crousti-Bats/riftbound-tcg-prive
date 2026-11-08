@@ -165,6 +165,18 @@ describe("Routes /api/catalogue", () => {
     expect(recherche.json.total).toBe(1);
   });
 
+  it("filtre par type : terrains (Battlefield) et runes", async () => {
+    const t = creerEnvironnementDeTest();
+    const cookie = await t.inscrire("Alice", "mot-de-passe");
+    const terrains = await t.appeler("GET", "/api/catalogue/cartes?type=Battlefield", { cookie });
+    const cartesTerrains = terrains.json.cartes as Array<{ type: string }>;
+    expect(cartesTerrains.length).toBeGreaterThan(0);
+    expect(cartesTerrains.every((c) => c.type === "Battlefield")).toBe(true);
+    const runes = await t.appeler("GET", "/api/catalogue/cartes?type=rune", { cookie });
+    expect((runes.json.cartes as Array<{ type: string }>).every((c) => c.type === "Rune")).toBe(true);
+    expect((await t.appeler("GET", "/api/catalogue/cartes?type=<script>", { cookie })).statut).toBe(400);
+  });
+
   it("refuse des filtres invalides", async () => {
     const t = creerEnvironnementDeTest();
     const cookie = await t.inscrire("Alice", "mot-de-passe");
