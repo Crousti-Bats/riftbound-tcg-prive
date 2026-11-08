@@ -4,6 +4,7 @@ import { type CompteCourant, chargerCompteCourant } from "./outils/appels-api";
 import { naviguer, useCheminCourant } from "./outils/navigation";
 import { PageAccueil } from "./pages/page-accueil";
 import { PageAdmin } from "./pages/page-admin";
+import { PageCatalogue } from "./pages/page-catalogue";
 import { PageConnexion } from "./pages/page-connexion";
 import { PageInscription } from "./pages/page-inscription";
 
@@ -40,6 +41,7 @@ export function RacineApplication() {
     if (chemin === "/inscription") return <PageInscription surConnexion={rafraichirCompte} />;
     return <PageConnexion surConnexion={rafraichirCompte} />;
   }
+  if (chemin === "/catalogue") return <PageCatalogue />;
   if (chemin.startsWith("/admin") && compte.role === "admin") {
     return <PageAdmin compte={compte} surChangementCompte={rafraichirCompte} />;
   }
