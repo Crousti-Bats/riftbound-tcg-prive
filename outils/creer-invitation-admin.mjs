@@ -12,9 +12,11 @@
  */
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const WRANGLER = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
+const CONFIG = fileURLToPath(new URL("../configuration/cloudflare-wrangler.jsonc", import.meta.url));
+const ETAT_LOCAL = fileURLToPath(new URL("../.wrangler/state", import.meta.url));
 
 const URL_PRODUCTION = "https://riftbound-tcg.axelgirard.workers.dev";
 const URL_LOCALE = "http://localhost:5173";
@@ -39,36 +41,30 @@ const maintenant = Date.now();
 const expiration = maintenant + 60 * 60_000;
 
 // Toutes les valeurs sont contrôlées : empreinte hexadécimale, pseudo validé par regex, nombres.
-const sql = `INSERT INTO invitations (code_hash, role, pseudo_reserve, note, cree_le, expire_le)
-VALUES ('${empreinte}', 'admin', '${pseudo}', 'Invitation admin (ligne de commande)', ${maintenant}, ${expiration});
-INSERT INTO journal (horodatage, categorie, type, pseudo, details)
-VALUES (${maintenant}, 'admin', 'invitation_admin_creee', '${pseudo}', '{"source":"ligne_de_commande"}');
-`;
+const sql =
+  "INSERT INTO invitations (code_hash, role, pseudo_reserve, note, cree_le, expire_le) " +
+  `VALUES ('${empreinte}', 'admin', '${pseudo}', 'Invitation admin (ligne de commande)', ${maintenant}, ${expiration}); ` +
+  "INSERT INTO journal (horodatage, categorie, type, pseudo, details) " +
+  `VALUES (${maintenant}, 'admin', 'invitation_admin_creee', '${pseudo}', 'source: ligne de commande');`;
 
-const dossier = mkdtempSync(join(tmpdir(), "riftbound-"));
-const fichier = join(dossier, "invitation-admin.sql");
-writeFileSync(fichier, sql, { mode: 0o600 });
-
-try {
-  const resultat = spawnSync(
-    "npx",
-    [
-      "wrangler", "d1", "execute", "riftbound-tcg",
-      production ? "--remote" : "--local",
-      "--config", "configuration/cloudflare-wrangler.jsonc",
-      ...(locale ? ["--persist-to", ".wrangler/state"] : []),
-      "--file", `"${fichier}"`,
-      "--yes",
-    ],
-    { stdio: ["ignore", "pipe", "inherit"], shell: true, encoding: "utf8" },
-  );
-  if (resultat.status !== 0) {
-    console.error(resultat.stdout);
-    console.error("Échec de la création de l'invitation (es-tu connecté ? npx wrangler login).");
-    process.exit(1);
-  }
-} finally {
-  rmSync(dossier, { recursive: true, force: true });
+// --command (API "query") et non --file : l'API "import" utilisée par --file refuse la connexion OAuth de wrangler login.
+// Wrangler est lancé directement par Node, sans shell : aucun problème de guillemets sous Windows.
+const resultat = spawnSync(
+  process.execPath,
+  [
+    WRANGLER, "d1", "execute", "riftbound-tcg",
+    production ? "--remote" : "--local",
+    "--config", CONFIG,
+    ...(locale ? ["--persist-to", ETAT_LOCAL] : []),
+    "--command", sql,
+    "--yes",
+  ],
+  { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" },
+);
+if (resultat.status !== 0) {
+  console.error(resultat.stdout, resultat.stderr);
+  console.error("Échec de la création de l'invitation (es-tu connecté ? npx wrangler login).");
+  process.exit(1);
 }
 
 const base = production ? URL_PRODUCTION : URL_LOCALE;
