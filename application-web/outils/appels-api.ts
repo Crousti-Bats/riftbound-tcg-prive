@@ -1,0 +1,61 @@
+/** Appels à l'API du serveur, avec messages d'erreur en français. */
+
+export type Role = "joueur" | "admin";
+
+export interface CompteCourant {
+  pseudo: string;
+  role: Role;
+  adminActif: boolean;
+}
+
+const MESSAGES: Record<string, string> = {
+  identifiants_invalides: "Pseudo ou mot de passe incorrect.",
+  trop_de_tentatives: "Trop de tentatives. Réessaie dans 15 minutes.",
+  invitation_invalide: "Ce code d'invitation est invalide, expiré, déjà utilisé ou réservé à un autre pseudo.",
+  pseudo_indisponible: "Ce pseudo est déjà pris.",
+  donnees_invalides: "Certains champs sont invalides.",
+  mot_de_passe_incorrect: "Mot de passe incorrect.",
+  elevation_requise: "Accès admin expiré : re-saisis ton mot de passe.",
+  non_connecte: "Tu n'es pas connecté.",
+  interdit: "Accès refusé.",
+  action_sur_soi_interdite: "Tu ne peux pas faire cette action sur ton propre compte.",
+  introuvable_ou_deja_utilisee: "Invitation introuvable ou déjà utilisée.",
+};
+
+export class ErreurApi extends Error {
+  constructor(
+    readonly code: string,
+    readonly statut: number,
+    readonly champs: Array<{ champ: string; message: string }> = [],
+  ) {
+    const detail = champs.length ? ` (${champs.map((c) => `${c.champ} : ${c.message}`).join(", ")})` : "";
+    super((MESSAGES[code] ?? "Erreur inattendue, réessaie plus tard.") + detail);
+  }
+}
+
+export async function appelerApi<T>(methode: "GET" | "POST" | "DELETE", chemin: string, corps?: unknown): Promise<T> {
+  const reponse = await fetch(`/api${chemin}`, {
+    method: methode,
+    credentials: "same-origin",
+    headers: corps !== undefined ? { "Content-Type": "application/json" } : {},
+    body: corps !== undefined ? JSON.stringify(corps) : undefined,
+  });
+  const donnees = (await reponse.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!reponse.ok) {
+    throw new ErreurApi(
+      String(donnees.erreur ?? donnees.error ?? "inconnue"),
+      reponse.status,
+      (donnees.champs as ErreurApi["champs"]) ?? [],
+    );
+  }
+  return donnees as T;
+}
+
+export async function chargerCompteCourant(): Promise<CompteCourant | null> {
+  try {
+    return await appelerApi<CompteCourant>("GET", "/auth/moi");
+  } catch (e) {
+    if (e instanceof ErreurApi && e.statut === 401) return null;
+    throw e;
+  }
+}

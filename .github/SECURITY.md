@@ -14,4 +14,7 @@ Ne pas ouvrir d'issue publique. Utiliser **Security → Report a vulnerability**
 | CI | Actions épinglées par SHA, `permissions` minimales, `persist-credentials: false` |
 | Branche | `main` protégée : PR obligatoire et CI verte avant de merger |
 | Application | En-têtes de sécurité (CSP stricte, HSTS, X-Frame-Options DENY), erreurs internes jamais renvoyées au client |
-| À venir | Mots de passe PBKDF2, cookies `HttpOnly; Secure; SameSite=Strict`, rate limiting, validation Zod, SQL paramétré, aléatoire côté serveur |
+| Authentification | Inscription uniquement sur invitation, mots de passe PBKDF2-SHA256, cookie `__Host-session` (HttpOnly, Secure, SameSite=Strict) dont seule l'empreinte est stockée, limitation des tentatives, mêmes réponses pour un pseudo inconnu ou un mauvais mot de passe |
+| Requêtes | Contrôle de l'en-tête `Origin` (CSRF), validation Zod stricte, corps limité à 16 Ko, SQL uniquement préparé (règle ESLint bloquante et testée) |
+| Admin | Rôle vérifié côté serveur, re-saisie du mot de passe (15 minutes), création d'admin uniquement en ligne de commande, journal de toutes les actions |
+| À venir | Aléatoire côté serveur pour les boosters (étape 5), Cloudflare Access sur /admin (étape 10) |

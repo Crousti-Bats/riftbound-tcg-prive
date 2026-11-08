@@ -10,5 +10,12 @@ export default defineConfig({
   root: chemin("../application-web"),
   publicDir: chemin("../application-web/fichiers-statiques"),
   build: { outDir: chemin("../dist"), emptyOutDir: true },
-  plugins: [react(), cloudflare({ configPath: chemin("./cloudflare-wrangler.jsonc") })],
+  plugins: [
+    react(),
+    cloudflare({
+      configPath: chemin("./cloudflare-wrangler.jsonc"),
+      // Base locale partagée avec `npm run base:migrer-local` et `npm run admin:invitation -- --local`.
+      persistState: { path: chemin("../.wrangler/state") },
+    }),
+  ],
 });

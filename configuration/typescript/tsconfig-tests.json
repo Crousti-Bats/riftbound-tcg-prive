@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "../../node_modules/.tmp/tsconfig-tests.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node", "../../serveur-api/types-cloudflare-generes.d.ts"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["../../serveur-api/tests"]
+}
