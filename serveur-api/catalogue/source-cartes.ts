@@ -19,7 +19,8 @@ export const URLS_SOURCE = [
 ] as const;
 export const URL_SOURCE = URLS_SOURCE[0];
 const DELAI_MAX_SOURCE_MS = 8_000;
-const CLE_CACHE = "https://cache.riftbound-tcg.interne/catalogue-v1.json";
+// Changer la version dès que le format de Catalogue change, sinon l'ancien format reste servi pendant 24 h.
+const CLE_CACHE = "https://cache.riftbound-tcg.interne/catalogue-v2.json";
 export const DUREE_CACHE_MS = 24 * 60 * 60_000;
 
 export interface DependancesSource {

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { classerVariante, construireCatalogue } from "../catalogue/classification-cartes";
+import { classerVariante, construireCatalogue, orientationImage } from "../catalogue/classification-cartes";
 import { obtenirCatalogue, URL_SOURCE, URLS_SOURCE, viderCacheMemoire } from "../catalogue/source-cartes";
 import { creerEnvironnementDeTest } from "./outils/client-api-de-test";
 
@@ -29,6 +29,14 @@ describe("Classification des variantes", () => {
     ["t04", "Common", "token"],
   ] as const)("%s (%s) → %s", (numero, rarete, attendu) => {
     expect(classerVariante(numero, rarete)).toBe(attendu);
+  });
+
+  it("détecte les images horizontales (Battlefields)", () => {
+    expect(orientationImage("https://cmsassets.rgpub.io/x/abc-1039x744.png")).toBe("paysage");
+    expect(orientationImage("https://cmsassets.rgpub.io/x/abc-744x1039.png")).toBe("portrait");
+    expect(orientationImage("https://cmsassets.rgpub.io/x/sans-dimensions.png")).toBe("portrait");
+    const terrain = construireCatalogue(ECHANTILLON).cartes.find((c) => c.type === "Battlefield");
+    expect(terrain?.orientation).toBe("paysage");
   });
 
   it("renvoie null pour un format inconnu", () => {

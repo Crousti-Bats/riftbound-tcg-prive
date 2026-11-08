@@ -11,6 +11,7 @@ export interface Carte {
   type: string;
   domaines: string[];
   image: string;
+  orientation: "portrait" | "paysage";
   energie: number | null;
   puissance: number | null;
   force: number | null;
@@ -55,6 +56,6 @@ export function classeRarete(carte: Pick<Carte, "rarete" | "variante">): string 
 }
 
 /** Le CDN Riot redimensionne et convertit en WebP : 28 Ko au lieu de 1,2 Mo pour une miniature. */
-export function urlImage(image: string, largeur: 300 | 744): string {
+export function urlImage(image: string, largeur: 300 | 744 | 1039): string {
   return `${image}?w=${largeur}&fm=webp`;
 }
