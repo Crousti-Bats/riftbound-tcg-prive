@@ -1,0 +1,945 @@
+[
+ {
+  "cardCode": "rad-sp1-005",
+  "name": "Ahri",
+  "subtitle": "Confident",
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "sp1-005",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Calm"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/e4be56cd7dc8075298567c5b28ecc3e46b87bc57-744x1039.png",
+  "energy": 4,
+  "power": 1,
+  "might": 4,
+  "abilityEffective": "[Disarm]\nWhen you reduce the Might of an enemy unit here by 1 or more, give me +1 [S] this turn.",
+  "artist": "HCuu",
+  "scrapedAt": "2026-11-04T13:52:09.016Z"
+ },
+ {
+  "cardCode": "rad-001-167",
+  "name": "Amateur Demolitionist",
+  "subtitle": null,
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "001-167",
+  "rarity": "Common",
+  "cardType": "Unit",
+  "domains": [
+   "Chaos"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/3dca5e04ff8dff983993f87d5a82a7fd56d7bc9c-744x1039.png",
+  "energy": 2,
+  "power": null,
+  "might": 1,
+  "abilityEffective": "When you play me, play a Bomb gear token to a battlefield. (It has [Deploy]. When it dies, deal 2 to an enemy there and kill your other Bombs there.)",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T13:52:09.616Z"
+ },
+ {
+  "cardCode": "rad-r01a",
+  "name": "Fury Rune",
+  "subtitle": null,
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "r01a",
+  "rarity": "Showcase",
+  "cardType": "Rune",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/55f5b003c67cd821895bc78a0a0c36322af53e11-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": null,
+  "artist": null,
+  "scrapedAt": "2026-11-04T13:52:10.165Z"
+ },
+ {
+  "cardCode": "rad-r01",
+  "name": "Fury Rune",
+  "subtitle": null,
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "r01",
+  "rarity": "Common",
+  "cardType": "Rune",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/e0337944fa56c357ab3b9a822064a8f58ead8315-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": null,
+  "artist": "Greg Ghielmetti & Leah Chen",
+  "scrapedAt": "2026-11-04T13:52:10.716Z"
+ },
+ {
+  "cardCode": "rad-009-167",
+  "name": "Antagonistic Apparatus",
+  "subtitle": null,
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "009-167",
+  "rarity": "Uncommon",
+  "cardType": "Unit",
+  "domains": null,
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/5be775464c8b897501317c6d32fd60c8b962b5c2-744x1039.png",
+  "energy": 6,
+  "power": 1,
+  "might": 3,
+  "abilityEffective": "I enter ready.\nWhen you play me, play a ready 3 [S] Mech unit token here.",
+  "artist": "Caravan Studio",
+  "scrapedAt": "2026-11-04T13:52:22.980Z"
+ },
+ {
+  "cardCode": "rad-015-167",
+  "name": "Akali",
+  "subtitle": "Brash",
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "015-167",
+  "rarity": "Rare",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/20997ddaef2cd714c36e5473c156faf331b80b7b-744x1039.png",
+  "energy": 5,
+  "power": 1,
+  "might": 5,
+  "abilityEffective": "The first time I move each turn, [Add] [1][A].\nThe second time I move each turn, banish the top card of your Main Deck. Until your next Ending Phase, you may play that card. (You still pay its costs.)",
+  "artist": "Luscinia Studio",
+  "scrapedAt": "2026-11-04T13:52:26.349Z"
+ },
+ {
+  "cardCode": "rad-020a-167",
+  "name": "Mordekaiser",
+  "subtitle": "Twice Slain",
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "020a-167",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/30e0267246c161d62eebb264cd6f1c07228ae749-744x1039.png",
+  "energy": 7,
+  "power": 1,
+  "might": 5,
+  "abilityEffective": "[Accelerate]\n[Assault 3]\nOnce each turn, if I would die, you may kill a friendly unit to heal me, exhaust me, and recall me instead.",
+  "artist": null,
+  "scrapedAt": "2026-11-04T13:52:29.130Z"
+ },
+ {
+  "cardCode": "rad-021-167",
+  "name": "Ekko",
+  "subtitle": "Revolutionary",
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "021-167",
+  "rarity": "Epic",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/d13964c46506f9f36430dfe91ee02d258a304908-744x1039.png",
+  "energy": 5,
+  "power": 1,
+  "might": 4,
+  "abilityEffective": "I enter ready.\n[Assault] (+1 [S] while I'm an attacker.)\n[Action][>] Discard 1, [1][C]: Banish me, then play me to your base, ignoring my cost.",
+  "artist": null,
+  "scrapedAt": "2026-11-04T13:52:30.865Z"
+ },
+ {
+  "cardCode": "rad-168-167",
+  "name": "Boy Who Shattered Time",
+  "subtitle": null,
+  "setCode": "rad",
+  "cardSet": "Radiance",
+  "cardNumber": "168-167",
+  "rarity": "Showcase",
+  "cardType": "Legend",
+  "domains": [
+   "Fury",
+   "Mind"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/0a921eca1acad149fd4bcb13244e3af25feac488-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[Empower] — [1], [T]\nDisempower me, [T]: Reduce the cost of the next unit you play this turn by [2][A] and give it \"Kill me at end of turn.\"",
+  "artist": "Blaine Burgos",
+  "scrapedAt": "2026-11-04T13:54:01.013Z"
+ },
+ {
+  "cardCode": "ven-001-166",
+  "name": "Baccai Sandspinner",
+  "subtitle": null,
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "001-166",
+  "rarity": "Common",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/d8abab7f0df7c8ec9fff8c8dfa71c732e1ce2e6a-744x1039.png",
+  "energy": 6,
+  "power": null,
+  "might": 6,
+  "abilityEffective": "[Empower] [5]. This ability costs [3] less if you control 4 or fewer runes. (Pay the cost: Empower me. Use only if not Empowered.)\n[Empowered][>] I have [Deflect] and [Assault 2]. (Opponents must pay [A] to choose me with a spell or ability. +2 [S] while I'm an attacker.)",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T13:54:10.278Z"
+ },
+ {
+  "cardCode": "ven-r01",
+  "name": "Fury Rune",
+  "subtitle": null,
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "r01",
+  "rarity": "Common",
+  "cardType": "Rune",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/f95ed6ba0c4d4d357c45bf5bdb1a8e540af1f85f-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": null,
+  "artist": "Greg Ghielmetti & Leah Chen",
+  "scrapedAt": "2026-11-04T13:54:10.826Z"
+ },
+ {
+  "cardCode": "ven-sp1-006",
+  "name": "Kai'Sa",
+  "subtitle": "Survivor",
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "sp1-006",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/a14d1be8f014a331f60885013d81a1a8f5c8c076-744x1039.png",
+  "energy": 4,
+  "power": null,
+  "might": 4,
+  "abilityEffective": "[Accelerate]\nWhen I conquer, draw 1.",
+  "artist": "Wild Rift Splash Team",
+  "scrapedAt": "2026-11-04T13:54:11.346Z"
+ },
+ {
+  "cardCode": "ven-t04",
+  "name": "Recruit",
+  "subtitle": null,
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "t04",
+  "rarity": "Common",
+  "cardType": "Unit",
+  "domains": [
+   "Colorless"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/08b9ccf225fc2ae9eb9b5668e5361b09789210ee-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": 1,
+  "abilityEffective": null,
+  "artist": "Six More Vodka",
+  "scrapedAt": "2026-11-04T13:54:16.249Z"
+ },
+ {
+  "cardCode": "ven-009-166",
+  "name": "Baccai Reaper",
+  "subtitle": null,
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "009-166",
+  "rarity": "Uncommon",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/14c473be38b3ec40503f44555db9a4168a45bfb4-744x1039.png",
+  "energy": 3,
+  "power": 1,
+  "might": 4,
+  "abilityEffective": "When I attack, you may pay [C] to give me [Assault 2] this turn. (+2 [S] while I'm an attacker.)",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T13:54:21.679Z"
+ },
+ {
+  "cardCode": "ven-015-166",
+  "name": "Decree of Rage",
+  "subtitle": null,
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "015-166",
+  "rarity": "Rare",
+  "cardType": "Spell",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/320d9f52a4f22fa3405bb9da82c4d02451d7c133-744x1039.png",
+  "energy": 1,
+  "power": 1,
+  "might": null,
+  "abilityEffective": "[Action] (Play on your turn or in showdowns.)\nThis can't be countered.\nDeal 4 to an enemy Calm ([G]) unit.",
+  "artist": "Envar Studio",
+  "scrapedAt": "2026-11-04T13:54:24.957Z"
+ },
+ {
+  "cardCode": "ven-019a-166",
+  "name": "Renekton",
+  "subtitle": "Rage Fueled",
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "019a-166",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/cf5a7294a9ebd2d5a8727078efbfd2cf84f12e3e-744x1039.png",
+  "energy": 6,
+  "power": null,
+  "might": 6,
+  "abilityEffective": "[Accelerate]\nWhen I attack, if you control 4 or fewer runes, deal 2 to all enemy units here.",
+  "artist": "League Splash Team",
+  "scrapedAt": "2026-11-04T13:54:27.641Z"
+ },
+ {
+  "cardCode": "ven-021-166",
+  "name": "Akali",
+  "subtitle": "Deadly Weapon",
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "021-166",
+  "rarity": "Epic",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/564e5f35ae39b6604290e83f39ffb61c2b2b9175-744x1039.png",
+  "energy": 3,
+  "power": null,
+  "might": 3,
+  "abilityEffective": "[Empower] [2][C] ([2][C]: Empower me. Use only if not Empowered.)\nWhen I move, you may deal 1 to a unit at a battlefield I moved to or from. If I'm [Empowered], deal 2 instead.\n[Empowered][>] I have +1 [S].",
+  "artist": "莺之歌",
+  "scrapedAt": "2026-11-04T13:54:29.284Z"
+ },
+ {
+  "cardCode": "ven-167-166",
+  "name": "Vi",
+  "subtitle": "Destructive",
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "167-166",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/dff596efc7413bfdd9cc8e667c46bd4228447de5-744x1039.png",
+  "energy": 2,
+  "power": 1,
+  "might": 3,
+  "abilityEffective": "[Ganking]\nRecycle 1 from your trash: Give me +1 [S] this turn.",
+  "artist": "Grafit Studio",
+  "scrapedAt": "2026-11-04T13:55:58.693Z"
+ },
+ {
+  "cardCode": "ven-189-star-166",
+  "name": "Rogue Assassin",
+  "subtitle": null,
+  "setCode": "ven",
+  "cardSet": "Vendetta",
+  "cardNumber": "189-star-166",
+  "rarity": "Showcase",
+  "cardType": "Legend",
+  "domains": [
+   "Fury",
+   "Calm"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/d8262e7b24f26d1c9a18b13166d009aaf573e059-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[Empower] [3][A]\n[Action][>] [T]: If it's your turn, move a friendly unit in a showdown to base and if I'm [Empowered], ready it.",
+  "artist": "Jessica Oyhenart",
+  "scrapedAt": "2026-11-04T13:56:11.506Z"
+ },
+ {
+  "cardCode": "unl-001-219",
+  "name": "Arena Kingpin",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "001-219",
+  "rarity": "Common",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/db48f8c1da0e4f9804ae94398f0864859db0002a-744x1039.png",
+  "energy": 5,
+  "power": null,
+  "might": 3,
+  "abilityEffective": "I enter ready.\n[T]: Give a unit +3 [S] this turn.",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T13:56:20.990Z"
+ },
+ {
+  "cardCode": "unl-t01",
+  "name": "Baron Pit",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "t01",
+  "rarity": "Common",
+  "cardType": "Battlefield",
+  "domains": [
+   "Colorless"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/e44f173629322a4e0c32d3f8902c294d4482ef42-1039x744.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": "(You can't start the game with a token battlefield.)\nUnits can move here from anywhere.",
+  "artist": "Fish Art Studio",
+  "scrapedAt": "2026-11-04T13:56:21.571Z"
+ },
+ {
+  "cardCode": "unl-011-219",
+  "name": "Fresh Beans",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "011-219",
+  "rarity": "Uncommon",
+  "cardType": "Gear",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/1737d7d02cd0619a520aba258d1b40fdbb5d1129-744x1039.png",
+  "energy": 2,
+  "power": null,
+  "might": null,
+  "abilityEffective": "When you play a unit during a showdown, you may exhaust this to draw 1.",
+  "artist": "Wild Blue Studios",
+  "scrapedAt": "2026-11-04T13:56:31.053Z"
+ },
+ {
+  "cardCode": "unl-019-219",
+  "name": "Blighted Battleaxe",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "019-219",
+  "rarity": "Rare",
+  "cardType": "Gear",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/a6425462180dc6bc3396397cd491c0abae58f616-744x1039.png",
+  "energy": 4,
+  "power": null,
+  "might": 4,
+  "abilityEffective": "[Equip] [1][C] ([1][C]: Attach this to a unit you control.)",
+  "artist": "Caravan Studio",
+  "scrapedAt": "2026-11-04T13:56:35.654Z"
+ },
+ {
+  "cardCode": "unl-022a-219",
+  "name": "Jhin",
+  "subtitle": "Murderous Artist",
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "022a-219",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/0e67164270e12b8d91905e977a314c7248a343e9-744x1039.png",
+  "energy": 4,
+  "power": 1,
+  "might": 4,
+  "abilityEffective": "[Deflect]\n[Ganking]\nWhen I move, [Add] [1][A].",
+  "artist": "League Splash Team",
+  "scrapedAt": "2026-11-04T13:56:37.353Z"
+ },
+ {
+  "cardCode": "unl-027-219",
+  "name": "Inviolus Vox",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "027-219",
+  "rarity": "Epic",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/9b742ef3dc17f5da03d41e3349839037183b5ea9-744x1039.png",
+  "energy": 8,
+  "power": 2,
+  "might": 8,
+  "abilityEffective": "When I conquer, give a friendly unit +8 [S] this turn.",
+  "artist": "Six More Vodka",
+  "scrapedAt": "2026-11-04T13:56:41.340Z"
+ },
+ {
+  "cardCode": "unl-220-219",
+  "name": "Pouty Poro",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "220-219",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/0c91b90d91c4f988aa9942dd9e06a634a66c6975-744x1039.png",
+  "energy": 2,
+  "power": null,
+  "might": 2,
+  "abilityEffective": "[Deflect]",
+  "artist": "FOREDAWN",
+  "scrapedAt": "2026-11-04T13:58:43.698Z"
+ },
+ {
+  "cardCode": "unl-226-star-219",
+  "name": "Virtuoso",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "226-star-219",
+  "rarity": "Showcase",
+  "cardType": "Legend",
+  "domains": [
+   "Fury",
+   "Mind"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/94fb0a4944da2427ce615dd2c311a2c9bc781fd2-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": "When you play a spell, if you spent [4] or more, you may banish it. Then, if there are four spells banished with me, put each in its trash, channel 4 runes, and draw 1.",
+  "artist": "Blaine Burgos",
+  "scrapedAt": "2026-11-04T13:58:47.614Z"
+ },
+ {
+  "cardCode": "unl-238-219",
+  "name": "Baron Nashor",
+  "subtitle": null,
+  "setCode": "unl",
+  "cardSet": "Unleashed",
+  "cardNumber": "238-219",
+  "rarity": "Epic",
+  "cardType": "Unit",
+  "domains": [
+   "Chaos"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/7e8d207a8057b97f9059ea6025a16e59229dc54d-744x1039.png",
+  "energy": 10,
+  "power": 3,
+  "might": 12,
+  "abilityEffective": "As you play me, add the Baron Pit battlefield token to the board if it's not there already. If you do, I enter there.\nI can't be chosen by enemy spells and abilities.\nOther friendly units have +2 [S].",
+  "artist": "張漁 ·ZHANG YU",
+  "scrapedAt": "2026-11-04T13:59:00.385Z"
+ },
+ {
+  "cardCode": "sfd-001-221",
+  "name": "Against the Odds",
+  "subtitle": null,
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "001-221",
+  "rarity": "Common",
+  "cardType": "Spell",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/4c4ab0c838854ccd5d5399a045835876450287e8-744x1039.png",
+  "energy": 2,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[Reaction] (Play any time, even before spells and abilities resolve.)\nGive a friendly unit at a battlefield +2 [S] this turn for each enemy unit there.",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T13:59:00.949Z"
+ },
+ {
+  "cardCode": "sfd-t03",
+  "name": "Gold",
+  "subtitle": null,
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "t03",
+  "rarity": "Common",
+  "cardType": "Gear",
+  "domains": [
+   "Colorless"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/e878c39b562a4e870e93b819c6d85cdf3fdc5238-744x1039.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": "Kill this, [T]: [Reaction] — [Add] [A]. (Abilities that add resources can't be reacted to.)",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T13:59:02.650Z"
+ },
+ {
+  "cardCode": "sfd-011-221",
+  "name": "Angle Shot",
+  "subtitle": null,
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "011-221",
+  "rarity": "Uncommon",
+  "cardType": "Spell",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/757d507b684e55e333bac0ecdf2ec9ff3ad6045c-744x1039.png",
+  "energy": 2,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[Reaction] (Play any time, even before spells and abilities resolve.)\nChoose a unit and an Equipment with the same controller. Attach that Equipment to that unit or detach that Equipment from that unit. Draw 1.",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T13:59:06.930Z"
+ },
+ {
+  "cardCode": "sfd-019-221",
+  "name": "Assembly Rig",
+  "subtitle": null,
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "019-221",
+  "rarity": "Rare",
+  "cardType": "Gear",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/40ae6f61f1a0b5d65d91e3bb3fd2a0dad9148208-744x1039.png",
+  "energy": 4,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[1][C], Recycle a unit from your trash, [T]: Play a 3 [S] Mech unit token to your base.",
+  "artist": "Six More Vodka",
+  "scrapedAt": "2026-11-04T13:59:11.419Z"
+ },
+ {
+  "cardCode": "sfd-020a-221",
+  "name": "Draven",
+  "subtitle": "Vanquisher",
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "020a-221",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/9019c449004f246de6607bf1829f4f3cabcda200-744x1039.png",
+  "energy": 4,
+  "power": null,
+  "might": 4,
+  "abilityEffective": "When I win a combat, play a Gold gear token exhausted.\nWhen I attack or defend, you may pay [C] to give me +2 [M] this turn.",
+  "artist": "League Splash Team",
+  "scrapedAt": "2026-11-04T13:59:11.982Z"
+ },
+ {
+  "cardCode": "sfd-027-221",
+  "name": "Dunebreaker",
+  "subtitle": null,
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "027-221",
+  "rarity": "Epic",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/fa17369233dfc68e011d16b7b98971a6f8743c3e-744x1039.png",
+  "energy": 7,
+  "power": 1,
+  "might": 7,
+  "abilityEffective": "If you have two or fewer cards in your hand, I enter ready.\nWhen I hold, draw 2.",
+  "artist": "Wild Blue Studios",
+  "scrapedAt": "2026-11-04T13:59:17.049Z"
+ },
+ {
+  "cardCode": "sfd-222-221",
+  "name": "Seal of Rage",
+  "subtitle": null,
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "222-221",
+  "rarity": "Showcase",
+  "cardType": "Gear",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/669d4dd94cf2d88ad58333c13a98cca2014e71aa-744x1039.png",
+  "energy": 0,
+  "power": 1,
+  "might": null,
+  "abilityEffective": "[T]: [Reaction] — [Add] [C]. (Abilities that add resources can't be reacted to.)",
+  "artist": "Envar Studio",
+  "scrapedAt": "2026-11-04T14:01:19.609Z"
+ },
+ {
+  "cardCode": "sfd-223-star-221",
+  "name": "Vayne",
+  "subtitle": "Hunter",
+  "setCode": "sfd",
+  "cardSet": "Spiritforged",
+  "cardNumber": "223-star-221",
+  "rarity": "Showcase",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/75f9eac062e43105ee602b6050fe230fb8d2dce5-744x1039.png",
+  "energy": 4,
+  "power": 1,
+  "might": 2,
+  "abilityEffective": "[Assault 3] (+3 [S] while I'm an attacker.)\nIf an opponent controls a battlefield, I enter ready.\nWhen I conquer, you may pay [1] to return me to my owner's hand.",
+  "artist": "John Kafka",
+  "scrapedAt": "2026-11-04T14:01:20.162Z"
+ },
+ {
+  "cardCode": "ogn-001-298",
+  "name": "Blazing Scorcher",
+  "subtitle": null,
+  "setCode": "ogn",
+  "cardSet": "Origins",
+  "cardNumber": "001-298",
+  "rarity": "Common",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/15ed971e4029a92b362a81ccadf309fb81e40b81-744x1039.png",
+  "energy": 5,
+  "power": null,
+  "might": 5,
+  "abilityEffective": "[Accelerate] (You may pay [1][C] as an additional cost to have me enter ready.)",
+  "artist": "Envar Studio",
+  "scrapedAt": "2026-11-04T14:01:43.882Z"
+ },
+ {
+  "cardCode": "ogn-007a-298",
+  "name": "Fury Rune",
+  "subtitle": null,
+  "setCode": "ogn",
+  "cardSet": "Origins",
+  "cardNumber": "007a-298",
+  "rarity": "Showcase",
+  "cardType": "Rune",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/09da06c69d07d4e72dde703737ef167472c715af-1488x2078.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": null,
+  "artist": "Fairfoul",
+  "scrapedAt": "2026-11-04T14:01:47.291Z"
+ },
+ {
+  "cardCode": "ogn-015-298",
+  "name": "Captain Farron",
+  "subtitle": null,
+  "setCode": "ogn",
+  "cardSet": "Origins",
+  "cardNumber": "015-298",
+  "rarity": "Uncommon",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/4c65e2cae6748590f589ad8b26bc5a20c0d770c2-744x1039.png",
+  "energy": 4,
+  "power": 1,
+  "might": 5,
+  "abilityEffective": "Other friendly units here have [Assault]. (+1 [S] while they're attackers.)",
+  "artist": "Six More Vodka",
+  "scrapedAt": "2026-11-04T14:01:52.391Z"
+ },
+ {
+  "cardCode": "ogn-025-298",
+  "name": "Blind Fury",
+  "subtitle": null,
+  "setCode": "ogn",
+  "cardSet": "Origins",
+  "cardNumber": "025-298",
+  "rarity": "Rare",
+  "cardType": "Spell",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/d74ba4998df9348408f1400090a0b0737c675fbd-744x1039.png",
+  "energy": 4,
+  "power": 2,
+  "might": null,
+  "abilityEffective": "[Action] (Play on your turn or in showdowns.)\nEach opponent reveals the top card of their Main Deck. Choose one and banish it, then play it, ignoring its cost. Then recycle the rest.",
+  "artist": "Six More Vodka",
+  "scrapedAt": "2026-11-04T14:01:58.123Z"
+ },
+ {
+  "cardCode": "ogn-037-298",
+  "name": "Immortal Phoenix",
+  "subtitle": null,
+  "setCode": "ogn",
+  "cardSet": "Origins",
+  "cardNumber": "037-298",
+  "rarity": "Epic",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/7b623ae985bf5f362b6d8d4a17e9b8146aeae3c3-744x1039.png",
+  "energy": 3,
+  "power": 1,
+  "might": 3,
+  "abilityEffective": "[Assault 2] (+2 [S] while I'm an attacker.)\nWhen you kill a unit with a spell, you may pay [1][C] to play me from your trash.",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T14:02:06.173Z"
+ },
+ {
+  "cardCode": "ogn-299-star-298",
+  "name": "Daughter of the Void",
+  "subtitle": null,
+  "setCode": "ogn",
+  "cardSet": "Origins",
+  "cardNumber": "299-star-298",
+  "rarity": "Showcase",
+  "cardType": "Legend",
+  "domains": [
+   "Fury",
+   "Mind"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/ae8e68af43400f61f7391c0a6ee339fd718a7540-1488x2078.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[T]: [Reaction] — [Add] [C]. Use only to play spells. (Abilities that add resources can't be reacted to.)",
+  "artist": "Jason Chan",
+  "scrapedAt": "2026-11-04T14:04:53.936Z"
+ },
+ {
+  "cardCode": "ogn-299-298",
+  "name": "Daughter of the Void",
+  "subtitle": null,
+  "setCode": "ogn",
+  "cardSet": "Origins",
+  "cardNumber": "299-298",
+  "rarity": "Showcase",
+  "cardType": "Legend",
+  "domains": [
+   "Fury",
+   "Mind"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/57e13462b8fea9a5cfa1b424d3ad3005f37b00ad-1488x2078.png",
+  "energy": null,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[T]: [Reaction] — [Add] [C]. Use only to play spells. (Abilities that add resources can't be reacted to.)",
+  "artist": "Jason Chan",
+  "scrapedAt": "2026-11-04T14:04:54.528Z"
+ },
+ {
+  "cardCode": "ogs-001-024",
+  "name": "Annie",
+  "subtitle": "Fiery",
+  "setCode": "ogs",
+  "cardSet": "Proving Grounds",
+  "cardNumber": "001-024",
+  "rarity": "Epic",
+  "cardType": "Unit",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/532d75dc36a16eb5954253a77366fcceac7aec62-744x1039.png",
+  "energy": 5,
+  "power": 1,
+  "might": 4,
+  "abilityEffective": "Your spells and abilities deal 1 Bonus Damage. (Each instance of damage they deal is increased by 1.)",
+  "artist": "Polar Engine Studio",
+  "scrapedAt": "2026-11-04T14:05:08.087Z"
+ },
+ {
+  "cardCode": "ogs-002-024",
+  "name": "Firestorm",
+  "subtitle": null,
+  "setCode": "ogs",
+  "cardSet": "Proving Grounds",
+  "cardNumber": "002-024",
+  "rarity": "Uncommon",
+  "cardType": "Spell",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/a7a34129e64f0296bf2da166c2b06ed156d568db-744x1039.png",
+  "energy": 6,
+  "power": 1,
+  "might": null,
+  "abilityEffective": "Deal 3 to all enemy units at a battlefield.",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T14:05:08.650Z"
+ },
+ {
+  "cardCode": "ogs-003-024",
+  "name": "Incinerate",
+  "subtitle": null,
+  "setCode": "ogs",
+  "cardSet": "Proving Grounds",
+  "cardNumber": "003-024",
+  "rarity": "Common",
+  "cardType": "Spell",
+  "domains": [
+   "Fury"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/46e4eaada1412f9b6c24751bdb3932c6a51e905f-744x1039.png",
+  "energy": 2,
+  "power": null,
+  "might": null,
+  "abilityEffective": "[Action] (Play on your turn or in showdowns.)\nDeal 2 to a unit at a battlefield.",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T14:05:09.217Z"
+ },
+ {
+  "cardCode": "ogs-004-024",
+  "name": "Master Yi",
+  "subtitle": "Meditative",
+  "setCode": "ogs",
+  "cardSet": "Proving Grounds",
+  "cardNumber": "004-024",
+  "rarity": "Rare",
+  "cardType": "Unit",
+  "domains": [
+   "Calm"
+  ],
+  "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/5508566c8f05f09492148faa803332a731095eb7-744x1039.png",
+  "energy": 5,
+  "power": 1,
+  "might": 4,
+  "abilityEffective": "While you have 8+ runes, I have +4 [S].",
+  "artist": "Kudos Productions",
+  "scrapedAt": "2026-11-04T14:05:09.801Z"
+ }
+]

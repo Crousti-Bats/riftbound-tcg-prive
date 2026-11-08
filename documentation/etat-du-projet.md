@@ -3,8 +3,8 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-08
-**Étape en cours :** 3 — Authentification et rôle admin (terminée, compte admin `Crousti` créé en production)
-**Prochaine étape :** 4 — Catalogue des cartes (récupération et cache du JSON, API des sets et des cartes)
+**Étape en cours :** 4 — Catalogue des cartes (terminée)
+**Prochaine étape :** 5 — Moteur de boosters (taux de drop, tirage côté serveur, tests statistiques) et timer 1 booster / 10 min, stock max 15
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -115,6 +115,18 @@ On classe les variantes à partir de `cardNumber` :
 - `spX-NNN` : Special Alt (Showcase).
 - `rNN` et `rNNa` : Rune et Rune alt. `tNN` : Token ou Battlefield token.
 
+## 3bis. Catalogue (étape 4)
+
+- **Source :** `https://github.com/LouisCourrian/riftbound-cards/releases/latest/download/cards.json` (environ 1,5 Mo, mis à jour chaque jour par l'auteur). Rien n'est stocké en base.
+- **Cache :** mémoire du Worker, puis Cache API Cloudflare (catalogue déjà transformé, 24 h), puis téléchargement. Si la source tombe en panne, on garde l'ancienne version en mémoire. Un seul téléchargement est lancé même si plusieurs requêtes arrivent en même temps.
+- **Validation :** chaque carte de la source est validée par Zod (format du code, rareté connue, longueurs maximales, image venant obligatoirement de `https://cmsassets.rgpub.io/`). Une carte invalide est ignorée et comptée, jamais affichée.
+- **Variante** (calculée à partir de `cardNumber`, voir `serveur-api/catalogue/classification-cartes.ts`) : `base`, `alt` (NNNa), `overnumbered` (NNN > total), `signee` (NNN-star), `special` (spX), `ultime` (overnumbered de rareté Epic : Baron Nashor `unl-238-219`), `rune`, `rune_alt`, `token`.
+- **Vérification du 2026-11-08 :** 1 407 cartes, 0 ignorée. Dans chaque set, le nombre de cartes `base` correspond au total imprimé (ogn 298, sfd 220, unl 219, ven 166, rad 167).
+- **Attention pour l'étape 5 :** les runes d'Origins sont numérotées comme des cartes normales (variante `base`, `cardType` = `Rune`). Le slot Rune doit donc sélectionner sur `type === "Rune"`, pas seulement sur la variante. Spiritforged et Unleashed n'ont pas de rune dans la source, seulement des tokens.
+- **Images :** le CDN Riot redimensionne. `?w=300&fm=webp` donne environ 28 Ko pour les miniatures, au lieu de 1,2 Mo pour le PNG d'origine, et `?w=744&fm=webp` sert pour la fiche.
+- **API (connexion obligatoire) :** `GET /api/catalogue/sets`, `GET /api/catalogue/cartes?set=&rarete=&variante=&recherche=&page=` (60 par page, recherche sans accents ni majuscules), `GET /api/catalogue/cartes/:code`.
+- **À surveiller :** le plan gratuit limite le CPU à 10 ms par requête. Le premier chargement (lecture du JSON de 1,5 Mo) peut dépasser cette limite. S'il y a des erreurs 1102 sur le catalogue en production, ajouter un stockage KV du catalogue transformé.
+
 ## 4. Composition d'un booster (14 cartes, source officielle Riot)
 
 | Slot | Nb | Contenu |
@@ -174,7 +186,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 1 | Outils (Git, Node), dépôt GitHub, squelette du monorepo, CI sécurité | Terminé |
 | 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | Terminé |
 | 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | Terminé |
-| 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | À faire |
+| 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | Terminé |
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | À faire |
 | 6 | Frontend : ouverture de booster animée, collection, filtres | À faire |
 | 7 | Échanges entre joueurs | À faire |
@@ -198,6 +210,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Étape 3.** Authentification complète, détaillée au §2ter. 41 tests automatiques passent (inscription, connexion, sessions, CSRF, injection SQL, limitation, admin, règle ESLint). Parcours de bout en bout validé en local avec curl : invitation admin en ligne de commande, inscription, élévation, création d'invitation, journal, déconnexion. Vitest 5 est incompatible avec `@cloudflare/vitest-pool-workers` (qui demande vitest 4) : les tests utilisent `node:sqlite` avec les vraies migrations.
 - **2026-11-08 — Correctif `admin:invitation`.** `wrangler d1 execute --remote --file` passe par l'API « import », qui refuse le jeton OAuth de `wrangler login` (Authentication error 10000). Le script utilise maintenant `--command`, qui passe par l'API « query », comme les migrations. Wrangler est lancé directement par Node, sans shell.
 - **2026-11-08 — Clôture de l'étape 3.** Mot de passe minimum abaissé à 6 caractères (PR #8). Compte admin `Crousti` créé en production avec `npm run admin:invitation`, puis vérifié en base (role=admin, actif=1).
+- **2026-11-08 — Étape 4.** Catalogue terminé (§3bis). 65 tests passent : classification, validation de données hostiles, cache, panne de la source, routes. Validé en local contre la vraie source : 1 407 cartes, premier chargement en 0,86 s, puis 0,05 s. Page Catalogue responsive avec filtres, miniatures WebP et fiche détaillée.
 - Astuce : PowerShell `Invoke-WebRequest` refuse les cookies `Secure` sur http://localhost (les navigateurs les acceptent). Pour tester l'API en local, utiliser `curl` avec `-b/-c` dans Git Bash.
 - Astuce Bash : les heredocs contenant des apostrophes françaises échouent dans l'outil Bash de l'assistant. Écrire plutôt les scripts dans un fichier.
 - Astuce Windows : `pkill` n'existe pas dans Git Bash. Pour arrêter un serveur de dev resté ouvert, utiliser PowerShell `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` puis `Stop-Process`.
@@ -213,6 +226,8 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   pages/page-inscription.tsx          création de compte avec un code d'invitation (lien /inscription#code=...)
   pages/page-accueil.tsx              accueil du joueur connecté
   pages/page-admin.tsx                administration : invitations, comptes, journal
+  pages/page-catalogue.tsx            catalogue : filtres, grille d'images, fiche de carte
+  outils/libelles-cartes.ts           noms français des raretés et variantes, couleurs, URL d'images redimensionnées
   outils/appels-api.ts                appels au serveur et messages d'erreur en français
   outils/navigation.ts                changement de page sans rechargement, format des dates
   styles-globaux.css                  couleurs et mise en page communes
@@ -232,9 +247,14 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
   securite/jetons-et-empreintes.ts    jetons aléatoires, SHA-256, comparaison en temps constant
   securite/limitation-tentatives.ts   anti force brute (compteurs dans D1)
   securite/protection-csrf.ts         refuse les requêtes venant d'un autre site
+  catalogue/types-catalogue.ts        types Carte, Set, Variante, Rareté
+  catalogue/classification-cartes.ts  validation de la source et classement en variantes
+  catalogue/source-cartes.ts          téléchargement et cache (mémoire, Cache API) de la source
+  catalogue/routes-catalogue.ts       /api/catalogue : sets, recherche de cartes, détail
   tests/                              tests automatiques (vraie base SQLite en mémoire + vraies migrations)
     outils/base-d1-de-test.ts         imite D1 avec node:sqlite
     outils/client-api-de-test.ts      appelle l'API comme un navigateur
+    donnees/cartes-echantillon.json   47 vraies cartes (une par set et par catégorie)
   types-cloudflare-generes.d.ts       GÉNÉRÉ par `npm run cf-typegen`, ne pas modifier à la main
 
 base-de-donnees/                      BASE SQLITE CLOUDFLARE D1

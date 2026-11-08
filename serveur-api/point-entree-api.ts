@@ -4,6 +4,7 @@ import { bodyLimit } from "hono/body-limit";
 import { routesAdministration } from "./administration/routes-administration";
 import { routesAuthentification } from "./authentification/routes-authentification";
 import { chargerSession } from "./authentification/sessions";
+import { routesCatalogue } from "./catalogue/routes-catalogue";
 import { securityHeaders } from "./entetes-securite";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
@@ -28,6 +29,7 @@ app.get("/api/health", async (c) => {
 
 app.route("/api/auth", routesAuthentification);
 app.route("/api/admin", routesAdministration);
+app.route("/api/catalogue", routesCatalogue);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
