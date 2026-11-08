@@ -1,7 +1,15 @@
 /** Catalogue de toutes les cartes : filtres par set, rareté, variante et recherche ; fiche détaillée. */
 import { useEffect, useState } from "react";
 import { appelerApi } from "../outils/appels-api";
-import { type Carte, classeRarete, LIBELLES_RARETE, LIBELLES_VARIANTE, type SetInfo, urlImage } from "../outils/libelles-cartes";
+import {
+  type Carte,
+  classeRarete,
+  LIBELLES_RARETE,
+  LIBELLES_TYPE,
+  LIBELLES_VARIANTE,
+  type SetInfo,
+  urlImage,
+} from "../outils/libelles-cartes";
 import { naviguer } from "../outils/navigation";
 
 interface ReponseCartes {
@@ -16,6 +24,7 @@ export function PageCatalogue() {
   const [filtreSet, setFiltreSet] = useState("");
   const [rarete, setRarete] = useState("");
   const [variante, setVariante] = useState("");
+  const [typeCarte, setTypeCarte] = useState("");
   const [recherche, setRecherche] = useState("");
   const [rechercheAppliquee, setRechercheAppliquee] = useState("");
   const [page, setPage] = useState(1);
@@ -44,6 +53,7 @@ export function PageCatalogue() {
     if (filtreSet) parametres.set("set", filtreSet);
     if (rarete) parametres.set("rarete", rarete);
     if (variante) parametres.set("variante", variante);
+    if (typeCarte) parametres.set("type", typeCarte);
     if (rechercheAppliquee) parametres.set("recherche", rechercheAppliquee);
     appelerApi<ReponseCartes>("GET", `/catalogue/cartes?${parametres.toString()}`).then(
       (r) => {
@@ -52,7 +62,7 @@ export function PageCatalogue() {
       },
       (e: Error) => setErreur(e.message),
     );
-  }, [filtreSet, rarete, variante, rechercheAppliquee, page]);
+  }, [filtreSet, rarete, variante, typeCarte, rechercheAppliquee, page]);
 
   const nbPages = resultat ? Math.max(1, Math.ceil(resultat.total / resultat.parPage)) : 1;
   const changerFiltre = (maj: () => void) => {
@@ -81,6 +91,13 @@ export function PageCatalogue() {
             {sets.map((s) => (
               <option key={s.code} value={s.code}>{s.nom} ({s.nbCartes})</option>
             ))}
+          </select>
+        </label>
+        <label>
+          Type
+          <select value={typeCarte} onChange={(e) => changerFiltre(() => setTypeCarte(e.target.value))}>
+            <option value="">Tous les types</option>
+            {Object.entries(LIBELLES_TYPE).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
         <label>

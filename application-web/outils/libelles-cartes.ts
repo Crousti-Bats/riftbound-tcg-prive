@@ -46,6 +46,17 @@ export const LIBELLES_VARIANTE: Record<string, string> = {
   token: "Token",
 };
 
+/** Types de carte : libellé français pour le filtre, nom anglais (celui des cartes) entre parenthèses. */
+export const LIBELLES_TYPE: Record<string, string> = {
+  Unit: "Unité (Unit)",
+  Spell: "Sort (Spell)",
+  Gear: "Équipement (Gear)",
+  Legend: "Légende (Legend)",
+  Battlefield: "Terrain (Battlefield)",
+  Rune: "Rune",
+  Token: "Token",
+};
+
 /** Classe CSS de couleur selon la rareté / variante (pour le liseré des cartes). */
 export function classeRarete(carte: Pick<Carte, "rarete" | "variante">): string {
   if (carte.variante === "ultime") return "rarete-ultime";

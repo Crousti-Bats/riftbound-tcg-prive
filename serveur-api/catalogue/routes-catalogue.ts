@@ -22,6 +22,8 @@ const schemaRecherche = z.object({
   set: z.string().regex(/^[a-z]{2,5}$/).optional(),
   rarete: z.enum(RARETES).optional(),
   variante: z.enum(VARIANTES).optional(),
+  /** Type de carte tel que dans la source : Unit, Spell, Gear, Legend, Battlefield, Rune, Token. */
+  type: z.string().regex(/^[A-Za-z]{2,20}$/).optional(),
   recherche: z.string().trim().max(50).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
@@ -38,7 +40,7 @@ routesCatalogue.get("/sets", async (c) => {
 routesCatalogue.get("/cartes", async (c) => {
   const filtres = schemaRecherche.safeParse(c.req.query());
   if (!filtres.success) return c.json({ erreur: "donnees_invalides" }, 400);
-  const { set, rarete, variante, recherche, page } = filtres.data;
+  const { set, rarete, variante, type, recherche, page } = filtres.data;
 
   const catalogue = await obtenirCatalogue();
   const mots = recherche ? sansAccents(recherche).split(/\s+/).filter(Boolean) : [];
@@ -46,6 +48,7 @@ routesCatalogue.get("/cartes", async (c) => {
     if (set && carte.set !== set) return false;
     if (rarete && carte.rarete !== rarete) return false;
     if (variante && carte.variante !== variante) return false;
+    if (type && carte.type.toLowerCase() !== type.toLowerCase()) return false;
     if (mots.length) {
       const texte = sansAccents(`${carte.nom} ${carte.sousTitre ?? ""} ${carte.type} ${carte.domaines.join(" ")} ${carte.numero}`);
       if (!mots.every((m) => texte.includes(m))) return false;
