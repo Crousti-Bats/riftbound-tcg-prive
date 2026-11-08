@@ -3,7 +3,7 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-08
-**Étape en cours :** 2 — Cloudflare, D1, déploiement continu (site en ligne ; il reste à saisir le jeton API dans GitHub, voir §7)
+**Étape en cours :** 2 — Cloudflare, D1, déploiement continu (terminée, déploiement automatique validé)
 **Prochaine étape :** 3 — Authentification (invitations, connexion, sessions, limitation des tentatives) et rôle admin
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
@@ -148,7 +148,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - Rate limiting sur la connexion. Validation des entrées avec Zod. Requêtes SQL paramétrées uniquement.
 - Le déploiement en production se fait automatiquement au merge sur `main`, via `.github/workflows/deploiement-production.yml`. Le workflow lance les tests, le build, les migrations D1 `--remote`, puis `wrangler deploy` et vérifie `/api/health`. Il utilise l'environnement GitHub `production`, limité à la branche `main`. Le jeton Cloudflare n'a que les droits Workers et D1.
 - `/api/health` vérifie aussi la base (`SELECT 1`). Si la base est en panne, il répond 503 sans détail interne.
-- Dependabot ignore les versions majeures de TypeScript : TS 7 n'est pas supporté par typescript-eslint (PR #2 à fermer).
+- Dependabot ignore les versions majeures de TypeScript : TS 7 n'est pas supporté par typescript-eslint (PR #2 fermée).
 
 ## 6. Feuille de route
 
@@ -156,7 +156,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 |---|---|---|
 | 0 | Cadrage, architecture, analyse des données, système de rapports | Terminé |
 | 1 | Outils (Git, Node), dépôt GitHub, squelette du monorepo, CI sécurité | Terminé |
-| 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | Terminé (il reste à saisir le jeton, voir §7) |
+| 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | Terminé |
 | 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | À faire |
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | À faire |
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | À faire |
@@ -168,14 +168,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 
 ## 7. Actions manuelles en attente (utilisateur)
 
-1. **Créer le jeton API Cloudflare pour GitHub.** Sur https://dash.cloudflare.com/profile/api-tokens : Create Token, modèle « Edit Cloudflare Workers ». Ajouter la permission Account / D1 / Edit. Dans Account Resources, choisir son compte. Dans Zone Resources, laisser All zones. Choisir une expiration d'un an, puis Create. Copier le jeton.
-2. **Saisir les valeurs dans GitHub.** Dans une fenêtre PowerShell, depuis le dossier du projet :
-   `gh secret set CLOUDFLARE_API_TOKEN --env production` (coller le jeton quand c'est demandé ; il ne s'affiche pas)
-   `gh secret set CLOUDFLARE_ACCOUNT_ID --env production --body 14bd3e99e009ec33efebde236223ab6a`
-   `gh variable set CLOUDFLARE_SOUS_DOMAINE --env production --body axelgirard`
-3. **Fermer la PR Dependabot #2** (TypeScript 7) : `gh pr close 2 --comment "TS 7 pas encore supporté par typescript-eslint"`.
-4. Merger la PR de l'étape 2. Le workflow « Déploiement production » doit passer au vert.
-5. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
+1. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
 
 ## 8. Journal
 
@@ -185,6 +178,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Étape 2.** `wrangler login` effectué sur le PC fixe. Base D1 `riftbound-tcg` créée (WEUR), migration `0001_initialisation.sql` (table `parametres`) appliquée en local et en production. Premier déploiement manuel réussi : https://riftbound-tcg.axelgirard.workers.dev/api/health répond `{"status":"ok","base":"ok"}`, avec les en-têtes CSP, HSTS et X-Frame-Options vérifiés. Workflow de déploiement automatique ajouté, environnement GitHub `production` créé (branche `main` uniquement). L'assistant n'a pas le droit d'écrire des secrets GitHub ni de fermer des PR : ces actions reviennent à l'utilisateur (§7). 4 tests passent.
 - **2026-11-08 — Admin.** L'utilisateur demande une page admin de monitoring en quasi temps réel, réservée à lui seul. Ajout du §2bis. La feuille de route passe à 11 étapes : rôle admin à l'étape 3, monitoring à l'étape 8. Étape 3 : ajout d'une règle ESLint contre le SQL non préparé.
 - **2026-11-08 — Taux de drop.** L'utilisateur a fourni les taux de référence : Epic 1/6, Alt 1/12, Over 1/72, Over signée 1/240 boosters. Ils remplacent les estimations initiales (Epic à 13,4 % et signée à 0,07 % par slot, jugées trop élevée et trop faible). Voir §4.
+- **2026-11-08 — Clôture de l'étape 2.** Jeton API Cloudflare créé par l'utilisateur (modèle Edit Cloudflare Workers + D1, expire dans 1 an, **à renouveler vers le 2027-11-08**) et saisi dans l'environnement GitHub `production`. PR #2 fermée. Premier run « Déploiement production » réussi (tests, build, migrations, déploiement, vérification de /api/health).
 - Astuce Windows : `pkill` n'existe pas dans Git Bash. Pour arrêter un serveur de dev resté ouvert, utiliser PowerShell `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` puis `Stop-Process`.
 
 ### Arborescence (convention de nommage : français, minuscules, tirets)
