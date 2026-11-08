@@ -70,6 +70,13 @@ describe("Inscription sur invitation", () => {
     expect(intrus.statut).toBe(400);
   });
 
+  it("accepte 6 caractères et refuse 5", async () => {
+    const t = creerEnvironnementDeTest();
+    const code = await t.creerInvitation();
+    expect((await t.appeler("POST", "/api/auth/inscription", { corps: { code, pseudo: "Alice", motDePasse: "12345" } })).statut).toBe(400);
+    expect((await t.appeler("POST", "/api/auth/inscription", { corps: { code, pseudo: "Alice", motDePasse: "123456" } })).statut).toBe(201);
+  });
+
   it("ne stocke ni le mot de passe ni le jeton de session en clair", async () => {
     const t = creerEnvironnementDeTest();
     const cookie = await t.inscrire("Alice", MDP);
