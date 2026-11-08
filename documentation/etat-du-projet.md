@@ -4,7 +4,7 @@ Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de
 
 **Dernière mise à jour :** 2026-11-08
 **Étape en cours :** 2 — Cloudflare, D1, déploiement continu (site en ligne ; il reste à saisir le jeton API dans GitHub, voir §7)
-**Prochaine étape :** 3 — Authentification (invitations, connexion, sessions, limitation des tentatives)
+**Prochaine étape :** 3 — Authentification (invitations, connexion, sessions, limitation des tentatives) et rôle admin
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -56,6 +56,26 @@ Un site privé de collection et d'échange de cartes Riftbound, accessible uniqu
 | Timer des boosters | Calcul paresseux : `stock = min(15, stock_saved + floor((now - last_tick)/600 s))`, sans cron | Aucun coût, résultat exact |
 | Échanges | Proposition, puis acceptation. Transfert atomique via `D1 batch()` après vérification de possession | Pas de duplication de cartes |
 | Code source | GitHub (dépôt public, voir §5), synchronisé entre le PC fixe et le portable | Demandé |
+
+## 2bis. Espace admin et monitoring (demandé le 2026-11-08)
+
+Une page `/admin` accessible **uniquement par l'utilisateur** (le propriétaire du site), pour surveiller le site en quasi temps réel.
+
+**Contrôle d'accès (défense en profondeur)**
+- Colonne `role` dans la table des comptes (`joueur` ou `admin`). Le premier compte admin est créé par une commande en ligne réservée à l'utilisateur. Aucun formulaire public ne peut créer d'admin.
+- Toutes les routes `/api/admin/*` vérifient le rôle **côté serveur**, à chaque requête. Masquer le menu dans l'interface ne suffit pas.
+- Option recommandée à l'étape 10 : protéger aussi `/admin` et `/api/admin/*` avec Cloudflare Access (Zero Trust, gratuit jusqu'à 50 utilisateurs). Il faudrait alors une vérification par e-mail ou par code en plus du mot de passe.
+- Chaque action admin est journalisée dans la table `journal_admin` (qui, quoi, quand).
+
+**Ce que la page affiche (rafraîchie toutes les 5 à 10 secondes)**
+- Joueurs connectés récemment (dernière activité de moins de 5 minutes), nombre total de comptes, invitations en attente.
+- Activité : boosters ouverts (dernière heure et aujourd'hui, par set), échanges proposés, acceptés ou refusés, dernières cartes rares tirées.
+- Sécurité : connexions échouées, comptes ou IP bloqués par la limitation des tentatives, dernières erreurs serveur.
+- Santé : état de l'API et de la base, temps de réponse, âge du cache `cards.json`, version déployée.
+- Quotas gratuits Cloudflare : requêtes Worker et lectures/écritures D1 du jour, comparées aux limites. Ces chiffres viennent de l'API GraphQL Analytics de Cloudflare, avec un jeton en lecture seule stocké en `wrangler secret`, jamais dans le code.
+- Actions : créer ou révoquer une invitation, désactiver un compte, forcer la déconnexion d'un joueur.
+
+**Technique :** pour démarrer, le navigateur interroge le serveur toutes les quelques secondes (« polling »). C'est simple et ça tient dans l'offre gratuite. On pourra passer à du vrai temps réel (WebSocket via Durable Objects) si le besoin se confirme.
 
 ## 3. Données de cartes (analysées le 2026-11-08, release v2026-11-04)
 
@@ -137,13 +157,14 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 0 | Cadrage, architecture, analyse des données, système de rapports | Terminé |
 | 1 | Outils (Git, Node), dépôt GitHub, squelette du monorepo, CI sécurité | Terminé |
 | 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | Terminé (il reste à saisir le jeton, voir §7) |
-| 3 | Authentification : invitations, connexion, sessions, rate limit | À faire |
+| 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | À faire |
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | À faire |
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | À faire |
 | 6 | Frontend : ouverture de booster animée, collection, filtres | À faire |
 | 7 | Échanges entre joueurs | À faire |
-| 8 | PWA (installable, hors-ligne partiel), responsive | À faire |
-| 9 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
+| 8 | **Admin : monitoring en quasi temps réel** (voir §2bis) | À faire |
+| 9 | PWA (installable, hors-ligne partiel), responsive | À faire |
+| 10 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
 
 ## 7. Actions manuelles en attente (utilisateur)
 
@@ -162,6 +183,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Étape 1.** Dépôt public `Crousti-Bats/riftbound-tcg-prive` créé. Squelette : Worker Hono (`worker/`, route `/api/health`, en-têtes de sécurité, 3 tests), front React 19 et Vite 8 (`src/`), `@cloudflare/vite-plugin`, TypeScript strict, ESLint. CI et sécurité (CodeQL, Gitleaks, audit, dependency review, Dependabot), ruleset sur `main`. Le lint, les types, les tests et le build passent en local, avec 0 vulnérabilité.
 - **2026-11-08 — Réorganisation.** Les fichiers sont rangés dans des dossiers par fonction, avec des noms explicites en français (voir ci-dessous). Les anciens chemins (`worker/`, `src/`, `docs/`, `tools/`) n'existent plus. Les rapports PDF 00 et 01 citent encore ces anciens chemins, c'est normal : ce sont des archives.
 - **2026-11-08 — Étape 2.** `wrangler login` effectué sur le PC fixe. Base D1 `riftbound-tcg` créée (WEUR), migration `0001_initialisation.sql` (table `parametres`) appliquée en local et en production. Premier déploiement manuel réussi : https://riftbound-tcg.axelgirard.workers.dev/api/health répond `{"status":"ok","base":"ok"}`, avec les en-têtes CSP, HSTS et X-Frame-Options vérifiés. Workflow de déploiement automatique ajouté, environnement GitHub `production` créé (branche `main` uniquement). L'assistant n'a pas le droit d'écrire des secrets GitHub ni de fermer des PR : ces actions reviennent à l'utilisateur (§7). 4 tests passent.
+- **2026-11-08 — Admin.** L'utilisateur demande une page admin de monitoring en quasi temps réel, réservée à lui seul. Ajout du §2bis. La feuille de route passe à 11 étapes : rôle admin à l'étape 3, monitoring à l'étape 8. Étape 3 : ajout d'une règle ESLint contre le SQL non préparé.
 - **2026-11-08 — Taux de drop.** L'utilisateur a fourni les taux de référence : Epic 1/6, Alt 1/12, Over 1/72, Over signée 1/240 boosters. Ils remplacent les estimations initiales (Epic à 13,4 % et signée à 0,07 % par slot, jugées trop élevée et trop faible). Voir §4.
 - Astuce Windows : `pkill` n'existe pas dans Git Bash. Pour arrêter un serveur de dev resté ouvert, utiliser PowerShell `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` puis `Stop-Process`.
 
