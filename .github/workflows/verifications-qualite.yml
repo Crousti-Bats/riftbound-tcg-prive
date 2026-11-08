@@ -27,7 +27,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Types Cloudflare à jour
-        run: npx wrangler types worker/worker-configuration.d.ts && git diff --exit-code worker/worker-configuration.d.ts
+        run: npm run cf-typegen && git diff --exit-code serveur-api/types-cloudflare-generes.d.ts
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

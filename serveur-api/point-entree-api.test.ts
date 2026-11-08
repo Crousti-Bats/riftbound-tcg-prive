@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { app } from "./index";
-import { SECURITY_HEADERS } from "./security";
+import { app } from "./point-entree-api";
+import { SECURITY_HEADERS } from "./entetes-securite";
 
 const env = {} as Env;
 

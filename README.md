@@ -2,9 +2,9 @@
 
 Site privé (sur invitation) pour ouvrir des boosters Riftbound, gérer sa collection et échanger des cartes entre amis. Hébergé sur Cloudflare Workers et D1 (offre gratuite).
 
-- Besoin d'origine : [docs/PROMPT_INITIAL.md](docs/PROMPT_INITIAL.md)
-- État, décisions et feuille de route : [docs/ETAT_PROJET.md](docs/ETAT_PROJET.md)
-- Rapports d'avancement : [docs/rapports/](docs/rapports/)
+- Besoin d'origine : [documentation/demande-initiale.md](documentation/demande-initiale.md)
+- État, décisions et feuille de route : [documentation/etat-du-projet.md](documentation/etat-du-projet.md)
+- Rapports d'avancement : [documentation/rapports-avancement/](documentation/rapports-avancement/)
 
 ## Développement
 

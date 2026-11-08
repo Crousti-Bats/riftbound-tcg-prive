@@ -1,7 +1,7 @@
-"""Génère le rapport PDF d'avancement à partir de docs/PROMPT_INITIAL.md et docs/ETAT_PROJET.md.
+"""Génère le rapport PDF d'avancement à partir de documentation/demande-initiale.md et documentation/etat-du-projet.md.
 
-Usage : python tools/generate_report.py <numero_etape> "<titre court>"
-Sortie : docs/rapports/rapport-<NN>-<slug>.pdf
+Usage : python outils/generer-rapport-pdf.py <numero_etape> "<titre court>"
+Sortie : documentation/rapports-avancement/rapport-<NN>-<slug>.pdf
 Dépendance : pip install reportlab
 """
 import os
@@ -21,7 +21,7 @@ from reportlab.platypus import (PageBreak, Paragraph, Preformatted, SimpleDocTem
                                 TableStyle)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DOCS = os.path.join(ROOT, "docs")
+DOCS = os.path.join(ROOT, "documentation")
 
 # Police Unicode (accents, ≤, →) : Arial / Consolas sous Windows, sinon Helvetica.
 FONT, FONT_B, MONO = "Helvetica", "Helvetica-Bold", "Courier"
@@ -116,10 +116,10 @@ def slugify(s: str) -> str:
 
 def main():
     if len(sys.argv) < 3:
-        sys.exit('Usage : python tools/generate_report.py <numero_etape> "<titre>"')
+        sys.exit('Usage : python outils/generer-rapport-pdf.py <numero_etape> "<titre>"')
     num, title = int(sys.argv[1]), sys.argv[2]
-    os.makedirs(os.path.join(DOCS, "rapports"), exist_ok=True)
-    out = os.path.join(DOCS, "rapports", f"rapport-{num:02d}-{slugify(title)}.pdf")
+    os.makedirs(os.path.join(DOCS, "rapports-avancement"), exist_ok=True)
+    out = os.path.join(DOCS, "rapports-avancement", f"rapport-{num:02d}-{slugify(title)}.pdf")
 
     def footer(c, d):
         c.saveState(); c.setFont(FONT, 8); c.setFillColor(colors.grey)
@@ -134,10 +134,10 @@ def main():
              Paragraph(f"Rapport d'avancement — Étape {num} : {inline(title)}", S["sub"]), Spacer(1, 10),
              Paragraph(date.today().strftime("%d/%m/%Y"), S["sub"]), Spacer(1, 3 * cm),
              Paragraph("Pour reprendre le projet dans une nouvelle conversation, donner ce PDF (ou le dépôt "
-                       "GitHub) à l'assistant et lui demander de lire <b>docs/ETAT_PROJET.md</b> puis de "
+                       "GitHub) à l'assistant et lui demander de lire <b>documentation/etat-du-projet.md</b> puis de "
                        "continuer à l'étape indiquée comme « prochaine étape ».", S["p"]),
              PageBreak()]
-    for name in ("PROMPT_INITIAL.md", "ETAT_PROJET.md"):
+    for name in ("demande-initiale.md", "etat-du-projet.md"):
         with open(os.path.join(DOCS, name), encoding="utf-8") as f:
             story += md_to_flowables(f.read(), w)
         story.append(PageBreak())

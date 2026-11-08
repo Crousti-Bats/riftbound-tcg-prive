@@ -1,7 +1,8 @@
+// Configuration Cloudflare (Wrangler). Les chemins sont relatifs à ce fichier.
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "riftbound-tcg",
-  "main": "worker/index.ts",
+  "main": "../serveur-api/point-entree-api.ts",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export function App() {
+export function EcranAccueil() {
   const [status, setStatus] = useState("…");
 
   useEffect(() => {
