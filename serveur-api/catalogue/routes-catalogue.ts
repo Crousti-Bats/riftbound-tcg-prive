@@ -10,6 +10,12 @@ export const routesCatalogue = new Hono<ContexteApi>();
 
 routesCatalogue.use("*", exigerConnexion);
 
+// Si la source des cartes est injoignable (et rien en cache), on le dit clairement au lieu d'une erreur 500.
+routesCatalogue.onError((err, c) => {
+  console.error("catalogue indisponible", err);
+  return c.json({ erreur: "catalogue_indisponible" }, 503);
+});
+
 const CARTES_PAR_PAGE = 60;
 
 const schemaRecherche = z.object({

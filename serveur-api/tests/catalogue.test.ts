@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { classerVariante, construireCatalogue } from "../catalogue/classification-cartes";
-import { obtenirCatalogue, URL_SOURCE, viderCacheMemoire } from "../catalogue/source-cartes";
+import { obtenirCatalogue, URL_SOURCE, URLS_SOURCE, viderCacheMemoire } from "../catalogue/source-cartes";
 import { creerEnvironnementDeTest } from "./outils/client-api-de-test";
 
 /** 47 vraies cartes de la source (une par set et par catégorie), extraites le 2026-11-08. */
@@ -77,6 +77,22 @@ describe("Cache du catalogue", () => {
     expect(telecharger).toHaveBeenCalledWith(URL_SOURCE);
   });
 
+  it("utilise Hugging Face en premier et GitHub en secours", async () => {
+    expect(URLS_SOURCE[0]).toContain("huggingface.co");
+    const telecharger = vi.fn(async (url: string) => (url.includes("huggingface") ? reponseJson({}, 504) : reponseJson(ECHANTILLON)));
+    const catalogue = await obtenirCatalogue({ telecharger, cache: null });
+    expect(catalogue.cartes).toHaveLength(ECHANTILLON.length);
+    expect(telecharger.mock.calls.map(([url]) => url)).toEqual([...URLS_SOURCE]);
+  });
+
+  it("passe au secours si la première source plante (délai dépassé)", async () => {
+    const telecharger = vi.fn(async (url: string) => {
+      if (url.includes("huggingface")) throw new DOMException("délai dépassé", "TimeoutError");
+      return reponseJson(ECHANTILLON);
+    });
+    expect((await obtenirCatalogue({ telecharger, cache: null })).cartes).toHaveLength(ECHANTILLON.length);
+  });
+
   it("partage un seul téléchargement entre requêtes simultanées", async () => {
     const telecharger = vi.fn(async () => reponseJson(ECHANTILLON));
     await Promise.all([1, 2, 3].map(() => obtenirCatalogue({ telecharger, cache: null })));
@@ -146,6 +162,15 @@ describe("Routes /api/catalogue", () => {
     const cookie = await t.inscrire("Alice", "mot-de-passe");
     expect((await t.appeler("GET", "/api/catalogue/cartes?rarete=Mythique", { cookie })).statut).toBe(400);
     expect((await t.appeler("GET", "/api/catalogue/cartes?set=<script>", { cookie })).statut).toBe(400);
+  });
+
+  it("répond 503 « catalogue_indisponible » si toutes les sources sont en panne", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => reponseJson({}, 503)));
+    const t = creerEnvironnementDeTest();
+    const cookie = await t.inscrire("Alice", "mot-de-passe");
+    const r = await t.appeler("GET", "/api/catalogue/sets", { cookie });
+    expect(r.statut).toBe(503);
+    expect(r.json.erreur).toBe("catalogue_indisponible");
   });
 
   it("renvoie le détail d'une carte ou 404", async () => {
