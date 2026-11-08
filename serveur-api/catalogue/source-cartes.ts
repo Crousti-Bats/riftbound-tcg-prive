@@ -1,5 +1,5 @@
 /**
- * Récupération du catalogue depuis la source publique (dernière release GitHub de LouisCourrian/riftbound-cards).
+ * Récupération du catalogue depuis la source publique LouisCourrian/riftbound-cards.
  * Rien n'est stocké en base. Trois niveaux de cache :
  *   1. mémoire du Worker (tant que l'instance vit) ;
  *   2. Cache API Cloudflare (catalogue déjà transformé, 24 h) ;
@@ -9,7 +9,16 @@
 import { construireCatalogue } from "./classification-cartes";
 import type { Catalogue } from "./types-catalogue";
 
-export const URL_SOURCE = "https://github.com/LouisCourrian/riftbound-cards/releases/latest/download/cards.json";
+/**
+ * Sources, essayées dans l'ordre. Même fichier, même auteur.
+ * Mesuré depuis le réseau Cloudflare le 2026-11-08 : Hugging Face environ 0,16 s, GitHub de 3 à 9,5 s (trop lent seul).
+ */
+export const URLS_SOURCE = [
+  "https://huggingface.co/datasets/Wysme/riftbound-cards/resolve/main/cards.json",
+  "https://github.com/LouisCourrian/riftbound-cards/releases/latest/download/cards.json",
+] as const;
+export const URL_SOURCE = URLS_SOURCE[0];
+const DELAI_MAX_SOURCE_MS = 8_000;
 const CLE_CACHE = "https://cache.riftbound-tcg.interne/catalogue-v1.json";
 export const DUREE_CACHE_MS = 24 * 60 * 60_000;
 
@@ -31,7 +40,7 @@ export function viderCacheMemoire(): void {
 function dependancesParDefaut(): DependancesSource {
   const global = globalThis as unknown as { caches?: { default?: Cache } };
   return {
-    telecharger: (url) => fetch(url, { signal: AbortSignal.timeout(15_000), headers: { "User-Agent": "riftbound-tcg-prive" } }),
+    telecharger: (url) => fetch(url, { signal: AbortSignal.timeout(DELAI_MAX_SOURCE_MS), headers: { "User-Agent": "riftbound-tcg-prive" } }),
     cache: global.caches?.default ?? null,
   };
 }
@@ -44,11 +53,27 @@ async function lireCacheCloudflare(cache: Cache | null): Promise<Catalogue | nul
   return Date.now() - catalogue.chargeLe < DUREE_CACHE_MS ? catalogue : null;
 }
 
-async function telechargerSource(dep: DependancesSource): Promise<Catalogue> {
-  const reponse = await dep.telecharger(URL_SOURCE);
-  if (!reponse.ok) throw new Error(`source des cartes indisponible (HTTP ${reponse.status})`);
+async function telechargerUneSource(dep: DependancesSource, url: string): Promise<Catalogue> {
+  const reponse = await dep.telecharger(url);
+  if (!reponse.ok) throw new Error(`source des cartes indisponible (HTTP ${reponse.status}) : ${url}`);
   const catalogue = construireCatalogue(await reponse.json());
-  if (catalogue.cartes.length === 0) throw new Error("source des cartes vide ou illisible");
+  if (catalogue.cartes.length === 0) throw new Error(`source des cartes vide ou illisible : ${url}`);
+  return catalogue;
+}
+
+async function telechargerSource(dep: DependancesSource): Promise<Catalogue> {
+  let catalogue: Catalogue | null = null;
+  let derniereErreur: unknown = null;
+  for (const url of URLS_SOURCE) {
+    try {
+      catalogue = await telechargerUneSource(dep, url);
+      break;
+    } catch (err) {
+      console.warn("catalogue : échec de la source, on essaie la suivante", url, err);
+      derniereErreur = err;
+    }
+  }
+  if (!catalogue) throw derniereErreur instanceof Error ? derniereErreur : new Error("source des cartes indisponible");
   if (catalogue.cartesIgnorees > 0) console.warn(`catalogue : ${catalogue.cartesIgnorees} carte(s) ignorée(s) (format inattendu)`);
 
   if (dep.cache) {

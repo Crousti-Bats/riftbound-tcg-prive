@@ -100,6 +100,7 @@ export function PageCatalogue() {
       </section>
 
       {erreur && <p className="message-erreur">{erreur}</p>}
+      {!resultat && !erreur && <p className="aide">Chargement du catalogue…</p>}
       {resultat && <p className="aide">{resultat.total} carte(s)</p>}
 
       <section className="grille-cartes">
