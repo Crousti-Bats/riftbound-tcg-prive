@@ -3,8 +3,22 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `docs/PROMPT_INITIAL.md`.
 
 **Dernière mise à jour :** 2026-11-08
-**Étape en cours :** 0 — Cadrage et architecture (terminée côté code, il reste les actions manuelles)
-**Prochaine étape :** 1 — Installer les outils, créer le dépôt GitHub et la pipeline CI de sécurité
+**Étape en cours :** 1 — Dépôt GitHub, squelette, CI DevSecOps (terminée)
+**Prochaine étape :** 2 — Compte Cloudflare, Worker et D1, premier déploiement automatique depuis la CI
+**Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
+
+## 0. Reprendre sur un autre PC
+
+```
+git clone https://github.com/Crousti-Bats/riftbound-tcg-prive.git
+cd riftbound-tcg-prive
+npm ci
+npm run dev        # site + API en local (http://localhost:5173)
+npm test           # tests
+```
+
+Pré-requis : Git, Node.js 22 ou plus, GitHub CLI (`gh auth login`), Python avec `pip install reportlab` pour les rapports.
+Méthode de travail : `git switch -c etape-N`, puis commit, puis `git push`, puis `gh pr create`. On merge quand la CI est verte.
 
 ## 1. Objectif
 
@@ -30,7 +44,7 @@ Un site privé de collection et d'échange de cartes Riftbound, accessible uniqu
 | Aléatoire | `crypto.getRandomValues` côté serveur uniquement | Le client ne peut pas tricher |
 | Timer des boosters | Calcul paresseux : `stock = min(15, stock_saved + floor((now - last_tick)/600 s))`, sans cron | Aucun coût, résultat exact |
 | Échanges | Proposition, puis acceptation. Transfert atomique via `D1 batch()` après vérification de possession | Pas de duplication de cartes |
-| Code source | GitHub (dépôt privé), synchronisé entre le PC fixe et le portable | Demandé |
+| Code source | GitHub (dépôt public, voir §5), synchronisé entre le PC fixe et le portable | Demandé |
 
 ## 3. Données de cartes (analysées le 2026-11-08, release v2026-11-04)
 
@@ -80,9 +94,13 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 
 ## 5. Démarche DevSecOps
 
-- Branche `main` protégée. On passe par une Pull Request et la CI doit être verte avant de merger.
-- La CI GitHub Actions lance le lint, le typecheck, les tests (Vitest) et `npm audit`.
-- Analyse de sécurité : CodeQL (SAST), gitleaks (détection de secrets), Dependabot (dépendances).
+- Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
+- Branche `main` protégée par un ruleset « Protection main » : PR obligatoire (0 approbation, on est seul), pas de force-push ni de suppression, merge en squash uniquement, et 4 contrôles requis : `Lint, types, tests, build`, `Audit des dépendances`, `CodeQL (SAST)`, `Gitleaks (secrets)`.
+- `.github/workflows/ci.yml` lance le lint (ESLint), le typecheck (tsc), les tests (Vitest), le build, `npm audit` et la dependency review sur les PR. Il vérifie aussi que `worker/worker-configuration.d.ts` est à jour.
+- `.github/workflows/securite.yml` lance CodeQL (`security-extended`, JS/TS et Actions) et Gitleaks, à chaque PR, à chaque push et chaque lundi.
+- Dependabot (npm et Actions, chaque semaine), alertes et correctifs automatiques activés. Secret scanning et push protection activés. Signalement privé de vulnérabilités activé (voir `SECURITY.md`).
+- Chaîne d'approvisionnement : versions npm exactes (`.npmrc` `save-exact`), lockfile, `npm ci`, actions épinglées par SHA, `permissions` minimales.
+- Override `minimatch@11.0.5` dans `package.json` : corrige GHSA-g3hv-75wg-m249 (ReDoS, moderate), remonté via eslint 10. On pourra le retirer quand eslint le corrigera.
 - Les secrets (token Cloudflare) sont uniquement dans GitHub Secrets. Jamais dans le code.
 - En-têtes de sécurité : CSP stricte, HSTS, X-Frame-Options DENY, Referrer-Policy.
 - Rate limiting sur la connexion. Validation des entrées avec Zod. Requêtes SQL paramétrées uniquement.
@@ -93,7 +111,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | # | Étape | Statut |
 |---|---|---|
 | 0 | Cadrage, architecture, analyse des données, système de rapports | Terminé |
-| 1 | Outils (Git, Node), dépôt GitHub, squelette du monorepo, CI sécurité | À faire |
+| 1 | Outils (Git, Node), dépôt GitHub, squelette du monorepo, CI sécurité | Terminé |
 | 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | À faire |
 | 3 | Authentification : invitations, connexion, sessions, rate limit | À faire |
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | À faire |
@@ -105,12 +123,23 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 
 ## 7. Actions manuelles en attente (utilisateur)
 
-1. Installer Git : `winget install --id Git.Git -e`
-2. Installer Node.js LTS : `winget install --id OpenJS.NodeJS.LTS -e`
-3. Installer GitHub CLI : `winget install --id GitHub.cli -e`, puis `gh auth login`
-4. Créer un compte Cloudflare gratuit (on en aura besoin à l'étape 2)
-5. Rouvrir VS Code pour que le PATH soit pris en compte
+1. Créer un compte Cloudflare gratuit (https://dash.cloudflare.com/sign-up), s'il n'existe pas déjà.
+2. Au début de l'étape 2, l'assistant lancera `npx wrangler login`, qui ouvre le navigateur pour autoriser l'accès.
+3. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
 
 ## 8. Journal
 
 - **2026-11-08 — Étape 0.** Analyse de l'API (1407 cartes, 6 sets), recherche des taux officiels, choix de l'architecture, mise en place des rapports PDF (`tools/generate_report.py`).
+- **2026-11-08 — Étape 1.** Dépôt public `Crousti-Bats/riftbound-tcg-prive` créé. Squelette : Worker Hono (`worker/`, route `/api/health`, en-têtes de sécurité, 3 tests), front React 19 et Vite 8 (`src/`), `@cloudflare/vite-plugin`, TypeScript strict, ESLint. CI et sécurité (CodeQL, Gitleaks, audit, dependency review, Dependabot), ruleset sur `main`. Le lint, les types, les tests et le build passent en local, avec 0 vulnérabilité.
+
+### Arborescence
+
+```
+worker/        API (Cloudflare Worker, Hono)       -> index.ts, security.ts, *.test.ts
+src/           Front React (PWA à l'étape 8)       -> main.tsx, App.tsx, styles.css
+public/        Fichiers statiques (_headers = en-têtes de sécurité du front)
+docs/          PROMPT_INITIAL.md, ETAT_PROJET.md, rapports/*.pdf
+tools/         generate_report.py
+.github/       workflows ci.yml + securite.yml, dependabot.yml
+wrangler.jsonc Configuration Cloudflare (D1 ajoutée à l'étape 2)
+```
