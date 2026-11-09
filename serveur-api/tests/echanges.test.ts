@@ -200,6 +200,9 @@ describe("Accepter", () => {
     const { env, alice, bob } = await deuxJoueurs();
     const { json } = await proposer(env, alice);
     vi.setSystemTime(Date.now() + 48 * 60 * 60_000 + 1);
+    // Après 48 h, le catalogue en mémoire (24 h) serait périmé et l'API irait le télécharger pour de vrai :
+    // test lent ou en échec sans réseau. On recharge le catalogue de test à la nouvelle date.
+    amorcerCataloguePourTest(catalogueDeTest());
     const r = await env.appeler("POST", `/api/echanges/${String(json.id)}/accepter`, { cookie: bob, corps: {} });
     expect(r.statut).toBe(410);
     expect(quantite(env, "Bob", "ogn-e0")).toBe(1);

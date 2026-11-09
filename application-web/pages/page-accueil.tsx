@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CarteInstallation } from "../composants/carte-installation";
 import { PanneauBoosters } from "../composants/panneau-boosters";
 import { appelerApi, type CompteCourant } from "../outils/appels-api";
 import { naviguer } from "../outils/navigation";
@@ -55,6 +56,7 @@ export function PageAccueil({ compte, surDeconnexion }: { compte: CompteCourant;
         </section>
 
         <PanneauBoosters />
+        <CarteInstallation />
       </div>
     </main>
   );

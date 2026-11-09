@@ -15,7 +15,14 @@
   line-height: 1.5;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--fond); color: var(--texte); }
+body {
+  margin: 0; background: var(--fond); color: var(--texte);
+  /* Application installée plein écran (viewport-fit=cover) : on évite l'encoche et la barre d'accueil. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
 h1 { color: var(--accent); margin: 0 0 8px; font-size: 1.6rem; }
 h2 { margin: 0 0 12px; font-size: 1.15rem; }
 a { color: var(--accent); }
@@ -110,12 +117,13 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 /* ---------- Fiche (fenêtre modale) ---------- */
 .fond-modale {
   position: fixed; inset: 0; background: rgba(5, 8, 15, 0.85); display: flex; align-items: center; justify-content: center;
-  padding: 16px; z-index: 10; overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  z-index: 10; overflow-y: auto; overscroll-behavior: contain;
 }
 .modale {
   background: var(--fond-carte); border: 1px solid var(--bordure); border-radius: var(--rayon); padding: 16px;
   display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; max-width: 760px; width: 100%;
-  max-height: calc(100vh - 32px); overflow-y: auto;
+  max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto;
 }
 .image-fiche { width: 100%; height: auto; border-radius: 12px; border: 3px solid var(--couleur-rarete, var(--bordure)); }
 /* Fiche d'un Battlefield : image horizontale en grand, détails en dessous. */
@@ -142,7 +150,7 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 /* ---------- Ouverture d'un booster (overlay) ---------- */
 .ouverture {
   background: var(--fond-carte); border: 1px solid var(--bordure); border-radius: var(--rayon);
-  padding: 16px; max-width: 1000px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto;
+  padding: 16px; max-width: 1000px; width: 100%; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto;
 }
 .actions-ouverture { justify-content: center; margin-top: 12px; }
 
@@ -250,3 +258,31 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 .pastille-en-ligne { background: var(--succes); box-shadow: 0 0 6px var(--succes); }
 .pastille-hors-ligne { background: var(--bordure); }
 @media (prefers-reduced-motion: reduce) { .jauge-barre span { transition: none; } }
+
+/* ---------- PWA et responsive (étape 9) ---------- */
+.bandeau-hors-ligne {
+  position: sticky; top: 0; z-index: 20; padding: 8px 16px; text-align: center; font-size: 0.85rem; font-weight: 600;
+  background: #5a3b12; color: #ffe2b8; border-bottom: 1px solid var(--accent);
+}
+.carte-installation { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.carte-installation h2 { margin-bottom: 4px; }
+.carte-installation p { margin: 0; }
+
+/* Application installée : pas de sélection de texte accidentelle sur les boutons au toucher long. */
+@media (display-mode: standalone) {
+  button { -webkit-user-select: none; user-select: none; }
+}
+
+/* Très petits écrans (≤ 380 px, ex. iPhone SE) : boutons sur toute la largeur, grilles plus serrées. */
+@media (max-width: 380px) {
+  .conteneur { padding: 10px; }
+  .carte { padding: 12px; }
+  .barre-actions > button { flex: 1 1 auto; }
+  .grille-cartes { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+  .filtres, .grille-champs { grid-template-columns: 1fr; }
+}
+
+/* Écrans tactiles : pas d'effet de survol qui reste « collé » après un toucher. */
+@media (hover: none) {
+  .vignette-carte:hover .cadre-carte { transform: none; }
+}

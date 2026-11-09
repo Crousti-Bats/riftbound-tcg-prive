@@ -3,8 +3,8 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-09
-**Étape en cours :** 8 — Admin : monitoring en quasi temps réel (terminée)
-**Prochaine étape :** 9 — PWA (installable, hors-ligne partiel) et responsive. **Pas encore commencée.** Le monitoring est dans l'onglet « Monitoring » de `/admin` ; les quotas Cloudflare s'afficheront dès que le jeton Analytics sera enregistré (§7).
+**Étape en cours :** 9 — PWA et responsive (terminée)
+**Prochaine étape :** 10 — Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod. **Pas encore commencée.** Le site est installable (PC, Android, iPhone) et s'ouvre hors ligne (§4sexies).
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -52,7 +52,7 @@ Un site privé de collection et d'échange de cartes Riftbound, accessible uniqu
 | Données des cartes | `cards.json` de la dernière release de LouisCourrian/riftbound-cards, récupéré par le Worker et mis en cache (Cache API, 24 h) | Aucune carte stockée en base. D1 ne garde que des `cardCode` et des quantités |
 | Images | Liens directs vers le CDN Riot (`imageUrl`) | Rien à héberger |
 | Backend | TypeScript + Hono | Léger, prévu pour Workers |
-| Frontend | React + Vite + TypeScript, `vite-plugin-pwa` | PWA installable, responsive |
+| Frontend | React + Vite + TypeScript. PWA avec un service worker écrit à la main (et non `vite-plugin-pwa`, décision de l'étape 9) | PWA installable, responsive, sans dépendance de plus |
 | Authentification | Inscription uniquement sur invitation : l'admin génère des codes. Mots de passe hachés en PBKDF2-SHA256 (WebCrypto), sessions en base avec cookie `HttpOnly; Secure; SameSite=Strict` | Site privé, sans dépendance externe |
 | Aléatoire | `crypto.getRandomValues` côté serveur uniquement | Le client ne peut pas tricher |
 | Timer des boosters | Calcul paresseux : `stock = min(15, stock_saved + floor((now - last_tick)/600 s))`, sans cron | Aucun coût, résultat exact |
@@ -223,6 +223,19 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **Interface :** onglet « Monitoring » (par défaut) de `/admin`, `application-web/composants/tableau-monitoring.tsx`. Rafraîchi toutes les 8 s, en pause quand l'onglet du navigateur est caché, avec un bouton Pause. Jauges de quotas (vert, puis orange à 70 %, puis rouge à 90 %). Les actions (invitations, désactivation, déconnexion forcée) restent dans les onglets existants.
 - **Tests :** `serveur-api/tests/monitoring.test.ts` (8 tests) : contrôle d'accès, non-prolongation de l'accès admin, compteurs, blocages, traçage exact des tirages remarquables, erreur 500 enregistrée sans détail renvoyé au client, quotas GraphQL (sommes, jeton en en-tête et jamais renvoyé, cache de 60 s, erreurs HTTP, GraphQL, réseau et format). Vérifié aussi de bout en bout sur le vrai runtime local (miniflare et D1).
 
+## 4sexies. PWA et responsive (étape 9)
+
+- **Choix technique :** un service worker **écrit à la main** (≈ 100 lignes) au lieu de `vite-plugin-pwa` prévu au §2. Raisons : aucune dépendance de plus (Workbox et ses dizaines de paquets = surface d'attaque de la chaîne d'approvisionnement), compatibilité garantie avec Vite 8 et le plugin Cloudflare, et chaque règle de cache est lisible et testée.
+- **Fabrication :** le modèle `application-web/service-worker/modele-service-worker.js` est transformé au build par `configuration/plugin-service-worker.ts` en `dist/client/service-worker.js`. Le plugin y injecte la liste des fichiers à précharger (coquille `/`, manifeste, favicon, icône 192, et le JS et le CSS du build) et une **version** = empreinte SHA-256 de cette liste. Chaque déploiement qui change le site change donc la version : le nouveau service worker s'installe, s'active tout de suite (`skipWaiting` + `clients.claim`) et supprime les anciens caches `riftbound-*`. Pas de service worker en développement (`npm run dev`).
+- **Règles de cache :** `/api/*` n'est **jamais** intercepté ni mis en cache : aucune donnée de compte (collection, échanges, session) ne reste sur l'appareil, rien à effacer à la déconnexion, et le serveur reste seul juge (anti-triche). Requêtes non GET et autres sites (images du CDN Riot) non interceptés non plus (le cache HTTP du navigateur suffit pour les images ; mettre en cache des réponses « opaques » coûterait ~7 Mo de quota chacune dans Chrome). Pages : réseau d'abord, coquille `index.html` en secours sans réseau. `/assets/*` (noms avec empreinte, immuables) : cache d'abord. Autres fichiers du site : réseau d'abord. Une erreur serveur (500) ne remplace jamais la coquille en cache.
+- **Hors-ligne partiel :** l'application s'ouvre sans réseau (depuis l'icône ou le navigateur), affiche un **bandeau « Hors ligne »** et un message clair avec un bouton Réessayer. Elle se reconnecte **toute seule** au retour du réseau, puis réessaie toutes les 15 s tant que le serveur ne répond pas. Une coupure pendant l'utilisation donne le message « Pas de connexion Internet » au lieu d'une erreur technique (`appels-api.ts`, codes `hors_ligne` et `serveur_injoignable`).
+- **Installation :** `fichiers-statiques/manifest.webmanifest` (nom, `display: standalone`, couleurs du site, icônes 192/512 et une icône **maskable** pour Android, raccourcis Ma collection et Échanges). Carte « Installer l'application » sur l'accueil : bouton natif sur Chrome, Edge et Android (`beforeinstallprompt`), mode d'emploi sur iPhone et iPad (Partager → « Sur l'écran d'accueil »). Bouton « Plus tard » mémorisé dans le navigateur. Masquée si l'application est déjà installée.
+- **En-têtes :** `service-worker.js` et le manifeste en `Cache-Control: no-cache` (mises à jour immédiates). CSP complétée par `manifest-src 'self'; worker-src 'self'`.
+- **Responsive :** `viewport-fit=cover` + marges `safe-area` (encoche, barre d'accueil de l'iPhone) ; `100dvh` pour les fenêtres (les barres du navigateur mobile ne coupent plus le bas) ; très petits écrans ≤ 380 px (boutons pleine largeur, grilles et filtres resserrés) ; pas d'effet de survol « collé » sur écran tactile ; pas de sélection de texte sur les boutons dans l'application installée.
+- **Tests :** `serveur-api/tests/pwa.test.ts` (17 tests). Le service worker généré est exécuté dans un bac à sable `node:vm` avec de faux caches et un faux réseau : préchargement, activation et nettoyage des anciennes versions, **jamais l'API ni les POST ni les autres sites**, pages hors ligne, erreur 500, cache d'abord sur `/assets/`, 503 propre. Plus le manifeste (dimensions réelles des PNG lues dans le fichier), `index.html` et `_headers`. Test de mutation fait : retirer l'exclusion de `/api/` fait bien échouer le test de sécurité.
+- **Vérifié dans un vrai navigateur** (Edge headless piloté par CDP, build de production servi en local) : aucun défilement horizontal sur les 6 pages à 360, 820 et 1366 px, ni pendant l'ouverture d'un booster ; service worker actif et contrôlant la page ; manifeste sans erreur ; **Edge déclare le site installable** ; serveur arrêté → l'application s'ouvre quand même et affiche « Hors ligne » ; serveur relancé → retour automatique sur la page sans clic ; mise à jour du build → nouveau cache, ancien supprimé.
+- **Correctif de test au passage :** `echanges.test.ts` « proposition expirée » avançait l'horloge de 48 h, ce qui périmait le catalogue en mémoire (24 h) et déclenchait un **vrai téléchargement** : test instable (échec à 5 s quand le réseau est lent). Le catalogue de test est maintenant rechargé après le saut d'horloge.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -252,13 +265,15 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 6 | Frontend : ouverture de booster animée, collection, filtres | Terminé |
 | 7 | Échanges entre joueurs | Terminé |
 | 8 | **Admin : monitoring en quasi temps réel** (voir §2bis et §4quinquies) | Terminé |
-| 9 | PWA (installable, hors-ligne partiel), responsive | À faire |
+| 9 | PWA (installable, hors-ligne partiel), responsive (voir §4sexies) | Terminé |
 | 10 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
 
 ## 7. Actions manuelles en attente (utilisateur)
 
 1. **Quotas Cloudflare dans le monitoring :** créer un jeton sur https://dash.cloudflare.com/profile/api-tokens → « Create Custom Token », permission **Account → Account Analytics → Read**, limité au compte `Axelgirard@gmail.com's Account`. Puis, depuis le dossier du projet : `npx wrangler secret put JETON_ANALYTICS_CLOUDFLARE --config configuration/cloudflare-wrangler.jsonc` et coller le jeton. Ne jamais le mettre dans le code ni dans GitHub.
 2. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
+3. **Après le déploiement de l'étape 9 :** installer l'application sur ton téléphone et ton PC pour valider en vrai (Android/PC : carte « Installer l'application » de l'accueil ; iPhone : Safari → Partager → « Sur l'écran d'accueil »), puis passer en mode avion et rouvrir l'application : elle doit s'ouvrir et afficher « Hors ligne ».
+4. **Brouillon à trancher (PC fixe uniquement) :** un travail non commité trouvé sur le PC fixe le 2026-11-09 (wishlist `/api/wishlist`, liste `/api/joueurs`, refactor `collection/enrichir.ts`, migration nommée `0004_wishlist.sql` qui entre en conflit avec `0004_echanges.sql`) a été mis de côté dans `git stash` (« brouillon wishlist+joueurs »). Rien n'est perdu : `git stash list` pour le voir. À reprendre plus tard (avec une migration renumérotée) ou à supprimer (`git stash drop`).
 
 ## 8. Journal
 
@@ -277,6 +292,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Favicon.** Logo de l'utilisateur (spirale orange). Le fond noir devient transparent pour l'onglet. L'icône iPhone et les icônes PWA ont le fond #0b1220. Script `outils/generer-icones.py`. Attention : ne jamais ouvrir puis sauvegarder une image dans VS Code, cela l'enregistre comme du texte et la corrompt (c'est arrivé une fois avec logo-source.png).
 - **2026-11-08 — Filtre par type.** Nouveau filtre `type` (Unité, Sort, Équipement, Légende, Terrain, Rune, Token) dans l'API et sur la page. Il permet notamment de trouver les runes d'Origins, rangées en variante `base`. 70 tests.
 - **2026-11-08 — Terrains et pagination.** Les Battlefields étaient déformés : ils sont maintenant tournés dans la grille et affichés à l'horizontale dans la fiche. Pagination en haut et en bas avec un choix de page. Comparaison avec la galerie officielle : il manque 2 cartes dans la source (voir §3bis). 69 tests.
+- **2026-11-09 — Étape 9.** PWA et responsive (§4sexies). Service worker écrit à la main et généré au build (aucune nouvelle dépendance), `/api/*` jamais en cache. Manifeste, icône maskable, carte « Installer l'application », bandeau hors ligne et reconnexion automatique. Marges safe-area, `dvh`, réglages petits écrans et écrans tactiles. 17 nouveaux tests (138 au total), dont l'exécution réelle du service worker dans un bac à sable. Vérifié dans Edge (installable, hors ligne, 3 tailles d'écran). Test d'échange instable corrigé (catalogue périmé après un saut de 48 h).
 - **2026-11-09 — Étape 8.** Monitoring admin en quasi temps réel (§4quinquies). Migration `0005` (tirages remarquables, erreurs serveur, index). Route `GET /api/admin/monitoring` en lecture seule, qui ne prolonge pas l'accès admin. Quotas Cloudflare via l'API GraphQL (jeton à créer par l'utilisateur, §7). Onglet « Monitoring » rafraîchi toutes les 8 s. « En ligne » précis à 2 minutes. 121 tests (8 nouveaux). Vérifié de bout en bout en local.
 - **2026-11-09 — Taux, filtres, images.** À la demande de l'utilisateur : (1) tous les taux Rare+ divisés par 2 (Epic 1/12, Alt 1/24, Over 1/144, Signée 1/480, Special et Ultime 1/2000 boosters), tests statistiques mis à jour ; (2) filtre Champion et Signature (étiquettes `cardTypeLabels`), fixture de test enrichie ; (3) image de secours quand une miniature du CDN ne se charge pas. 113 tests.
 - **2026-11-09 — Correctif page blanche à l’ouverture.** Après l’ouverture d’un booster, cliquer sur une carte affichait une page blanche : `POST /api/boosters/ouvrir` renvoyait des cartes incomplètes (sans `domaines`, `set`, `texte`…) et la fiche plantait sur `carte.domaines.length`. L’API renvoie maintenant la carte complète du catalogue (comme la collection), plus `foil` et `slot`. Test de non-régression sur la forme des cartes. 113 tests.
@@ -316,11 +332,16 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   outils/libelles-cartes.ts           noms français des raretés et variantes, couleurs, URL d'images redimensionnées
   outils/appels-api.ts                appels au serveur et messages d'erreur en français
   outils/navigation.ts                changement de page sans rechargement, format des dates
+  outils/pwa.ts                       PWA : enregistrement du service worker, installation, détection hors ligne
+  composants/bandeau-hors-ligne.tsx   bandeau « Hors ligne » en haut de l'écran
+  composants/carte-installation.tsx   carte « Installer l'application » (bouton natif ou mode d'emploi iPhone)
+  service-worker/modele-service-worker.js  MODÈLE du service worker (règles de cache), complété au build
   styles-globaux.css                  couleurs et mise en page communes
+  fichiers-statiques/manifest.webmanifest  manifeste de l'application installable (nom, couleurs, icônes, raccourcis)
   fichiers-statiques/_headers         en-têtes de sécurité du site (nom imposé par Cloudflare)
   fichiers-statiques/logo-source.png  logo d'origine fourni par l'utilisateur (spirale orange)
   fichiers-statiques/favicon.ico      favicon (16, 32, 48 px), GÉNÉRÉ
-  fichiers-statiques/icones/          favicon-32, apple-touch-icon (180), icone-192/512 (PWA), logo transparent, GÉNÉRÉS
+  fichiers-statiques/icones/          favicon-32, apple-touch-icon (180), icone-192/512 et icone-masquable-512 (PWA), logo transparent, GÉNÉRÉS
 
 serveur-api/                          L'API (Cloudflare Worker, Hono)
   point-entree-api.ts                 assemble la sécurité (en-têtes, taille max, CSRF, session) et les routes
@@ -357,6 +378,7 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
     outils/base-d1-de-test.ts         imite D1 avec node:sqlite
     outils/client-api-de-test.ts      appelle l'API comme un navigateur
     outils/catalogue-de-test.ts       catalogue synthétique pour les tests de boosters
+    pwa.test.ts                       service worker exécuté dans un bac à sable, manifeste, icônes, en-têtes
     donnees/cartes-echantillon.json   47 vraies cartes (une par set et par catégorie)
   types-cloudflare-generes.d.ts       GÉNÉRÉ par `npm run cf-typegen`, ne pas modifier à la main
 
@@ -371,6 +393,7 @@ base-de-donnees/                      BASE SQLITE CLOUDFLARE D1
 configuration/                        RÉGLAGES DES OUTILS
   cloudflare-wrangler.jsonc           Cloudflare : nom du service, règles de routage, base D1
   vite-site-et-api.config.ts          Vite : `npm run dev` et `npm run build`
+  plugin-service-worker.ts            Vite : fabrique service-worker.js au build (fichiers à précharger, version)
   tests-vitest.config.ts              Vitest : où sont les tests
   qualite-code-eslint.config.js       ESLint : règles de qualité et de sécurité du code
   typescript/tsconfig.json            TypeScript : fichier principal, qui renvoie aux 4 suivants

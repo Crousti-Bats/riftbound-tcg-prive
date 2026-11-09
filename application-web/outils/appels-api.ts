@@ -35,6 +35,8 @@ const MESSAGES: Record<string, string> = {
   echange_introuvable_ou_deja_traite: "Échange introuvable ou déjà traité.",
   cartes_plus_disponibles: "Échange impossible : une des cartes n'est plus disponible chez l'un de vous deux. Rien n'a été transféré.",
   collection_indisponible: "La collection est momentanément indisponible. Réessaie dans une minute.",
+  hors_ligne: "Pas de connexion Internet. Réessaie quand tu seras de nouveau en ligne.",
+  serveur_injoignable: "Le serveur ne répond pas. Réessaie dans un instant.",
 };
 
 export class ErreurApi extends Error {
@@ -49,12 +51,18 @@ export class ErreurApi extends Error {
 }
 
 export async function appelerApi<T>(methode: "GET" | "POST" | "DELETE", chemin: string, corps?: unknown): Promise<T> {
-  const reponse = await fetch(`/api${chemin}`, {
-    method: methode,
-    credentials: "same-origin",
-    headers: corps !== undefined ? { "Content-Type": "application/json" } : {},
-    body: corps !== undefined ? JSON.stringify(corps) : undefined,
-  });
+  let reponse: Response;
+  try {
+    reponse = await fetch(`/api${chemin}`, {
+      method: methode,
+      credentials: "same-origin",
+      headers: corps !== undefined ? { "Content-Type": "application/json" } : {},
+      body: corps !== undefined ? JSON.stringify(corps) : undefined,
+    });
+  } catch {
+    // Pas de réponse du tout : réseau coupé (ou serveur injoignable). Statut 0 par convention.
+    throw new ErreurApi(navigator.onLine ? "serveur_injoignable" : "hors_ligne", 0);
+  }
   const donnees = (await reponse.json().catch(() => ({}))) as Record<string, unknown>;
   if (!reponse.ok) {
     throw new ErreurApi(
