@@ -7,6 +7,8 @@ import { PageAdmin } from "./pages/page-admin";
 import { PageCatalogue } from "./pages/page-catalogue";
 import { PageCollection } from "./pages/page-collection";
 import { PageConnexion } from "./pages/page-connexion";
+import { PageEchanges } from "./pages/page-echanges";
+import { PageNouvelEchange } from "./pages/page-nouvel-echange";
 import { PageInscription } from "./pages/page-inscription";
 
 export function RacineApplication() {
@@ -44,6 +46,8 @@ export function RacineApplication() {
   }
   if (chemin === "/catalogue") return <PageCatalogue />;
   if (chemin === "/collection") return <PageCollection />;
+  if (chemin === "/echanges") return <PageEchanges />;
+  if (chemin === "/echanges/nouveau") return <PageNouvelEchange />;
   if (chemin.startsWith("/admin") && compte.role === "admin") {
     return <PageAdmin compte={compte} surChangementCompte={rafraichirCompte} />;
   }

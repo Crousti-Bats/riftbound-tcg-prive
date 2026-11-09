@@ -1,8 +1,18 @@
+import { useEffect, useState } from "react";
 import { PanneauBoosters } from "../composants/panneau-boosters";
 import { appelerApi, type CompteCourant } from "../outils/appels-api";
 import { naviguer } from "../outils/navigation";
 
 export function PageAccueil({ compte, surDeconnexion }: { compte: CompteCourant; surDeconnexion: () => Promise<void> }) {
+  const [recuesEnAttente, setRecuesEnAttente] = useState(0);
+
+  useEffect(() => {
+    appelerApi<{ recuesEnAttente: number }>("GET", "/echanges/resume").then(
+      (r) => setRecuesEnAttente(r.recuesEnAttente),
+      () => undefined, // la pastille est un bonus : pas d'erreur affichée si elle échoue
+    );
+  }, []);
+
   async function seDeconnecter() {
     await appelerApi("POST", "/auth/deconnexion", {}).catch(() => undefined);
     await surDeconnexion();
@@ -30,6 +40,14 @@ export function PageAccueil({ compte, surDeconnexion }: { compte: CompteCourant;
           <h2>Bonjour {compte.pseudo} 👋</h2>
           <nav className="barre-actions">
             <button onClick={() => naviguer("/collection")}>Ma collection</button>
+            <button className="secondaire bouton-pastille" onClick={() => naviguer("/echanges")}>
+              Échanges
+              {recuesEnAttente > 0 && (
+                <span className="pastille" aria-label={`${recuesEnAttente} proposition(s) reçue(s)`}>
+                  {recuesEnAttente}
+                </span>
+              )}
+            </button>
             <button className="secondaire" onClick={() => naviguer("/catalogue")}>
               Voir toutes les cartes
             </button>

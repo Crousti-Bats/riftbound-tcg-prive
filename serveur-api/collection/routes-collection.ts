@@ -1,7 +1,8 @@
 /** Routes /api/collection : cartes possédées par le joueur connecté, et résumé de complétion.
  *  La base ne stocke que des cardCode et des quantités : les données de carte viennent du catalogue. */
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { z } from "zod";
+import { schemaPseudo } from "../validation-donnees";
 import { exigerConnexion } from "../authentification/sessions";
 import { sansAccents } from "../catalogue/recherche-texte";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
@@ -53,14 +54,28 @@ async function chargerPossession(base: D1Database, compteId: number): Promise<Ma
 routesCollection.get("/", async (c) => {
   const compte = c.get("compte");
   if (!compte) return c.json({ erreur: "non_connecte" }, 401);
+  return listerCartesPossedees(c, compte.id);
+});
 
+/** Collection d'un autre joueur (pour préparer un échange : décision « toute la collection est visible »). */
+routesCollection.get("/joueur/:pseudo", async (c) => {
+  const pseudo = schemaPseudo.safeParse(c.req.param("pseudo"));
+  if (!pseudo.success) return c.json({ erreur: "joueur_introuvable" }, 404);
+  const joueur = await c.env.BASE_DE_DONNEES.prepare("SELECT id FROM comptes WHERE pseudo = ? AND actif = 1")
+    .bind(pseudo.data)
+    .first<{ id: number }>();
+  if (!joueur) return c.json({ erreur: "joueur_introuvable" }, 404);
+  return listerCartesPossedees(c, joueur.id);
+});
+
+async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number) {
   const filtres = schemaRecherche.safeParse(c.req.query());
   if (!filtres.success) return c.json({ erreur: "donnees_invalides" }, 400);
   const { set, rarete, variante, type, recherche, page } = filtres.data;
   const seulementFoil = c.req.query("foil") === "1";
   const seulementDoublons = c.req.query("doublons") === "1";
 
-  const possession = await chargerPossession(c.env.BASE_DE_DONNEES, compte.id);
+  const possession = await chargerPossession(c.env.BASE_DE_DONNEES, compteId);
   const catalogue = await obtenirCatalogue();
   const mots = recherche ? sansAccents(recherche).split(/\s+/).filter(Boolean) : [];
 
@@ -84,7 +99,7 @@ routesCollection.get("/", async (c) => {
 
   const debut = (page - 1) * CARTES_PAR_PAGE;
   return c.json({ cartes: cartes.slice(debut, debut + CARTES_PAR_PAGE), total: cartes.length, page, parPage: CARTES_PAR_PAGE });
-});
+}
 
 routesCollection.get("/resume", async (c) => {
   const compte = c.get("compte");
