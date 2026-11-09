@@ -147,23 +147,6 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 .choix-set { flex-direction: row; align-items: center; gap: 8px; font-weight: 600; }
 .choix-set select { min-height: 44px; }
 
-/* ---------- Ouverture d'un booster (overlay) ---------- */
-.ouverture {
-  background: var(--fond-carte); border: 1px solid var(--bordure); border-radius: var(--rayon);
-  padding: 16px; max-width: 1000px; width: 100%; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto;
-}
-.actions-ouverture { justify-content: center; margin-top: 12px; }
-
-/* Apparition en cascade (animation-delay posé par carte dans le composant) */
-.vignette-carte.apparition { opacity: 0; animation: apparition-carte 0.45s ease forwards; }
-@keyframes apparition-carte {
-  from { opacity: 0; transform: translateY(14px) scale(0.92); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* Halo lumineux sur les cartes rares et plus */
-.halo-rarete .cadre-carte { box-shadow: 0 0 18px 2px var(--couleur-rarete, var(--accent)); }
-
 /* Voile brillant « foil » animé */
 .cadre-carte.voile-foil::after {
   content: ""; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.6;
@@ -173,10 +156,6 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 @keyframes brillance-foil {
   from { background-position: 0% 0%; }
   to { background-position: 100% 100%; }
-}
-.etiquette-foil {
-  position: absolute; top: 6px; left: 6px; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;
-  background: rgba(5, 8, 15, 0.7); color: #bfe9ff;
 }
 
 /* Badges sur les cartes de la collection */
@@ -197,7 +176,6 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 .bascule input { min-height: 0; width: 18px; height: 18px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .vignette-carte.apparition { opacity: 1; animation: none; }
   .cadre-carte.voile-foil::after { animation: none; }
 }
 
