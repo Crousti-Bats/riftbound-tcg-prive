@@ -3,8 +3,8 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-09
-**Étape en cours :** 5 — Moteur de boosters (terminée)
-**Prochaine étape :** 6 — Frontend : ouverture de booster animée, page Collection, filtres. **Pas encore commencée.** Le moteur serveur (tirage, stock, collection) et l'API `/api/boosters` sont prêts ; il reste l'interface.
+**Étape en cours :** 6 — Frontend boosters et collection (terminée)
+**Prochaine étape :** 7 — Échanges entre joueurs. **Pas encore commencée.** L'ouverture de boosters et la collection sont désormais utilisables sur le site.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -187,6 +187,15 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **Base (migration `0003`) :** colonnes `stock_boosters` / `boosters_tick` sur `comptes` ; table `collection` (`compte_id, card_code, est_foil, quantite`) — **jamais** de donnée de carte, seulement des `cardCode` et des quantités ; table `ouvertures_boosters` (pour le monitoring de l'étape 8).
 - **Tests :** `serveur-api/tests/boosters.test.ts` — stock, pools, structure, **100 000 boosters seedés** (fréquences par booster vérifiées : Epic ≈16,7 %, Alt ≈8,3 %, Over ≈1,39 %, signée ≈0,42 %, Special/Ultime ≈0,1 % ; Foil 75/20/4/1 ; Rune 92/8), redistribution des taux pour un set sans Special/Ultime, et API (15 au départ, ouverture, collection, foil distinct, 409/400/401, régénération dans le temps). Fixture `tests/donnees/` via `catalogue-de-test.ts`.
 
+## 4ter. Interface boosters et collection (étape 6)
+
+- **Hub d'ouverture (accueil) :** `application-web/composants/panneau-boosters.tsx` affiche le stock `N/15`, un **minuteur** du prochain booster (décompte client, relecture de `/etat` à zéro), le choix du set ouvrable et le bouton Ouvrir.
+- **Animation :** `composants/ouverture-booster.tsx` révèle les 14 cartes **en cascade** (`animation-delay` par carte), avec **halo** sur les rares+ et **voile brillant** sur les foil ; clic = fiche. Respecte `prefers-reduced-motion`.
+- **Page Collection (`/collection`) :** `pages/page-collection.tsx` — filtres (set, type, rareté, variante, recherche) + bascules **foil** / **doublons**, grille avec badge quantité (×N) et foil (✨), fiche au clic, pagination, en-tête de **complétion par set** (cartes de base possédées / total).
+- **Composants partagés :** `composants/fiche-carte.tsx`, `filtres-cartes.tsx`, `pagination.tsx` (extraits du catalogue, réutilisés par catalogue, collection et ouverture).
+- **API collection (lecture, connexion obligatoire) :** `GET /api/collection?set=&rarete=&variante=&type=&recherche=&foil=&doublons=&page=` (cartes possédées enrichies depuis le catalogue, 60/page) et `GET /api/collection/resume` (totaux + complétion par set). Aucune donnée de carte en base. `sansAccents` est partagé via `serveur-api/catalogue/recherche-texte.ts`.
+- **Vérifié bout-en-bout** le 2026-11-09 contre le vrai runtime local (miniflare D1 + vraie source) : inscription → 15 boosters → ouverture (14 cartes, composition exacte) → collection et complétion (ogn 298 cartes de base). 96 tests automatiques (90 + 6 pour la collection).
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -213,7 +222,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | Terminé |
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | Terminé |
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | Terminé |
-| 6 | Frontend : ouverture de booster animée, collection, filtres | À faire |
+| 6 | Frontend : ouverture de booster animée, collection, filtres | Terminé |
 | 7 | Échanges entre joueurs | À faire |
 | 8 | **Admin : monitoring en quasi temps réel** (voir §2bis) | À faire |
 | 9 | PWA (installable, hors-ligne partiel), responsive | À faire |
@@ -240,6 +249,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Favicon.** Logo de l'utilisateur (spirale orange). Le fond noir devient transparent pour l'onglet. L'icône iPhone et les icônes PWA ont le fond #0b1220. Script `outils/generer-icones.py`. Attention : ne jamais ouvrir puis sauvegarder une image dans VS Code, cela l'enregistre comme du texte et la corrompt (c'est arrivé une fois avec logo-source.png).
 - **2026-11-08 — Filtre par type.** Nouveau filtre `type` (Unité, Sort, Équipement, Légende, Terrain, Rune, Token) dans l'API et sur la page. Il permet notamment de trouver les runes d'Origins, rangées en variante `base`. 70 tests.
 - **2026-11-08 — Terrains et pagination.** Les Battlefields étaient déformés : ils sont maintenant tournés dans la grille et affichés à l'horizontale dans la fiche. Pagination en haut et en bas avec un choix de page. Comparaison avec la galerie officielle : il manque 2 cartes dans la source (voir §3bis). 69 tests.
+- **2026-11-09 — Étape 6.** Interface boosters et collection (§4ter). Accueil transformé en hub (stock + minuteur + choix du set + Ouvrir), animation d'ouverture en cascade avec halo et voile foil, page `/collection` (filtres, quantités, foil, doublons, complétion par set). Composants partagés extraits (`fiche-carte`, `filtres-cartes`, `pagination`). Nouvelles routes de lecture `GET /api/collection` et `/api/collection/resume`. Parcours vérifié bout-en-bout contre le vrai runtime local. 96 tests. Aucune nouvelle dépendance ni migration.
 - **2026-11-09 — Étape 5.** Moteur de boosters terminé (§4bis). 3 décisions tranchées avec l'utilisateur (Légendes/Terrains dans leurs pools, doublons autorisés, foil stocké à part). Nouveau dossier `serveur-api/boosters/` (config des taux, aléatoire injectable, pools, tirage pur, stock paresseux, routes). Migration `0003` (stock sur les comptes, tables `collection` et `ouvertures_boosters`). API `/api/boosters/etat` et `/ouvrir`. 90 tests passent (dont 100 000 boosters simulés, fréquences par booster vérifiées). Migration validée sur le vrai moteur D1 en local. Un nouveau joueur reçoit 15 boosters à l'inscription.
 - Astuce diagnostic : `Date.now()` n'avance pas pendant le calcul dans un Worker (protection Spectre), donc on ne peut pas mesurer le CPU ainsi. Utiliser le champ `cpuTime` de `wrangler tail --format json`.
 - Astuce : PowerShell `Invoke-WebRequest` refuse les cookies `Secure` sur http://localhost (les navigateurs les acceptent). Pour tester l'API en local, utiliser `curl` avec `-b/-c` dans Git Bash.
@@ -258,6 +268,12 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   pages/page-accueil.tsx              accueil du joueur connecté
   pages/page-admin.tsx                administration : invitations, comptes, journal
   pages/page-catalogue.tsx            catalogue : filtres, grille d'images, fiche de carte
+  pages/page-collection.tsx           ma collection : cartes possédées, quantités, foil, complétion
+  composants/panneau-boosters.tsx     hub : stock, minuteur, choix du set, bouton Ouvrir
+  composants/ouverture-booster.tsx    animation d'ouverture des 14 cartes (cascade, halo, foil)
+  composants/fiche-carte.tsx          fiche détaillée d'une carte (modale), partagée
+  composants/filtres-cartes.tsx       barre de filtres partagée (catalogue + collection)
+  composants/pagination.tsx           navigation entre pages de résultats, partagée
   outils/libelles-cartes.ts           noms français des raretés et variantes, couleurs, URL d'images redimensionnées
   outils/appels-api.ts                appels au serveur et messages d'erreur en français
   outils/navigation.ts                changement de page sans rechargement, format des dates
@@ -285,6 +301,8 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
   catalogue/classification-cartes.ts  validation de la source et classement en variantes
   catalogue/source-cartes.ts          téléchargement et cache (mémoire, Cache API) de la source
   catalogue/routes-catalogue.ts       /api/catalogue : sets, recherche de cartes, détail
+  catalogue/recherche-texte.ts        normalisation du texte (sans accents), partagée
+  collection/routes-collection.ts     /api/collection : cartes possédées, résumé de complétion
   boosters/configuration-taux.ts      SOURCE DE VÉRITÉ des taux, composition, stock (doc §4)
   boosters/aleatoire.ts               aléatoire injectable (crypto en prod, PRNG seedé pour les tests)
   boosters/pools.ts                   pré-indexe les cartes par set/rareté/variante (mémoïsé)

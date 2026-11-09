@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
 import type { ContexteApi } from "../types-application";
+import { sansAccents } from "./recherche-texte";
 import { obtenirCatalogue } from "./source-cartes";
 import { RARETES, VARIANTES } from "./types-catalogue";
 
@@ -27,10 +28,6 @@ const schemaRecherche = z.object({
   recherche: z.string().trim().max(50).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
-
-function sansAccents(texte: string): string {
-  return texte.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-}
 
 routesCatalogue.get("/sets", async (c) => {
   const catalogue = await obtenirCatalogue();

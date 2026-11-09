@@ -6,6 +6,7 @@ import { routesAuthentification } from "./authentification/routes-authentificati
 import { chargerSession } from "./authentification/sessions";
 import { routesBoosters } from "./boosters/routes-boosters";
 import { routesCatalogue } from "./catalogue/routes-catalogue";
+import { routesCollection } from "./collection/routes-collection";
 import { securityHeaders } from "./entetes-securite";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
@@ -32,6 +33,7 @@ app.route("/api/auth", routesAuthentification);
 app.route("/api/admin", routesAdministration);
 app.route("/api/catalogue", routesCatalogue);
 app.route("/api/boosters", routesBoosters);
+app.route("/api/collection", routesCollection);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
