@@ -9,6 +9,8 @@ export interface Carte {
   rarete: string;
   variante: string;
   type: string;
+  /** Champion, Signature, Token, Basic. */
+  etiquettes: string[];
   domaines: string[];
   image: string;
   orientation: "portrait" | "paysage";
@@ -76,6 +78,8 @@ export const LIBELLES_VARIANTE: Record<string, string> = {
 /** Types de carte : libellé français pour le filtre, nom anglais (celui des cartes) entre parenthèses. */
 export const LIBELLES_TYPE: Record<string, string> = {
   Unit: "Unité (Unit)",
+  Champion: "Champion",
+  Signature: "Signature",
   Spell: "Sort (Spell)",
   Gear: "Équipement (Gear)",
   Legend: "Légende (Legend)",

@@ -17,6 +17,7 @@ function carte(partiel: Partial<Carte> & Pick<Carte, "code" | "set" | "rarete" |
     sousTitre: null,
     numero: "001-100",
     type: "Unit",
+    etiquettes: [],
     domaines: [],
     image: "https://cmsassets.rgpub.io/x-500x700.png",
     orientation: "portrait",

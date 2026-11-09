@@ -32,6 +32,7 @@ const schemaCarteSource = z.object({
   cardNumber: z.string().regex(/^[a-z0-9-]{1,20}$/),
   rarity: z.enum(RARETES),
   cardType: texteCourt(40),
+  cardTypeLabels: z.array(texteCourt(30)).max(6).nullish(),
   domains: z.array(texteCourt(30)).max(6).nullish(),
   imageUrl: z.string().max(300).startsWith(PREFIXE_IMAGES),
   energy: nombreOuNul,
@@ -61,6 +62,13 @@ export function classerVariante(numero: string, rarete: Rarete): Variante | null
 export function orientationImage(url: string): "portrait" | "paysage" {
   const m = /-(\d+)x(\d+)\.\w+$/.exec(url);
   return m && Number(m[1]) > Number(m[2]) ? "paysage" : "portrait";
+}
+
+/** Filtre « type » : le type principal (Unit, Battlefield…) OU une étiquette (Champion, Signature, Token).
+ *  Ainsi « Champion » donne les unités et légendes champions, « Token » tous les tokens. Insensible à la casse. */
+export function correspondAuType(carte: Pick<CarteCatalogue, "type" | "etiquettes">, type: string): boolean {
+  const t = type.toLowerCase();
+  return carte.type.toLowerCase() === t || carte.etiquettes.some((e) => e.toLowerCase() === t);
 }
 
 export function construireCatalogue(brut: unknown): Catalogue {
@@ -93,6 +101,7 @@ export function construireCatalogue(brut: unknown): Catalogue {
       rarete: c.rarity,
       variante,
       type: c.cardType,
+      etiquettes: (c.cardTypeLabels ?? []).filter((e) => e !== c.cardType),
       domaines: c.domains ?? [],
       image: c.imageUrl,
       orientation: orientationImage(c.imageUrl),

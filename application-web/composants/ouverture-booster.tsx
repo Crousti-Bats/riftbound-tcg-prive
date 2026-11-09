@@ -1,7 +1,8 @@
 /** Overlay d'ouverture d'un booster : les 14 cartes apparaissent en cascade, halo sur les rares+ et voile foil. */
+import { ImageCarte } from "./image-carte";
 import { useState } from "react";
 import { FicheCarte } from "./fiche-carte";
-import { type CarteOuverte, classeRarete, estRarePlus, urlImage } from "../outils/libelles-cartes";
+import { type CarteOuverte, classeRarete, estRarePlus } from "../outils/libelles-cartes";
 import { naviguer } from "../outils/navigation";
 
 interface Props {
@@ -30,9 +31,10 @@ export function OuvertureBooster({ cartes, sets, peutOuvrirAutre, envoi, surOuvr
               title={carte.nom}
             >
               <span className={`cadre-carte ${carte.foil ? "voile-foil" : ""}`}>
-                <img
+                <ImageCarte
                   className={carte.orientation === "paysage" ? "image-paysage" : undefined}
-                  src={urlImage(carte.image, 300)}
+                  image={carte.image}
+                  largeur={300}
                   alt={carte.nom}
                 />
                 {carte.foil && <span className="etiquette-foil">✨ foil</span>}

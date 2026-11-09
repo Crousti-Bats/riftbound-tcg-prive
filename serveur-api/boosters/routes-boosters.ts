@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
+import type { CarteCatalogue } from "../catalogue/types-catalogue";
 import { lireCorps } from "../lecture-requete";
 import type { ContexteApi } from "../types-application";
 import { aleatoireCrypto } from "./aleatoire";
@@ -15,6 +16,13 @@ import { prochainDansMs, regenerer } from "./stock";
 import { tirerBooster } from "./tirage-booster";
 
 export const routesBoosters = new Hono<ContexteApi>();
+
+const VARIANTES_REMARQUABLES = new Set(["alt", "overnumbered", "signee", "special", "ultime"]);
+
+/** Epic, Alt Art, Overnumbered, signée, Special, Ultime : ce qu'affiche le monitoring « dernières cartes rares ». */
+export function estRemarquable(carte: Pick<CarteCatalogue, "rarete" | "variante">): boolean {
+  return carte.rarete === "Epic" || VARIANTES_REMARQUABLES.has(carte.variante);
+}
 
 routesBoosters.use("*", exigerConnexion);
 
@@ -105,10 +113,21 @@ routesBoosters.post("/ouvrir", async (c) => {
       .prepare("INSERT INTO ouvertures_boosters (compte_id, set_code, horodatage) VALUES (?, ?, ?)")
       .bind(compte.id, set, maintenant),
   );
+  // Cartes remarquables (Epic et au-delà) : tracées pour le monitoring admin, dans le même lot atomique.
+  const parCode = new Map(catalogue.cartes.map((carte) => [carte.code, carte]));
+  for (const t of tirees) {
+    const carte = parCode.get(t.code);
+    if (carte && estRemarquable(carte)) {
+      requetes.push(
+        base
+          .prepare("INSERT INTO tirages_remarquables (compte_id, card_code, est_foil, horodatage) VALUES (?, ?, ?, ?)")
+          .bind(compte.id, t.code, t.foil ? 1 : 0, maintenant),
+      );
+    }
+  }
   await base.batch(requetes);
 
   // Enrichissement pour l'affichage (données de carte issues du catalogue, jamais de la base).
-  const parCode = new Map(catalogue.cartes.map((carte) => [carte.code, carte]));
   // La fiche de carte du site lit tous les champs (domaines, texte, énergie…) : on renvoie la carte complète,
   // exactement comme le catalogue et la collection, plus le foil et le slot du tirage.
   const cartes = tirees.flatMap((t) => {

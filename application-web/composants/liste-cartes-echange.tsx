@@ -1,5 +1,6 @@
 /** Petite liste de cartes d'un échange (miniatures + quantité + foil). Optionnellement modifiable (panier). */
-import { classeRarete, type Carte, urlImage } from "../outils/libelles-cartes";
+import { ImageCarte } from "./image-carte";
+import { classeRarete, type Carte } from "../outils/libelles-cartes";
 
 export interface ElementListe {
   cle: string;
@@ -25,11 +26,12 @@ export function ListeCartesEchange({ elements, vide, surChangement, maxParCle }:
       {elements.map((e) => (
         <li key={e.cle} className={`ligne-echange ${e.carte ? classeRarete(e.carte) : ""}`}>
           {e.carte ? (
-            <img
+            <ImageCarte
               className={`miniature ${e.carte.orientation === "paysage" ? "miniature-paysage" : ""}`}
-              src={urlImage(e.carte.image, 300)}
+              image={e.carte.image}
+              largeur={300}
               alt={e.carte.nom}
-              loading="lazy"
+              paresseuse
             />
           ) : (
             <span className="miniature miniature-vide" />

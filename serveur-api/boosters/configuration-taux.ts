@@ -25,18 +25,20 @@ export type CategorieRarePlus = "ultime" | "special" | "signee" | "overnumbered"
 
 /**
  * Probabilités par slot Rare+ (il y a 2 slots indépendants par booster).
+ * 2026-11-09 : tous les taux Rare+ divisés par 2 à la demande de l'utilisateur (Epic 1/12, Alt 1/24,
+ * Over 1/144, Signée 1/480, Special et Ultime 1/2000 boosters). La différence revient aux Rares.
  * Lues dans l'ordre, de façon cumulative. Tout le reste (~87 %) va à "rare".
  * Si le pool d'une catégorie est vide pour le set ouvert, le tirage retombe sur "rare"
  * (sa probabilité est ainsi automatiquement reversée aux Rares).
  */
 export const TAUX_RARE_PLUS: ReadonlyArray<{ categorie: Exclude<CategorieRarePlus, "rare">; p: number }> = [
-  { categorie: "ultime", p: 0.0005 }, //        1 booster / 1000 → 1/2000 par slot (Baron Nashor, Unleashed)
-  { categorie: "special", p: 0.0005 }, //       1 booster / 1000 → 1/2000 par slot (Special Alt)
-  { categorie: "signee", p: 0.00208 }, //       1/480 (Overnumbered signée)
-  { categorie: "overnumbered", p: 0.00694 }, // 1/144 (Overnumbered)
-  { categorie: "alt", p: 0.0417 }, //           1/24  (Alt Art)
-  { categorie: "epic", p: 0.0783 }, //          (1/6 − 0,01) / 2 (Epic, après retrait de la part Foil)
-  // reste ≈ 0,87048 → "rare"
+  { categorie: "ultime", p: 0.00025 }, //       1 booster / 2000 → 1/4000 par slot (Baron Nashor, Unleashed)
+  { categorie: "special", p: 0.00025 }, //      1 booster / 2000 → 1/4000 par slot (Special Alt)
+  { categorie: "signee", p: 0.00104 }, //       1 booster / 480 → 1/960 par slot (Overnumbered signée)
+  { categorie: "overnumbered", p: 0.00347 }, // 1 booster / 144 → 1/288 par slot (Overnumbered)
+  { categorie: "alt", p: 0.0208 }, //           1 booster / 24 → 1/48 par slot (Alt Art)
+  { categorie: "epic", p: 0.03667 }, //         (1/12 − 0,01) / 2 (Epic 1 booster / 12, après retrait de la part Foil)
+  // reste ≈ 0,93767 → "rare"
 ];
 
 /** Slot Foil : rareté de la carte brillante (estimation communautaire). Le reste (0,75) est Common. */

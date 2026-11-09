@@ -1,10 +1,11 @@
 /** Catalogue de toutes les cartes : filtres par set, rareté, variante et recherche ; fiche détaillée. */
+import { ImageCarte } from "../composants/image-carte";
 import { useEffect, useState } from "react";
 import { FicheCarte } from "../composants/fiche-carte";
 import { FiltresCartes } from "../composants/filtres-cartes";
 import { Pagination } from "../composants/pagination";
 import { appelerApi } from "../outils/appels-api";
-import { type Carte, classeRarete, LIBELLES_RARETE, LIBELLES_VARIANTE, type SetInfo, urlImage } from "../outils/libelles-cartes";
+import { type Carte, classeRarete, LIBELLES_RARETE, LIBELLES_VARIANTE, type SetInfo } from "../outils/libelles-cartes";
 import { naviguer } from "../outils/navigation";
 
 interface ReponseCartes {
@@ -111,11 +112,12 @@ export function PageCatalogue() {
           >
             <span className="cadre-carte">
               {/* Les Battlefields (paysage) sont tournés d'un quart de tour pour rester alignés, sans déformation. */}
-              <img
+              <ImageCarte
                 className={carte.orientation === "paysage" ? "image-paysage" : undefined}
-                src={urlImage(carte.image, 300)}
+                image={carte.image}
+                largeur={300}
                 alt={carte.nom}
-                loading="lazy"
+                paresseuse
               />
             </span>
             <span className="legende-carte">

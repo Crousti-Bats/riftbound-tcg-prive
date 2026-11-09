@@ -5,9 +5,16 @@
  * - Chaque action est journalisée.
  */
 import { type Context, Hono } from "hono";
-import { DUREE_ADMIN_MS, exigerAdmin, exigerConnexion, ipClient } from "../authentification/sessions";
+import {
+  DUREE_ADMIN_MS,
+  exigerAdmin,
+  exigerAdminSansProlonger,
+  exigerConnexion,
+  ipClient,
+} from "../authentification/sessions";
 import { journaliser, requeteJournal } from "../journal-evenements";
 import { lireCorps } from "../lecture-requete";
+import { collecterMonitoring } from "./monitoring";
 import { empreinteSha256, jetonAleatoire } from "../securite/jetons-et-empreintes";
 import { enregistrerEchec, estBloque, REGLES, reinitialiser } from "../securite/limitation-tentatives";
 import { verifierMotDePasse } from "../securite/mots-de-passe";
@@ -48,9 +55,18 @@ routesAdministration.post("/elevation", exigerConnexion, async (c) => {
 });
 
 // Toutes les routes suivantes : admin avec accès ouvert.
+// Le tableau de bord, rafraîchi automatiquement, vérifie l'accès SANS le prolonger.
 routesAdministration.use("/*", async (c, next) => {
   if (c.req.path.endsWith("/elevation")) return next();
+  if (c.req.method === "GET" && c.req.path.endsWith("/monitoring")) return exigerAdminSansProlonger(c, next);
   return exigerAdmin(c, next);
+});
+
+// ---------- Monitoring (étape 8) ----------
+
+routesAdministration.get("/monitoring", async (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json(await collecterMonitoring(c));
 });
 
 routesAdministration.post("/fermer", async (c) => {

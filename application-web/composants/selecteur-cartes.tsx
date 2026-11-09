@@ -2,10 +2,11 @@
  * Parcourt une collection (la mienne ou celle d'un autre joueur) avec les filtres habituels,
  * et permet d'ajouter des cartes à une proposition d'échange (version normale ou foil).
  */
+import { ImageCarte } from "./image-carte";
 import { useEffect, useState } from "react";
 import { appelerApi } from "../outils/appels-api";
 import { cleLigne } from "../outils/echanges";
-import { type CartePossedee, classeRarete, type SetInfo, urlImage } from "../outils/libelles-cartes";
+import { type CartePossedee, classeRarete, type SetInfo } from "../outils/libelles-cartes";
 import { FiltresCartes } from "./filtres-cartes";
 import { Pagination } from "./pagination";
 
@@ -93,11 +94,12 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout }: Props) {
           return (
             <div key={carte.code} className={`vignette-carte ${classeRarete(carte)}`} title={carte.nom}>
               <span className={`cadre-carte ${carte.quantiteFoil > 0 ? "voile-foil" : ""}`}>
-                <img
+                <ImageCarte
                   className={carte.orientation === "paysage" ? "image-paysage" : undefined}
-                  src={urlImage(carte.image, 300)}
+                  image={carte.image}
+                  largeur={300}
                   alt={carte.nom}
-                  loading="lazy"
+                  paresseuse
                 />
                 <span className="badge-quantite">×{carte.quantite + carte.quantiteFoil}</span>
               </span>

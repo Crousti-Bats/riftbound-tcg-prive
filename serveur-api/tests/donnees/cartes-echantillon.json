@@ -8,6 +8,10 @@
   "cardNumber": "sp1-005",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Calm"
   ],
@@ -28,6 +32,9 @@
   "cardNumber": "001-167",
   "rarity": "Common",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Chaos"
   ],
@@ -48,6 +55,10 @@
   "cardNumber": "r01a",
   "rarity": "Showcase",
   "cardType": "Rune",
+  "cardTypeLabels": [
+   "Rune",
+   "Basic"
+  ],
   "domains": [
    "Fury"
   ],
@@ -68,6 +79,10 @@
   "cardNumber": "r01",
   "rarity": "Common",
   "cardType": "Rune",
+  "cardTypeLabels": [
+   "Rune",
+   "Basic"
+  ],
   "domains": [
    "Fury"
   ],
@@ -88,6 +103,9 @@
   "cardNumber": "009-167",
   "rarity": "Uncommon",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": null,
   "imageUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/5be775464c8b897501317c6d32fd60c8b962b5c2-744x1039.png",
   "energy": 6,
@@ -106,6 +124,10 @@
   "cardNumber": "015-167",
   "rarity": "Rare",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -126,6 +148,10 @@
   "cardNumber": "020a-167",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -146,6 +172,10 @@
   "cardNumber": "021-167",
   "rarity": "Epic",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -166,6 +196,9 @@
   "cardNumber": "168-167",
   "rarity": "Showcase",
   "cardType": "Legend",
+  "cardTypeLabels": [
+   "Legend"
+  ],
   "domains": [
    "Fury",
    "Mind"
@@ -187,6 +220,9 @@
   "cardNumber": "001-166",
   "rarity": "Common",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -207,6 +243,10 @@
   "cardNumber": "r01",
   "rarity": "Common",
   "cardType": "Rune",
+  "cardTypeLabels": [
+   "Rune",
+   "Basic"
+  ],
   "domains": [
    "Fury"
   ],
@@ -227,6 +267,10 @@
   "cardNumber": "sp1-006",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -247,6 +291,10 @@
   "cardNumber": "t04",
   "rarity": "Common",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Token"
+  ],
   "domains": [
    "Colorless"
   ],
@@ -267,6 +315,9 @@
   "cardNumber": "009-166",
   "rarity": "Uncommon",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -287,6 +338,9 @@
   "cardNumber": "015-166",
   "rarity": "Rare",
   "cardType": "Spell",
+  "cardTypeLabels": [
+   "Spell"
+  ],
   "domains": [
    "Fury"
   ],
@@ -307,6 +361,10 @@
   "cardNumber": "019a-166",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -327,6 +385,10 @@
   "cardNumber": "021-166",
   "rarity": "Epic",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -347,6 +409,10 @@
   "cardNumber": "167-166",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -367,6 +433,9 @@
   "cardNumber": "189-star-166",
   "rarity": "Showcase",
   "cardType": "Legend",
+  "cardTypeLabels": [
+   "Legend"
+  ],
   "domains": [
    "Fury",
    "Calm"
@@ -388,6 +457,9 @@
   "cardNumber": "001-219",
   "rarity": "Common",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -408,6 +480,10 @@
   "cardNumber": "t01",
   "rarity": "Common",
   "cardType": "Battlefield",
+  "cardTypeLabels": [
+   "Battlefield",
+   "Token"
+  ],
   "domains": [
    "Colorless"
   ],
@@ -428,6 +504,9 @@
   "cardNumber": "011-219",
   "rarity": "Uncommon",
   "cardType": "Gear",
+  "cardTypeLabels": [
+   "Gear"
+  ],
   "domains": [
    "Fury"
   ],
@@ -448,6 +527,9 @@
   "cardNumber": "019-219",
   "rarity": "Rare",
   "cardType": "Gear",
+  "cardTypeLabels": [
+   "Gear"
+  ],
   "domains": [
    "Fury"
   ],
@@ -468,6 +550,10 @@
   "cardNumber": "022a-219",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -488,6 +574,9 @@
   "cardNumber": "027-219",
   "rarity": "Epic",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -508,6 +597,9 @@
   "cardNumber": "220-219",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -528,6 +620,9 @@
   "cardNumber": "226-star-219",
   "rarity": "Showcase",
   "cardType": "Legend",
+  "cardTypeLabels": [
+   "Legend"
+  ],
   "domains": [
    "Fury",
    "Mind"
@@ -549,6 +644,9 @@
   "cardNumber": "238-219",
   "rarity": "Epic",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Chaos"
   ],
@@ -569,6 +667,9 @@
   "cardNumber": "001-221",
   "rarity": "Common",
   "cardType": "Spell",
+  "cardTypeLabels": [
+   "Spell"
+  ],
   "domains": [
    "Fury"
   ],
@@ -589,6 +690,10 @@
   "cardNumber": "t03",
   "rarity": "Common",
   "cardType": "Gear",
+  "cardTypeLabels": [
+   "Gear",
+   "Token"
+  ],
   "domains": [
    "Colorless"
   ],
@@ -609,6 +714,9 @@
   "cardNumber": "011-221",
   "rarity": "Uncommon",
   "cardType": "Spell",
+  "cardTypeLabels": [
+   "Spell"
+  ],
   "domains": [
    "Fury"
   ],
@@ -629,6 +737,9 @@
   "cardNumber": "019-221",
   "rarity": "Rare",
   "cardType": "Gear",
+  "cardTypeLabels": [
+   "Gear"
+  ],
   "domains": [
    "Fury"
   ],
@@ -649,6 +760,10 @@
   "cardNumber": "020a-221",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -669,6 +784,9 @@
   "cardNumber": "027-221",
   "rarity": "Epic",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -689,6 +807,9 @@
   "cardNumber": "222-221",
   "rarity": "Showcase",
   "cardType": "Gear",
+  "cardTypeLabels": [
+   "Gear"
+  ],
   "domains": [
    "Fury"
   ],
@@ -709,6 +830,10 @@
   "cardNumber": "223-star-221",
   "rarity": "Showcase",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -729,6 +854,9 @@
   "cardNumber": "001-298",
   "rarity": "Common",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -749,6 +877,10 @@
   "cardNumber": "007a-298",
   "rarity": "Showcase",
   "cardType": "Rune",
+  "cardTypeLabels": [
+   "Rune",
+   "Basic"
+  ],
   "domains": [
    "Fury"
   ],
@@ -769,6 +901,9 @@
   "cardNumber": "015-298",
   "rarity": "Uncommon",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -789,6 +924,9 @@
   "cardNumber": "025-298",
   "rarity": "Rare",
   "cardType": "Spell",
+  "cardTypeLabels": [
+   "Spell"
+  ],
   "domains": [
    "Fury"
   ],
@@ -809,6 +947,9 @@
   "cardNumber": "037-298",
   "rarity": "Epic",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit"
+  ],
   "domains": [
    "Fury"
   ],
@@ -829,6 +970,9 @@
   "cardNumber": "299-star-298",
   "rarity": "Showcase",
   "cardType": "Legend",
+  "cardTypeLabels": [
+   "Legend"
+  ],
   "domains": [
    "Fury",
    "Mind"
@@ -850,6 +994,9 @@
   "cardNumber": "299-298",
   "rarity": "Showcase",
   "cardType": "Legend",
+  "cardTypeLabels": [
+   "Legend"
+  ],
   "domains": [
    "Fury",
    "Mind"
@@ -871,6 +1018,10 @@
   "cardNumber": "001-024",
   "rarity": "Epic",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Fury"
   ],
@@ -891,6 +1042,9 @@
   "cardNumber": "002-024",
   "rarity": "Uncommon",
   "cardType": "Spell",
+  "cardTypeLabels": [
+   "Spell"
+  ],
   "domains": [
    "Fury"
   ],
@@ -911,6 +1065,9 @@
   "cardNumber": "003-024",
   "rarity": "Common",
   "cardType": "Spell",
+  "cardTypeLabels": [
+   "Spell"
+  ],
   "domains": [
    "Fury"
   ],
@@ -931,6 +1088,10 @@
   "cardNumber": "004-024",
   "rarity": "Rare",
   "cardType": "Unit",
+  "cardTypeLabels": [
+   "Unit",
+   "Champion"
+  ],
   "domains": [
    "Calm"
   ],

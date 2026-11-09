@@ -1,10 +1,11 @@
 /** Ma collection : cartes possédées, quantités, foil, complétion par set, mêmes filtres que le catalogue. */
+import { ImageCarte } from "../composants/image-carte";
 import { useEffect, useMemo, useState } from "react";
 import { FicheCarte } from "../composants/fiche-carte";
 import { FiltresCartes } from "../composants/filtres-cartes";
 import { Pagination } from "../composants/pagination";
 import { appelerApi } from "../outils/appels-api";
-import { type CartePossedee, classeRarete, type SetInfo, urlImage } from "../outils/libelles-cartes";
+import { type CartePossedee, classeRarete, type SetInfo } from "../outils/libelles-cartes";
 import { naviguer } from "../outils/navigation";
 
 interface ReponseCollection {
@@ -158,11 +159,12 @@ export function PageCollection() {
             title={carte.nom}
           >
             <span className={`cadre-carte ${carte.quantiteFoil > 0 ? "voile-foil" : ""}`}>
-              <img
+              <ImageCarte
                 className={carte.orientation === "paysage" ? "image-paysage" : undefined}
-                src={urlImage(carte.image, 300)}
+                image={carte.image}
+                largeur={300}
                 alt={carte.nom}
-                loading="lazy"
+                paresseuse
               />
               <span className="badge-quantite">×{carte.quantite + carte.quantiteFoil}</span>
               {carte.quantiteFoil > 0 && <span className="badge-foil">✨</span>}
