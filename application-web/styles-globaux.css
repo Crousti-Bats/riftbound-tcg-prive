@@ -192,3 +192,36 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
   .vignette-carte.apparition { opacity: 1; animation: none; }
   .cadre-carte.voile-foil::after { animation: none; }
 }
+
+/* ---------- Échanges ---------- */
+.message-succes { color: var(--succes); margin: 0 0 12px; }
+.bouton-pastille { position: relative; }
+.pastille {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; margin-left: 8px;
+  padding: 0 6px; border-radius: 11px; background: var(--danger); color: #fff; font-size: 0.8rem; font-weight: 700;
+}
+.carte-echange { display: flex; flex-direction: column; gap: 10px; }
+.entete-echange { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.message-echange { margin: 0; font-style: italic; color: var(--texte-doux); }
+.colonnes-echange { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.colonnes-echange h3 { margin: 0 0 8px; font-size: 1rem; color: var(--accent); }
+.recapitulatif-echange { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+
+.liste-echange { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ligne-echange {
+  display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; padding: 4px 6px;
+  border-left: 3px solid var(--couleur-rarete, var(--bordure)); background: var(--fond); border-radius: 6px;
+}
+.miniature { width: 44px; height: 61px; object-fit: cover; border-radius: 4px; display: block; }
+.miniature-paysage { object-fit: contain; background: var(--fond-carte); }
+.miniature-vide { background: var(--fond-carte); }
+.nom-ligne { font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; }
+.quantite-ligne { display: inline-flex; align-items: center; gap: 6px; }
+.quantite-ligne button { min-width: 32px; }
+
+.grille-compacte { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.vignette-carte .boutons-ajout { display: flex; flex-direction: column; gap: 4px; }
+.vignette-carte .boutons-ajout button { width: 100%; }
+@media (max-width: 600px) {
+  .grille-compacte { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+}

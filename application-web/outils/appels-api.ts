@@ -25,6 +25,16 @@ const MESSAGES: Record<string, string> = {
   aucun_booster: "Tu n'as plus de booster. Reviens dans quelques minutes.",
   conflit_ouverture: "Ouverture déjà en cours. Réessaie dans un instant.",
   set_non_ouvrable: "Ce set ne peut pas être ouvert en booster.",
+  joueur_introuvable: "Ce joueur n'existe pas ou son compte est désactivé.",
+  echange_avec_soi: "Tu ne peux pas échanger avec toi-même.",
+  trop_de_propositions: "Tu as déjà 20 propositions en attente. Attends des réponses ou annule-en.",
+  cartes_non_possedees: "Une des cartes n'est pas (ou plus) disponible en quantité suffisante.",
+  echange_introuvable: "Échange introuvable.",
+  echange_deja_traite: "Cet échange a déjà été traité.",
+  echange_expire: "Cette proposition a expiré (48 heures).",
+  echange_introuvable_ou_deja_traite: "Échange introuvable ou déjà traité.",
+  cartes_plus_disponibles: "Échange impossible : une des cartes n'est plus disponible chez l'un de vous deux. Rien n'a été transféré.",
+  collection_indisponible: "La collection est momentanément indisponible. Réessaie dans une minute.",
 };
 
 export class ErreurApi extends Error {

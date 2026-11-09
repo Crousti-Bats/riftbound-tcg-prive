@@ -3,8 +3,8 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-09
-**Étape en cours :** 6 — Frontend boosters et collection (terminée)
-**Prochaine étape :** 7 — Échanges entre joueurs. **Pas encore commencée.** L'ouverture de boosters et la collection sont désormais utilisables sur le site.
+**Étape en cours :** 7 — Échanges entre joueurs (terminée)
+**Prochaine étape :** 8 — Admin : monitoring en quasi temps réel (voir §2bis). **Pas encore commencée.** Les échanges sont utilisables sur le site.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -196,6 +196,18 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **API collection (lecture, connexion obligatoire) :** `GET /api/collection?set=&rarete=&variante=&type=&recherche=&foil=&doublons=&page=` (cartes possédées enrichies depuis le catalogue, 60/page) et `GET /api/collection/resume` (totaux + complétion par set). Aucune donnée de carte en base. `sansAccents` est partagé via `serveur-api/catalogue/recherche-texte.ts`.
 - **Vérifié bout-en-bout** le 2026-11-09 contre le vrai runtime local (miniflare D1 + vraie source) : inscription → 15 boosters → ouverture (14 cartes, composition exacte) → collection et complétion (ogn 298 cartes de base). 96 tests automatiques (90 + 6 pour la collection).
 
+## 4quater. Échanges entre joueurs (étape 7)
+
+**Règles décidées par l'utilisateur le 2026-11-09 :** plusieurs cartes contre plusieurs, **dons autorisés** (un côté peut être vide, pas les deux), on peut parcourir **toute la collection** des autres joueurs, une proposition expire au bout de **48 heures**. Limites anti-abus (`serveur-api/echanges/regles-echanges.ts`) : 20 cartes différentes et 60 exemplaires maximum par côté, 20 propositions en attente maximum par joueur, message de 200 caractères maximum.
+
+- **Base (migration `0004`) :** table `echanges` (auteur, destinataire, statut `en_attente | accepte | refuse | annule | expire | echoue`, message, dates, `jeton_acceptation`) et table `echanges_cartes` (`sens` = `donne` de l'auteur vers le destinataire, ou `demande` dans l'autre sens ; `card_code`, `est_foil`, `quantite`). Seulement des cardCode et des quantités.
+- **Pas de réservation des cartes** pendant l'attente : la possession est vérifiée à la création, puis **revérifiée à l'acceptation**.
+- **Acceptation atomique :** un seul `batch()` D1 (une transaction). (1) Réservation `UPDATE … SET statut='accepte', jeton_acceptation=? WHERE statut='en_attente' AND destinataire_id=? AND expire_le > now`. (2) Pour chaque ligne : retrait chez le donneur (ligne créée à 0 si absente, puis `quantite - n`) et ajout chez le receveur. Chaque transfert porte la garde `EXISTS (… jeton_acceptation = ?)` : il ne s'exécute que si la réservation a réussi **dans ce lot**. (3) Suppression des lignes à 0. S'il manque une carte, `CHECK (quantite >= 0)` fait échouer le lot et **tout est annulé** : l'échange passe en `echoue` et l'API renvoie 409 `cartes_plus_disponibles`. Une double acceptation, ou deux acceptations simultanées, n'exécutent l'échange qu'une fois.
+- **Expiration paresseuse :** les propositions dépassées passent en `expire` à la lecture, sans tâche planifiée.
+- **API (connexion obligatoire) :** `GET /api/echanges/joueurs`, `POST /api/echanges` (proposer), `GET /api/echanges` (reçues, envoyées, historique, cartes enrichies depuis le catalogue), `GET /api/echanges/resume` (pastille), `POST /api/echanges/:id/accepter | refuser | annuler`. Seul le destinataire accepte ou refuse, seul l'auteur annule. Collection d'un autre joueur : `GET /api/collection/joueur/:pseudo` (mêmes filtres que la sienne).
+- **Interface :** bouton « Échanges » sur l'accueil avec une pastille du nombre de propositions reçues. Page `/echanges` (onglets Reçues, Envoyées, Historique ; Accepter, Refuser, Annuler ; temps restant). Page `/echanges/nouveau` (choix du joueur, collection de l'autre et la mienne avec filtres, boutons « + Normale » / « + Foil », panier modifiable −/+, message).
+- **Tests :** `serveur-api/tests/echanges.test.ts` (17 tests) : création, possession (foil distinct), validation, limite de propositions, échange dans les deux sens, don, droits, double et triple acceptation simultanée, **atomicité** (carte disparue entre-temps : rien ne bouge), expiration à 48 h, refus et annulation, liste des joueurs, collection des autres. Vérifié aussi de bout en bout sur le vrai moteur D1 local (échange réussi, et annulation complète quand une carte manque).
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -223,7 +235,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | Terminé |
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | Terminé |
 | 6 | Frontend : ouverture de booster animée, collection, filtres | Terminé |
-| 7 | Échanges entre joueurs | À faire |
+| 7 | Échanges entre joueurs | Terminé |
 | 8 | **Admin : monitoring en quasi temps réel** (voir §2bis) | À faire |
 | 9 | PWA (installable, hors-ligne partiel), responsive | À faire |
 | 10 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
@@ -249,6 +261,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Favicon.** Logo de l'utilisateur (spirale orange). Le fond noir devient transparent pour l'onglet. L'icône iPhone et les icônes PWA ont le fond #0b1220. Script `outils/generer-icones.py`. Attention : ne jamais ouvrir puis sauvegarder une image dans VS Code, cela l'enregistre comme du texte et la corrompt (c'est arrivé une fois avec logo-source.png).
 - **2026-11-08 — Filtre par type.** Nouveau filtre `type` (Unité, Sort, Équipement, Légende, Terrain, Rune, Token) dans l'API et sur la page. Il permet notamment de trouver les runes d'Origins, rangées en variante `base`. 70 tests.
 - **2026-11-08 — Terrains et pagination.** Les Battlefields étaient déformés : ils sont maintenant tournés dans la grille et affichés à l'horizontale dans la fiche. Pagination en haut et en bas avec un choix de page. Comparaison avec la galerie officielle : il manque 2 cartes dans la source (voir §3bis). 69 tests.
+- **2026-11-09 — Étape 7.** Échanges entre joueurs (§4quater). Quatre règles validées par l'utilisateur : plusieurs contre plusieurs, dons, collection complète visible, expiration à 48 h. Migration `0004`. Acceptation en un seul lot D1 atomique avec jeton de garde. 17 nouveaux tests (113 au total), dont l'atomicité et les acceptations simultanées. Vérifié de bout en bout sur le vrai moteur D1 local.
 - **2026-11-09 — Étape 6.** Interface boosters et collection (§4ter). Accueil transformé en hub (stock + minuteur + choix du set + Ouvrir), animation d'ouverture en cascade avec halo et voile foil, page `/collection` (filtres, quantités, foil, doublons, complétion par set). Composants partagés extraits (`fiche-carte`, `filtres-cartes`, `pagination`). Nouvelles routes de lecture `GET /api/collection` et `/api/collection/resume`. Parcours vérifié bout-en-bout contre le vrai runtime local. 96 tests. Aucune nouvelle dépendance ni migration.
 - **2026-11-09 — Étape 5.** Moteur de boosters terminé (§4bis). 3 décisions tranchées avec l'utilisateur (Légendes/Terrains dans leurs pools, doublons autorisés, foil stocké à part). Nouveau dossier `serveur-api/boosters/` (config des taux, aléatoire injectable, pools, tirage pur, stock paresseux, routes). Migration `0003` (stock sur les comptes, tables `collection` et `ouvertures_boosters`). API `/api/boosters/etat` et `/ouvrir`. 90 tests passent (dont 100 000 boosters simulés, fréquences par booster vérifiées). Migration validée sur le vrai moteur D1 en local. Un nouveau joueur reçoit 15 boosters à l'inscription.
 - Astuce diagnostic : `Date.now()` n'avance pas pendant le calcul dans un Worker (protection Spectre), donc on ne peut pas mesurer le CPU ainsi. Utiliser le champ `cpuTime` de `wrangler tail --format json`.
@@ -274,6 +287,11 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   composants/fiche-carte.tsx          fiche détaillée d'une carte (modale), partagée
   composants/filtres-cartes.tsx       barre de filtres partagée (catalogue + collection)
   composants/pagination.tsx           navigation entre pages de résultats, partagée
+  pages/page-echanges.tsx             mes échanges : reçues, envoyées, historique ; accepter, refuser, annuler
+  pages/page-nouvel-echange.tsx       composer une proposition (joueur, cartes données et demandées, message)
+  composants/selecteur-cartes.tsx     parcourir une collection (la mienne ou celle d'un autre) et ajouter des cartes
+  composants/liste-cartes-echange.tsx liste compacte des cartes d'un échange (panier modifiable)
+  outils/echanges.ts                  types, libellés des statuts, point de vue « je reçois / je donne »
   outils/libelles-cartes.ts           noms français des raretés et variantes, couleurs, URL d'images redimensionnées
   outils/appels-api.ts                appels au serveur et messages d'erreur en français
   outils/navigation.ts                changement de page sans rechargement, format des dates
@@ -302,7 +320,9 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
   catalogue/source-cartes.ts          téléchargement et cache (mémoire, Cache API) de la source
   catalogue/routes-catalogue.ts       /api/catalogue : sets, recherche de cartes, détail
   catalogue/recherche-texte.ts        normalisation du texte (sans accents), partagée
-  collection/routes-collection.ts     /api/collection : cartes possédées, résumé de complétion
+  collection/routes-collection.ts     /api/collection : cartes possédées, résumé de complétion, collection d'un autre joueur
+  echanges/regles-echanges.ts         règles, limites et validation (Zod) des propositions
+  echanges/routes-echanges.ts         /api/echanges : proposer, lister, accepter (lot atomique), refuser, annuler
   boosters/configuration-taux.ts      SOURCE DE VÉRITÉ des taux, composition, stock (doc §4)
   boosters/aleatoire.ts               aléatoire injectable (crypto en prod, PRNG seedé pour les tests)
   boosters/pools.ts                   pré-indexe les cartes par set/rareté/variante (mémoïsé)
@@ -320,6 +340,7 @@ base-de-donnees/                      BASE SQLITE CLOUDFLARE D1
   migrations/0001_initialisation.sql  table parametres
   migrations/0002_comptes_et_sessions.sql  comptes, sessions, invitations, limitations, journal
   migrations/0003_boosters_et_collection.sql  stock de boosters, collection, ouvertures
+  migrations/0004_echanges.sql        échanges et cartes des échanges
   (les migrations sont numérotées et jamais modifiées après le merge : on en ajoute une nouvelle)
 
 configuration/                        RÉGLAGES DES OUTILS
