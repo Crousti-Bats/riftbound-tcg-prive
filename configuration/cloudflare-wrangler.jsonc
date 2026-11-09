@@ -10,6 +10,11 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
+  // Monitoring admin : l'ID du compte n'est pas un secret. Le jeton Analytics, lui, est un secret Worker :
+  // `npx wrangler secret put JETON_ANALYTICS_CLOUDFLARE --config configuration/cloudflare-wrangler.jsonc`.
+  "vars": { "ID_COMPTE_CLOUDFLARE": "14bd3e99e009ec33efebde236223ab6a" },
+  // Identifiant et date de la version déployée, affichés dans le monitoring.
+  "version_metadata": { "binding": "VERSION_DEPLOYEE" },
   // Base SQLite Cloudflare D1 (région Europe de l'Ouest). L'identifiant n'est pas un secret.
   "d1_databases": [
     {

@@ -225,3 +225,28 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 @media (max-width: 600px) {
   .grille-compacte { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 }
+
+/* ---------- Monitoring admin (étape 8) ---------- */
+.barre-monitoring { margin-bottom: 0; }
+.barre-monitoring .aide { margin: 0; }
+.grille-monitoring { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+.chiffres { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.chiffre { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--bordure); }
+.chiffre strong { font-size: 1.4rem; line-height: 1.2; color: var(--texte); }
+.chiffre span { font-size: 0.78rem; color: var(--texte-doux); }
+.chiffre-alerte { border-color: var(--danger); }
+.chiffre-alerte strong { color: #f3b2b4; }
+.jauge { margin-bottom: 12px; }
+.jauge-libelle { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 0.85rem; margin-bottom: 4px; }
+.jauge-barre { height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.jauge-barre span { display: block; height: 100%; border-radius: 5px; background: var(--succes); transition: width 0.4s ease; }
+.jauge-attention span { background: var(--accent); }
+.jauge-danger span { background: var(--danger); }
+.liste-simple, .liste-sante { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.liste-simple li { overflow-wrap: anywhere; }
+.liste-sante .ok { color: var(--succes); }
+.liste-sante .ko, .texte-alerte { color: #f3b2b4; }
+.pastille-en-ligne, .pastille-hors-ligne { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.pastille-en-ligne { background: var(--succes); box-shadow: 0 0 6px var(--succes); }
+.pastille-hors-ligne { background: var(--bordure); }
+@media (prefers-reduced-motion: reduce) { .jauge-barre span { transition: none; } }

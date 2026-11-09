@@ -13,6 +13,7 @@ export interface CompteConnecte {
 
 /** Contexte Hono : bindings Cloudflare + variables posées par les middlewares. */
 export interface ContexteApi {
-  Bindings: Env;
+  /** Env généré par wrangler + secrets (absents des types générés). */
+  Bindings: Env & { JETON_ANALYTICS_CLOUDFLARE?: string };
   Variables: { compte: CompteConnecte | null };
 }

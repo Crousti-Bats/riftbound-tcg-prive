@@ -3,6 +3,7 @@
  * Il faut re-saisir son mot de passe pour l'ouvrir ; elle se referme après 15 minutes d'inactivité.
  */
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { TableauMonitoring } from "../composants/tableau-monitoring";
 import { appelerApi, type CompteCourant, ErreurApi } from "../outils/appels-api";
 import { formaterDate, naviguer } from "../outils/navigation";
 
@@ -38,7 +39,14 @@ interface Evenement {
   details: string | null;
 }
 
-type Onglet = "invitations" | "comptes" | "journal";
+type Onglet = "monitoring" | "invitations" | "comptes" | "journal";
+
+const LIBELLES_ONGLETS: Record<Onglet, string> = {
+  monitoring: "Monitoring",
+  invitations: "Invitations",
+  comptes: "Comptes",
+  journal: "Journal",
+};
 
 interface Props {
   compte: CompteCourant;
@@ -46,7 +54,7 @@ interface Props {
 }
 
 export function PageAdmin({ compte, surChangementCompte }: Props) {
-  const [onglet, setOnglet] = useState<Onglet>("invitations");
+  const [onglet, setOnglet] = useState<Onglet>("monitoring");
 
   async function fermer() {
     await appelerApi("POST", "/admin/fermer", {}).catch(() => undefined);
@@ -68,12 +76,13 @@ export function PageAdmin({ compte, surChangementCompte }: Props) {
       ) : (
         <>
           <nav className="onglets">
-            {(["invitations", "comptes", "journal"] as const).map((o) => (
+            {(Object.keys(LIBELLES_ONGLETS) as Onglet[]).map((o) => (
               <button key={o} className={o === onglet ? "onglet actif" : "onglet"} onClick={() => setOnglet(o)}>
-                {o === "invitations" ? "Invitations" : o === "comptes" ? "Comptes" : "Journal"}
+                {LIBELLES_ONGLETS[o]}
               </button>
             ))}
           </nav>
+          {onglet === "monitoring" && <TableauMonitoring surExpiration={surChangementCompte} />}
           {onglet === "invitations" && <OngletInvitations surExpiration={surChangementCompte} />}
           {onglet === "comptes" && <OngletComptes moi={compte.pseudo} surExpiration={surChangementCompte} />}
           {onglet === "journal" && <OngletJournal surExpiration={surChangementCompte} />}
