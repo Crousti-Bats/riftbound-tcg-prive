@@ -38,6 +38,12 @@ export function viderCacheMemoire(): void {
   chargementEnCours = null;
 }
 
+/** Pour les tests : injecte un catalogue en mémoire (évite tout appel réseau). */
+export function amorcerCataloguePourTest(catalogue: Catalogue): void {
+  enMemoire = catalogue;
+  chargementEnCours = null;
+}
+
 function dependancesParDefaut(): DependancesSource {
   const global = globalThis as unknown as { caches?: { default?: Cache } };
   return {

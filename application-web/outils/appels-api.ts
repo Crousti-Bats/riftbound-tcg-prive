@@ -21,6 +21,10 @@ const MESSAGES: Record<string, string> = {
   action_sur_soi_interdite: "Tu ne peux pas faire cette action sur ton propre compte.",
   introuvable_ou_deja_utilisee: "Invitation introuvable ou déjà utilisée.",
   catalogue_indisponible: "La liste des cartes est momentanément indisponible. Réessaie dans une minute.",
+  boosters_indisponibles: "Les boosters sont momentanément indisponibles. Réessaie dans une minute.",
+  aucun_booster: "Tu n'as plus de booster. Reviens dans quelques minutes.",
+  conflit_ouverture: "Ouverture déjà en cours. Réessaie dans un instant.",
+  set_non_ouvrable: "Ce set ne peut pas être ouvert en booster.",
 };
 
 export class ErreurApi extends Error {
