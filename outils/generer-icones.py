@@ -7,6 +7,8 @@ Usage : python outils/generer-icones.py   (dépendance : pip install pillow)
 - favicon.ico (16, 32, 48 px) et icones/favicon-32.png : fond transparent, pour l'onglet du navigateur.
 - icones/apple-touch-icon.png (180 px) et icones/icone-192.png / icone-512.png : fond de la couleur du site,
   car iOS et les applications installées n'aiment pas la transparence.
+- icones/icone-masquable-512.png : version « maskable » pour Android (le système découpe l'icône en rond,
+  en carré arrondi...) : logo réduit pour rester dans la zone sûre (cercle de 80 % du côté).
 """
 import os
 
@@ -56,6 +58,7 @@ def main() -> None:
     carre(logo, 180, 0.12, FOND_SITE).save(os.path.join(DOSSIER_ICONES, "apple-touch-icon.png"))
     carre(logo, 192, 0.12, FOND_SITE).save(os.path.join(DOSSIER_ICONES, "icone-192.png"))
     carre(logo, 512, 0.12, FOND_SITE).save(os.path.join(DOSSIER_ICONES, "icone-512.png"))
+    carre(logo, 512, 0.24, FOND_SITE).save(os.path.join(DOSSIER_ICONES, "icone-masquable-512.png"))
     carre(logo, 512, 0.02).save(os.path.join(DOSSIER_ICONES, "logo-transparent-512.png"))
     print("Icônes générées dans", DOSSIER_ICONES)
 

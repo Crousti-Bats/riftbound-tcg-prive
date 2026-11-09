@@ -17,6 +17,11 @@ export default tseslint.config(
     rules: { ...reactHooks.configs.recommended.rules },
   },
   {
+    // Service worker de la PWA (JavaScript simple, exécuté par le navigateur hors de la page).
+    files: ["application-web/service-worker/**/*.js"],
+    languageOptions: { globals: globals.serviceworker, sourceType: "script" },
+  },
+  {
     files: ["configuration/**/*.{ts,js}"],
     languageOptions: { globals: globals.node },
   },

@@ -1,5 +1,6 @@
 /** Racine du site : charge le compte connecté et affiche la bonne page. */
 import { useCallback, useEffect, useState } from "react";
+import { BandeauHorsLigne } from "./composants/bandeau-hors-ligne";
 import { type CompteCourant, chargerCompteCourant } from "./outils/appels-api";
 import { naviguer, useCheminCourant } from "./outils/navigation";
 import { PageAccueil } from "./pages/page-accueil";
@@ -16,17 +17,38 @@ export function RacineApplication() {
   const [compte, setCompte] = useState<CompteCourant | null | undefined>(undefined);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  const rafraichirCompte = useCallback(async () => {
-    try {
-      setCompte(await chargerCompteCourant());
-    } catch {
-      setErreur("Le serveur ne répond pas. Réessaie dans un instant.");
-    }
-  }, []);
+  const rafraichirCompte = useCallback(
+    () =>
+      chargerCompteCourant().then(
+        (c) => {
+          setCompte(c);
+          setErreur(null);
+        },
+        (e: unknown) => setErreur(e instanceof Error ? e.message : "Le serveur ne répond pas. Réessaie dans un instant."),
+      ),
+    [],
+  );
 
   useEffect(() => {
-    chargerCompteCourant().then(setCompte, () => setErreur("Le serveur ne répond pas. Réessaie dans un instant."));
+    chargerCompteCourant().then(setCompte, (e: unknown) =>
+      setErreur(e instanceof Error ? e.message : "Le serveur ne répond pas. Réessaie dans un instant."),
+    );
   }, []);
+
+  // Application ouverte sans réseau ou serveur injoignable : on réessaie toute seule
+  // dès que la connexion revient, puis toutes les 15 secondes tant que l'erreur dure.
+  useEffect(() => {
+    if (!erreur) return;
+    const reessayer = () => void rafraichirCompte();
+    const minuteur = window.setInterval(() => {
+      if (navigator.onLine) reessayer();
+    }, 15_000);
+    window.addEventListener("online", reessayer);
+    return () => {
+      window.clearInterval(minuteur);
+      window.removeEventListener("online", reessayer);
+    };
+  }, [erreur, rafraichirCompte]);
 
   // Redirections : visiteur → connexion ; connecté → pas de page de connexion.
   useEffect(() => {
@@ -37,7 +59,32 @@ export function RacineApplication() {
     if (compte && chemin.startsWith("/admin") && compte.role !== "admin") naviguer("/");
   }, [compte, chemin]);
 
-  if (erreur) return <main className="conteneur"><p className="message-erreur">{erreur}</p></main>;
+  return (
+    <>
+      <BandeauHorsLigne />
+      {erreur ? (
+        <main className="conteneur">
+          <div className="carte pile conteneur-etroit">
+            <p className="message-erreur">{erreur}</p>
+            <button onClick={() => void rafraichirCompte()}>Réessayer</button>
+          </div>
+        </main>
+      ) : (
+        <Page compte={compte} chemin={chemin} rafraichirCompte={rafraichirCompte} />
+      )}
+    </>
+  );
+}
+
+function Page({
+  compte,
+  chemin,
+  rafraichirCompte,
+}: {
+  compte: CompteCourant | null | undefined;
+  chemin: string;
+  rafraichirCompte: () => Promise<void>;
+}) {
   if (compte === undefined) return <main className="conteneur"><p>Chargement…</p></main>;
 
   if (!compte) {

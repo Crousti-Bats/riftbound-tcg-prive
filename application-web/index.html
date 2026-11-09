@@ -2,8 +2,16 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover : l'application installée occupe tout l'écran (encoche gérée en CSS avec safe-area). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1220" />
+    <meta name="description" content="Collection et échanges de cartes Riftbound entre amis." />
+    <!-- PWA : manifeste (installation) et réglages iPhone/iPad. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Riftbound" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- Icônes générées par outils/generer-icones.py à partir de fichiers-statiques/logo-source.png -->
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icones/favicon-32.png" />
@@ -15,4 +23,3 @@
     <script type="module" src="/demarrage-application.tsx"></script>
   </body>
 </html>
- 
