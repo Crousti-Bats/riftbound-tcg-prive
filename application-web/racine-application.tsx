@@ -5,6 +5,7 @@ import { naviguer, useCheminCourant } from "./outils/navigation";
 import { PageAccueil } from "./pages/page-accueil";
 import { PageAdmin } from "./pages/page-admin";
 import { PageCatalogue } from "./pages/page-catalogue";
+import { PageCollection } from "./pages/page-collection";
 import { PageConnexion } from "./pages/page-connexion";
 import { PageInscription } from "./pages/page-inscription";
 
@@ -42,6 +43,7 @@ export function RacineApplication() {
     return <PageConnexion surConnexion={rafraichirCompte} />;
   }
   if (chemin === "/catalogue") return <PageCatalogue />;
+  if (chemin === "/collection") return <PageCollection />;
   if (chemin.startsWith("/admin") && compte.role === "admin") {
     return <PageAdmin compte={compte} surChangementCompte={rafraichirCompte} />;
   }
