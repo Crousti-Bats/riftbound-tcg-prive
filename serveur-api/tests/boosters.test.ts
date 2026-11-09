@@ -224,6 +224,16 @@ describe("API /api/boosters", () => {
     const ouverture = r.json as unknown as Ouverture;
     expect(ouverture.cartes).toHaveLength(14);
     expect(ouverture.cartes.filter((c) => c.foil)).toHaveLength(1);
+    // Chaque carte est complète : la fiche du site lit domaines, set, texte… (sinon page blanche au clic).
+    for (const carte of ouverture.cartes as unknown as Array<Record<string, unknown>>) {
+      expect(Array.isArray(carte.domaines)).toBe(true);
+      for (const champ of ["nom", "set", "numero", "rarete", "variante", "type", "image", "orientation"]) {
+        expect(typeof carte[champ]).toBe("string");
+      }
+      for (const champ of ["sousTitre", "energie", "puissance", "force", "texte", "artiste"]) {
+        expect(champ in carte).toBe(true);
+      }
+    }
     expect(ouverture.stock.actuel).toBe(14);
     expect(totalCollection(env.bd, "Alice")).toBe(14);
 

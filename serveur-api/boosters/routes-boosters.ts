@@ -109,21 +109,11 @@ routesBoosters.post("/ouvrir", async (c) => {
 
   // Enrichissement pour l'affichage (données de carte issues du catalogue, jamais de la base).
   const parCode = new Map(catalogue.cartes.map((carte) => [carte.code, carte]));
-  const cartes = tirees.map((t) => {
+  // La fiche de carte du site lit tous les champs (domaines, texte, énergie…) : on renvoie la carte complète,
+  // exactement comme le catalogue et la collection, plus le foil et le slot du tirage.
+  const cartes = tirees.flatMap((t) => {
     const carte = parCode.get(t.code);
-    return {
-      code: t.code,
-      foil: t.foil,
-      slot: t.slot,
-      nom: carte?.nom ?? t.code,
-      sousTitre: carte?.sousTitre ?? null,
-      image: carte?.image ?? null,
-      rarete: carte?.rarete ?? null,
-      variante: carte?.variante ?? null,
-      type: carte?.type ?? null,
-      numero: carte?.numero ?? null,
-      orientation: carte?.orientation ?? "portrait",
-    };
+    return carte ? [{ ...carte, foil: t.foil, slot: t.slot }] : [];
   });
 
   const nouvelEtat = { stock: etat.stock - 1, tick: etat.tick };
