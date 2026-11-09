@@ -14,7 +14,8 @@ export const NOM_COOKIE = "__Host-session";
 export const DUREE_SESSION_MS = 7 * 24 * 60 * 60_000;
 export const DUREE_MAX_SESSION_MS = 30 * 24 * 60 * 60_000;
 export const DUREE_ADMIN_MS = 15 * 60_000;
-const INTERVALLE_MAJ_ACTIVITE_MS = 5 * 60_000;
+// 2 minutes : assez précis pour l'indicateur « en ligne » du monitoring (activité < 5 min), peu d'écritures D1.
+const INTERVALLE_MAJ_ACTIVITE_MS = 2 * 60_000;
 
 export function ipClient(c: Context): string {
   return c.req.header("CF-Connecting-IP") ?? "inconnue";
@@ -89,7 +90,7 @@ export const chargerSession: MiddlewareHandler<ContexteApi> = async (c, next) =>
     return next();
   }
 
-  // Prolongation glissante (au plus toutes les 5 minutes pour économiser les écritures D1).
+  // Prolongation glissante (au plus toutes les 2 minutes pour économiser les écritures D1).
   if (maintenant - session.derniere_activite > INTERVALLE_MAJ_ACTIVITE_MS) {
     const nouvelleExpiration = Math.min(maintenant + DUREE_SESSION_MS, session.cree_le + DUREE_MAX_SESSION_MS);
     await base.batch([
@@ -116,18 +117,30 @@ export const exigerConnexion: MiddlewareHandler<ContexteApi> = async (c, next) =
   return next();
 };
 
+function verifierAdmin(prolonger: boolean): MiddlewareHandler<ContexteApi> {
+  return async (c, next) => {
+    const compte = c.get("compte");
+    if (!compte) return c.json({ erreur: "non_connecte" }, 401);
+    if (compte.role !== "admin") return c.json({ erreur: "interdit" }, 403);
+    const maintenant = Date.now();
+    if (compte.adminJusqua <= maintenant) return c.json({ erreur: "elevation_requise" }, 403);
+    if (prolonger) {
+      await c.env.BASE_DE_DONNEES.prepare("UPDATE sessions SET admin_jusqua = ? WHERE id_hash = ?")
+        .bind(maintenant + DUREE_ADMIN_MS, compte.sessionIdHash)
+        .run();
+    }
+    return next();
+  };
+}
+
 /**
  * Middleware : refuse si le compte n'est pas admin, ou si l'accès admin n'a pas été ouvert
  * (re-saisie du mot de passe) dans les 15 dernières minutes. Prolonge l'accès à chaque requête.
  */
-export const exigerAdmin: MiddlewareHandler<ContexteApi> = async (c, next) => {
-  const compte = c.get("compte");
-  if (!compte) return c.json({ erreur: "non_connecte" }, 401);
-  if (compte.role !== "admin") return c.json({ erreur: "interdit" }, 403);
-  const maintenant = Date.now();
-  if (compte.adminJusqua <= maintenant) return c.json({ erreur: "elevation_requise" }, 403);
-  await c.env.BASE_DE_DONNEES.prepare("UPDATE sessions SET admin_jusqua = ? WHERE id_hash = ?")
-    .bind(maintenant + DUREE_ADMIN_MS, compte.sessionIdHash)
-    .run();
-  return next();
-};
+export const exigerAdmin = verifierAdmin(true);
+
+/**
+ * Même contrôle, SANS prolonger l'accès : pour le tableau de bord rafraîchi automatiquement.
+ * Sinon une page laissée ouverte garderait l'accès admin ouvert indéfiniment (et écrirait en base à chaque fois).
+ */
+export const exigerAdminSansProlonger = verifierAdmin(false);

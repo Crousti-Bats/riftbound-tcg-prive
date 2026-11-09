@@ -9,6 +9,7 @@ import { routesCatalogue } from "./catalogue/routes-catalogue";
 import { routesCollection } from "./collection/routes-collection";
 import { routesEchanges } from "./echanges/routes-echanges";
 import { securityHeaders } from "./entetes-securite";
+import { enregistrerErreurServeur } from "./erreurs-serveur";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
 
@@ -41,6 +42,13 @@ app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
 app.onError((err, c) => {
   console.error(err);
+  // Trace pour le monitoring admin. Ne doit jamais faire échouer la réponse d'erreur elle-même.
+  const trace = enregistrerErreurServeur(c.env.BASE_DE_DONNEES, c.req.method, c.req.path, err).catch(() => undefined);
+  try {
+    c.executionCtx.waitUntil(trace);
+  } catch {
+    // Pas de contexte d'exécution (tests) : la promesse se termine seule.
+  }
   // Jamais de détail d'erreur interne renvoyé au client.
   return c.json({ error: "internal_error" }, 500);
 });

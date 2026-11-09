@@ -3,8 +3,8 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-09
-**Étape en cours :** 7 — Échanges entre joueurs (terminée)
-**Prochaine étape :** 8 — Admin : monitoring en quasi temps réel (voir §2bis). **Pas encore commencée.** Les échanges sont utilisables sur le site.
+**Étape en cours :** 8 — Admin : monitoring en quasi temps réel (terminée)
+**Prochaine étape :** 9 — PWA (installable, hors-ligne partiel) et responsive. **Pas encore commencée.** Le monitoring est dans l'onglet « Monitoring » de `/admin` ; les quotas Cloudflare s'afficheront dès que le jeton Analytics sera enregistré (§7).
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -212,6 +212,17 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **Interface :** bouton « Échanges » sur l'accueil avec une pastille du nombre de propositions reçues. Page `/echanges` (onglets Reçues, Envoyées, Historique ; Accepter, Refuser, Annuler ; temps restant). Page `/echanges/nouveau` (choix du joueur, collection de l'autre et la mienne avec filtres, boutons « + Normale » / « + Foil », panier modifiable −/+, message).
 - **Tests :** `serveur-api/tests/echanges.test.ts` (17 tests) : création, possession (foil distinct), validation, limite de propositions, échange dans les deux sens, don, droits, double et triple acceptation simultanée, **atomicité** (carte disparue entre-temps : rien ne bouge), expiration à 48 h, refus et annulation, liste des joueurs, collection des autres. Vérifié aussi de bout en bout sur le vrai moteur D1 local (échange réussi, et annulation complète quand une carte manque).
 
+## 4quinquies. Monitoring admin (étape 8)
+
+- **Route :** `GET /api/admin/monitoring` (`serveur-api/administration/monitoring.ts`), réservée à l'admin avec accès ouvert. Elle **ne prolonge pas** l'accès admin (`exigerAdminSansProlonger`) : sinon une page laissée ouverte garderait l'accès indéfiniment, avec une écriture D1 toutes les 8 s. Réponse `Cache-Control: no-store`. Lecture seule : les 11 requêtes préparées partent en un seul `batch()` D1.
+- **Contenu :** joueurs (en ligne si activité < 5 min, comptes, désactivés, invitations en attente, joueurs actifs sur 24 h) ; activité (boosters sur 1 h et 24 h, par set ; échanges sur 24 h : proposés, acceptés, refusés, échoués, en attente ; 15 dernières cartes remarquables) ; sécurité (connexions échouées et bloquées, inscriptions refusées, élévations refusées sur 1 h et 24 h, blocages actifs de la limitation des tentatives, erreurs serveur) ; santé (API, base et sa latence, âge du catalogue, version déployée) ; quotas Cloudflare du jour.
+- **« En ligne » :** la dernière activité est maintenant écrite au plus toutes les **2 minutes** (au lieu de 5), pour que le seuil de 5 minutes soit fiable.
+- **Base (migration `0005`) :** `tirages_remarquables` (cardCode d'une carte Epic, Alt Art, Overnumbered, signée, Special ou Ultime, écrit dans le même lot atomique que l'ouverture) et `erreurs_serveur` (méthode, chemin sans paramètres, message tronqué à 300 caractères ; jamais le corps ni les en-têtes ; purge à 7 jours, `app.onError` via `waitUntil`). Index sur `journal(type, horodatage)` et `echanges(cree_le)`, `echanges(termine_le)`.
+- **Quotas Cloudflare :** `serveur-api/administration/quotas-cloudflare.ts` interroge l'API GraphQL Analytics (`workersInvocationsAdaptive` pour les requêtes Worker, `d1AnalyticsAdaptiveGroups` pour les lignes D1 lues et écrites), depuis 00:00 UTC (remise à zéro des quotas gratuits). Limites affichées : 100 000 requêtes, 5 M lignes lues, 100 000 lignes écrites par jour. Résultat gardé 60 s en mémoire. L'ID du compte est en `vars` dans wrangler (non secret). Le jeton est un **secret Worker** `JETON_ANALYTICS_CLOUDFLARE` (lecture seule) : il n'est jamais dans le code ni renvoyé au navigateur. Sans jeton, le tableau affiche « non configuré ».
+- **Version déployée :** binding `version_metadata` (`VERSION_DEPLOYEE` : id et date du déploiement).
+- **Interface :** onglet « Monitoring » (par défaut) de `/admin`, `application-web/composants/tableau-monitoring.tsx`. Rafraîchi toutes les 8 s, en pause quand l'onglet du navigateur est caché, avec un bouton Pause. Jauges de quotas (vert, puis orange à 70 %, puis rouge à 90 %). Les actions (invitations, désactivation, déconnexion forcée) restent dans les onglets existants.
+- **Tests :** `serveur-api/tests/monitoring.test.ts` (8 tests) : contrôle d'accès, non-prolongation de l'accès admin, compteurs, blocages, traçage exact des tirages remarquables, erreur 500 enregistrée sans détail renvoyé au client, quotas GraphQL (sommes, jeton en en-tête et jamais renvoyé, cache de 60 s, erreurs HTTP, GraphQL, réseau et format). Vérifié aussi de bout en bout sur le vrai runtime local (miniflare et D1).
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -240,13 +251,14 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | Terminé |
 | 6 | Frontend : ouverture de booster animée, collection, filtres | Terminé |
 | 7 | Échanges entre joueurs | Terminé |
-| 8 | **Admin : monitoring en quasi temps réel** (voir §2bis) | À faire |
+| 8 | **Admin : monitoring en quasi temps réel** (voir §2bis et §4quinquies) | Terminé |
 | 9 | PWA (installable, hors-ligne partiel), responsive | À faire |
 | 10 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
 
 ## 7. Actions manuelles en attente (utilisateur)
 
-1. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
+1. **Quotas Cloudflare dans le monitoring :** créer un jeton sur https://dash.cloudflare.com/profile/api-tokens → « Create Custom Token », permission **Account → Account Analytics → Read**, limité au compte `Axelgirard@gmail.com's Account`. Puis, depuis le dossier du projet : `npx wrangler secret put JETON_ANALYTICS_CLOUDFLARE --config configuration/cloudflare-wrangler.jsonc` et coller le jeton. Ne jamais le mettre dans le code ni dans GitHub.
+2. Sur le portable : installer Git, Node.js LTS et GitHub CLI (`winget install --id Git.Git -e`, `OpenJS.NodeJS.LTS`, `GitHub.cli`), puis lancer `gh auth login`.
 
 ## 8. Journal
 
@@ -265,6 +277,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Favicon.** Logo de l'utilisateur (spirale orange). Le fond noir devient transparent pour l'onglet. L'icône iPhone et les icônes PWA ont le fond #0b1220. Script `outils/generer-icones.py`. Attention : ne jamais ouvrir puis sauvegarder une image dans VS Code, cela l'enregistre comme du texte et la corrompt (c'est arrivé une fois avec logo-source.png).
 - **2026-11-08 — Filtre par type.** Nouveau filtre `type` (Unité, Sort, Équipement, Légende, Terrain, Rune, Token) dans l'API et sur la page. Il permet notamment de trouver les runes d'Origins, rangées en variante `base`. 70 tests.
 - **2026-11-08 — Terrains et pagination.** Les Battlefields étaient déformés : ils sont maintenant tournés dans la grille et affichés à l'horizontale dans la fiche. Pagination en haut et en bas avec un choix de page. Comparaison avec la galerie officielle : il manque 2 cartes dans la source (voir §3bis). 69 tests.
+- **2026-11-09 — Étape 8.** Monitoring admin en quasi temps réel (§4quinquies). Migration `0005` (tirages remarquables, erreurs serveur, index). Route `GET /api/admin/monitoring` en lecture seule, qui ne prolonge pas l'accès admin. Quotas Cloudflare via l'API GraphQL (jeton à créer par l'utilisateur, §7). Onglet « Monitoring » rafraîchi toutes les 8 s. « En ligne » précis à 2 minutes. 121 tests (8 nouveaux). Vérifié de bout en bout en local.
 - **2026-11-09 — Taux, filtres, images.** À la demande de l'utilisateur : (1) tous les taux Rare+ divisés par 2 (Epic 1/12, Alt 1/24, Over 1/144, Signée 1/480, Special et Ultime 1/2000 boosters), tests statistiques mis à jour ; (2) filtre Champion et Signature (étiquettes `cardTypeLabels`), fixture de test enrichie ; (3) image de secours quand une miniature du CDN ne se charge pas. 113 tests.
 - **2026-11-09 — Correctif page blanche à l’ouverture.** Après l’ouverture d’un booster, cliquer sur une carte affichait une page blanche : `POST /api/boosters/ouvrir` renvoyait des cartes incomplètes (sans `domaines`, `set`, `texte`…) et la fiche plantait sur `carte.domaines.length`. L’API renvoie maintenant la carte complète du catalogue (comme la collection), plus `foil` et `slot`. Test de non-régression sur la forme des cartes. 113 tests.
 - **2026-11-09 — Étape 7.** Échanges entre joueurs (§4quater). Quatre règles validées par l'utilisateur : plusieurs contre plusieurs, dons, collection complète visible, expiration à 48 h. Migration `0004`. Acceptation en un seul lot D1 atomique avec jeton de garde. 17 nouveaux tests (113 au total), dont l'atomicité et les acceptations simultanées. Vérifié de bout en bout sur le vrai moteur D1 local.
@@ -297,6 +310,8 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   pages/page-nouvel-echange.tsx       composer une proposition (joueur, cartes données et demandées, message)
   composants/selecteur-cartes.tsx     parcourir une collection (la mienne ou celle d'un autre) et ajouter des cartes
   composants/liste-cartes-echange.tsx liste compacte des cartes d'un échange (panier modifiable)
+  composants/tableau-monitoring.tsx   tableau de bord admin (rafraîchi toutes les 8 s)
+  composants/image-carte.tsx          image de carte avec repli si le CDN échoue
   outils/echanges.ts                  types, libellés des statuts, point de vue « je reçois / je donne »
   outils/libelles-cartes.ts           noms français des raretés et variantes, couleurs, URL d'images redimensionnées
   outils/appels-api.ts                appels au serveur et messages d'erreur en français
@@ -314,6 +329,9 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
   validation-donnees.ts               règles de validation (Zod) de tout ce que le navigateur envoie
   lecture-requete.ts                  lecture et validation du corps JSON
   journal-evenements.ts               écriture dans le journal de sécurité et d'admin
+  erreurs-serveur.ts                  trace des erreurs 500 pour le monitoring (purge à 7 jours)
+  administration/monitoring.ts        /api/admin/monitoring : chiffres du tableau de bord
+  administration/quotas-cloudflare.ts quotas gratuits du jour (API GraphQL Analytics, jeton secret)
   authentification/sessions.ts        cookie de session, chargement du compte, exigerConnexion, exigerAdmin
   authentification/routes-authentification.ts   /api/auth : inscription, connexion, déconnexion, moi
   administration/routes-administration.ts       /api/admin : élévation, invitations, comptes, journal
@@ -347,6 +365,7 @@ base-de-donnees/                      BASE SQLITE CLOUDFLARE D1
   migrations/0002_comptes_et_sessions.sql  comptes, sessions, invitations, limitations, journal
   migrations/0003_boosters_et_collection.sql  stock de boosters, collection, ouvertures
   migrations/0004_echanges.sql        échanges et cartes des échanges
+  migrations/0005_monitoring.sql      tirages remarquables, erreurs serveur, index du monitoring
   (les migrations sont numérotées et jamais modifiées après le merge : on en ajoute une nouvelle)
 
 configuration/                        RÉGLAGES DES OUTILS
