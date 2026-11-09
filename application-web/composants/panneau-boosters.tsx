@@ -14,17 +14,17 @@ interface EtatBoosters {
   sets: Array<{ code: string; nom: string }>;
 }
 
+const dateProchain = (stock: Stock) => (stock.prochainDansMs == null ? null : Date.now() + stock.prochainDansMs);
+
 export function PanneauBoosters() {
   const [etat, setEtat] = useState<EtatBoosters | null>(null);
   const [set, setSet] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
-  const [envoi, setEnvoi] = useState(false);
   const [prochaineA, setProchaineA] = useState<number | null>(null);
   const [maintenant, setMaintenant] = useState(() => Date.now());
-  const [cartesOuvertes, setCartesOuvertes] = useState<CarteOuverte[] | null>(null);
+  const [enOuverture, setEnOuverture] = useState(false);
+  const fermer = useCallback(() => setEnOuverture(false), []);
   const rechargement = useRef(false);
-
-  const dateProchain = (stock: Stock) => (stock.prochainDansMs == null ? null : Date.now() + stock.prochainDansMs);
 
   const appliquerEtat = useCallback((e: EtatBoosters) => {
     setEtat(e);
@@ -61,21 +61,16 @@ export function PanneauBoosters() {
     }
   }, [prochaineA, maintenant, rafraichir]);
 
-  function ouvrir() {
-    if (!set) return;
-    setEnvoi(true);
-    setErreur(null);
-    appelerApi<{ cartes: CarteOuverte[]; stock: Stock }>("POST", "/boosters/ouvrir", { set })
-      .then(
-        (r) => {
-          setCartesOuvertes(r.cartes);
-          setEtat((prev) => (prev ? { ...prev, stock: r.stock } : prev));
-          setProchaineA(dateProchain(r.stock));
-        },
-        (e: Error) => setErreur(e.message),
-      )
-      .finally(() => setEnvoi(false));
-  }
+  // Le serveur tire les cartes quand le booster se déchire dans la scène d'ouverture (pas au clic sur le bouton).
+  const ouvrirSetChoisi = useCallback(
+    () =>
+      appelerApi<{ cartes: CarteOuverte[]; stock: Stock }>("POST", "/boosters/ouvrir", { set }).then((r) => {
+        setEtat((prev) => (prev ? { ...prev, stock: r.stock } : prev));
+        setProchaineA(dateProchain(r.stock));
+        return r.cartes;
+      }),
+    [set],
+  );
 
   const stock = etat?.stock;
 
@@ -103,22 +98,21 @@ export function PanneauBoosters() {
                 ))}
               </select>
             </label>
-            <button onClick={ouvrir} disabled={envoi || !set || (stock?.actuel ?? 0) < 1}>
-              {envoi ? "Ouverture…" : "Ouvrir un booster"}
+            <button onClick={() => setEnOuverture(true)} disabled={!set || (stock?.actuel ?? 0) < 1}>
+              Ouvrir un booster
             </button>
           </div>
         </>
       )}
       {erreur && <p className="message-erreur">{erreur}</p>}
 
-      {cartesOuvertes && (
+      {enOuverture && set && (
         <OuvertureBooster
-          cartes={cartesOuvertes}
-          sets={etat?.sets ?? []}
+          set={set}
+          nomSet={etat?.sets.find((s) => s.code === set)?.nom ?? set}
+          ouvrir={ouvrirSetChoisi}
           peutOuvrirAutre={(stock?.actuel ?? 0) >= 1}
-          envoi={envoi}
-          surOuvrirAutre={ouvrir}
-          surFermer={() => setCartesOuvertes(null)}
+          surFermer={fermer}
         />
       )}
     </section>

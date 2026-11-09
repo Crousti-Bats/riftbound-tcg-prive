@@ -1,0 +1,251 @@
+/* Ouverture d'un booster : scène plein écran (booster officiel, cartes une par une, récapitulatif).
+   Toutes les classes sont préfixées « ob- » pour ne pas croiser les styles du site.
+   Chaque set redéfinit les mêmes jetons via [data-set] (couleurs, lumière). */
+@property --ob-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+.ob-overlay {
+  position: fixed; inset: 0; z-index: 9; overflow: hidden; color: #eef2fb;
+  user-select: none; -webkit-user-select: none; overscroll-behavior: contain;
+}
+/* Les zones masquées (booster, table) ne doivent ni s'afficher ni capter les clics, même avec un display posé en CSS. */
+.ob-overlay [hidden] { display: none !important; }
+.ob-racine {
+  --ob-fond-1: #060d1a; --ob-fond-2: #18306a; --ob-halo: #5aa9ff; --ob-accent: #e6b85c; --ob-texte-doux: #a9b6d3;
+  --ob-arc-en-ciel: #ff3d6e, #ffb13d, #f9ff3d, #3dff8b, #3dc8ff, #8b3dff, #ff3d6e;
+  --ob-largeur-carte: min(64vw, 46vh, 320px);
+  --ob-police-titre: "Marcellus SC", "Trajan Pro", Georgia, "Times New Roman", serif;
+  --ob-police-ui: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  position: absolute; inset: 0;
+  background: radial-gradient(130% 85% at 50% 115%, var(--ob-fond-2), var(--ob-fond-1) 72%); background-color: var(--ob-fond-1);
+}
+/* Origins : la Faille, magie des runes — bleu arcane et or */
+.ob-racine[data-set="ogn"] { --ob-fond-1: #060d1a; --ob-fond-2: #18306a; --ob-halo: #5aa9ff; --ob-accent: #e6b85c; --ob-texte-doux: #a9b6d3; }
+/* Spiritforged : acier forgé et Spirit Blossom — encre de nuit, pétales roses */
+.ob-racine[data-set="sfd"] { --ob-fond-1: #0c0a14; --ob-fond-2: #3a1630; --ob-halo: #ff8fb3; --ob-accent: #f2e6d8; --ob-texte-doux: #cdb9c4; }
+/* Unleashed : la jungle et ses monstres — violet du Baron, orage bleu, spores vertes */
+.ob-racine[data-set="unl"] { --ob-fond-1: #05060f; --ob-fond-2: #24184f; --ob-halo: #6fb6ff; --ob-accent: #b9ff6a; --ob-texte-doux: #b0b2d6; }
+/* Vendetta : Zaun, chemtech — fumées toxiques vertes, rouge sang, étincelles */
+.ob-racine[data-set="ven"] { --ob-fond-1: #0a0806; --ob-fond-2: #3d0a0a; --ob-halo: #ff3434; --ob-accent: #9dff3c; --ob-texte-doux: #d0b0a8; }
+/* Radiance : la scène — irisé, projecteurs, paillettes */
+.ob-racine[data-set="rad"] { --ob-fond-1: #0d0620; --ob-fond-2: #401a6e; --ob-halo: #ff79e1; --ob-accent: #ffe08a; --ob-texte-doux: #d2bde8; }
+
+/* ---------- Décor ---------- */
+.ob-fond { position: absolute; inset: -8%; pointer-events: none; background-size: cover; background-position: center;
+  filter: blur(9px) saturate(1.25) brightness(0.36); transform: scale(1.08); animation: ob-derive 30s ease-in-out infinite alternate; }
+@keyframes ob-derive { to { transform: scale(1.18) translate(2%, -1.5%); } }
+.ob-ambiance { position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(42% 34% at 50% 50%, color-mix(in srgb, var(--ob-halo) 30%, transparent), transparent 70%),
+    conic-gradient(from 180deg at 50% -10%, transparent 160deg, color-mix(in srgb, var(--ob-halo) 16%, transparent) 172deg, rgba(255,255,255,0.10) 180deg, color-mix(in srgb, var(--ob-halo) 16%, transparent) 188deg, transparent 200deg),
+    linear-gradient(180deg, rgba(0,0,0,0.55), transparent 22%, transparent 70%, rgba(0,0,0,0.6)),
+    radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(0,0,0,0.85)); }
+.ob-projecteurs { position: absolute; inset: 0; pointer-events: none; overflow: hidden; display: none; }
+.ob-racine[data-set="rad"] .ob-projecteurs { display: block; }
+.ob-projecteurs i {
+  position: absolute; top: -10%; width: 70vmax; height: 140vmax; transform-origin: 50% 0; mix-blend-mode: screen; opacity: 0.22;
+  background: conic-gradient(from 168deg at 50% 0, transparent 0deg, var(--c) 12deg, transparent 24deg);
+  animation: ob-balaye 7s ease-in-out infinite alternate;
+}
+.ob-projecteurs i:nth-child(1) { left: -25vmax; --c: #ff79e1; }
+.ob-projecteurs i:nth-child(2) { right: -25vmax; --c: #7fd8ff; animation-delay: -3.5s; animation-direction: alternate-reverse; }
+@keyframes ob-balaye { from { rotate: -18deg; } to { rotate: 18deg; } }
+.ob-ciel { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+/* ---------- Barre du haut (React) ---------- */
+.ob-barre {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 8px 12px;
+  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+}
+.ob-titre-set { margin: 0; font-family: var(--ob-police-titre); font-weight: 400; font-size: 1.15rem; letter-spacing: 0.06em; color: var(--ob-accent); }
+.ob-titre-set small { display: block; font-family: var(--ob-police-ui); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--ob-texte-doux); text-transform: uppercase; }
+.ob-reglages { display: flex; gap: 6px; }
+.ob-overlay button.ob-bouton-discret {
+  font-family: var(--ob-police-ui); font-weight: 500; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ob-texte-doux);
+  background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 6px 10px; min-height: 36px;
+}
+.ob-overlay button.ob-bouton-discret[aria-pressed="true"] { color: var(--ob-accent); border-color: var(--ob-accent); }
+.ob-overlay button:focus-visible, .ob-overlay [tabindex]:focus-visible { outline: 2px solid var(--ob-accent); outline-offset: 3px; }
+
+/* ---------- Scène ---------- */
+.ob-scene { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; perspective: 1200px;
+  padding: 64px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left)); }
+.ob-sol { position: absolute; left: 50%; bottom: -6%; width: 120%; height: 16%; translate: -50% 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ob-halo) 55%, transparent), transparent); filter: blur(6px); opacity: 0.8; }
+
+/* ---------- Booster officiel ---------- */
+.ob-paquet-zone { position: relative; display: grid; justify-items: center; gap: 22px; z-index: 3; }
+.ob-paquet {
+  --tx: 0deg; --ty: 0deg; --mx: 50%; --my: 50%; --coupe: 7%;
+  position: relative; height: min(56vh, 540px); aspect-ratio: 621 / 1100; max-width: 78vw;
+  transform: rotateX(var(--tx)) rotateY(var(--ty)); transform-style: preserve-3d; transition: transform 0.15s ease-out;
+  cursor: grab; touch-action: none; animation: ob-flotte 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 28px 34px rgba(0,0,0,0.65)) drop-shadow(0 0 26px color-mix(in srgb, var(--ob-halo) 45%, transparent));
+}
+@keyframes ob-flotte { 50% { translate: 0 -8px; } }
+.ob-paquet img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+.ob-paquet .ob-haut { clip-path: inset(0 0 calc(100% - var(--coupe)) 0); transform-origin: 85% var(--coupe); transition: transform 0.7s cubic-bezier(.2,.7,.3,1), opacity 0.7s; }
+.ob-paquet .ob-bas { clip-path: inset(var(--coupe) 0 0 0); }
+.ob-reflet {
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: soft-light;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,0.85), transparent 38%),
+              linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%);
+  background-size: 100% 100%, 250% 250%; background-position: 0 0, var(--mx) var(--my);
+}
+.ob-dechirure { position: absolute; left: 0; top: var(--coupe); height: 3px; width: 0; background: #fff; box-shadow: 0 0 10px var(--ob-accent), 0 0 30px var(--ob-halo); z-index: 3; border-radius: 2px; }
+.ob-paquet.ob-tremble { animation: ob-tremble 0.08s linear infinite; }
+@keyframes ob-tremble { 0% { translate: -2px 1px; } 50% { translate: 2px -1px; } 100% { translate: -1px 2px; } }
+.ob-paquet.ob-ouvert .ob-haut { transform: translate(40%, -160%) rotate(28deg); opacity: 0; }
+.ob-paquet.ob-part { transition: transform 0.6s ease-in, opacity 0.6s; transform: translateY(70vh) rotateX(25deg); opacity: 0; animation: none; }
+.ob-consigne { font-family: var(--ob-police-ui); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.85rem; color: var(--ob-texte-doux); text-align: center; max-width: 32ch; margin: 0; transition: opacity 0.3s; text-shadow: 0 1px 6px #000; }
+.ob-consigne strong { color: var(--ob-accent); font-weight: 600; }
+
+/* ---------- Cartes ---------- */
+.ob-table { position: absolute; inset: 0; display: grid; place-items: center; z-index: 3; }
+.ob-pile { position: relative; z-index: 1; width: var(--ob-largeur-carte); aspect-ratio: 744 / 1039; max-width: 100%; }
+.ob-emplacement { --c: #9aa7bd; position: absolute; inset: 0; transition: translate 0.5s ease, opacity 0.4s; }
+.ob-emplacement.ob-sort-gauche { translate: -130vw 0 !important; opacity: 0 !important; }
+/* Aura autour de la carte : néon arc-en-ciel (rare ou mieux, avant révélation), liseré foil, puis lueur de la rareté. */
+.ob-aura, .ob-aura::after {
+  position: absolute; inset: -5px; border-radius: 6.5% / 4.8%;
+  background: conic-gradient(from var(--ob-angle), var(--ob-arc-en-ciel)); animation: ob-tourne-aura 2.4s linear infinite;
+}
+.ob-aura { opacity: 0; filter: blur(14px); transition: opacity 0.5s, filter 0.5s; }
+.ob-aura::after { content: ""; inset: 0; filter: blur(0); opacity: 0.9; }
+@keyframes ob-tourne-aura { to { --ob-angle: 360deg; } }
+.ob-emplacement.ob-neon .ob-aura { opacity: 1; animation-duration: 1.6s; }
+.ob-emplacement.ob-neon .ob-carte { animation: ob-pulse 1.2s ease-in-out infinite; }
+@keyframes ob-pulse { 50% { scale: 1.025; } }
+.ob-emplacement.ob-foil-revele .ob-aura { opacity: 1; filter: blur(6px); inset: -3px; }
+.ob-emplacement.ob-lueur .ob-aura { opacity: 1; background: var(--c); animation: none; filter: blur(22px); inset: -8px; }
+.ob-emplacement.ob-lueur .ob-aura::after { background: var(--c); filter: blur(0); inset: 5px; opacity: 1; }
+.ob-emplacement.ob-lueur.ob-foil-revele .ob-aura::after { background: conic-gradient(from var(--ob-angle), var(--ob-arc-en-ciel)); animation: ob-tourne-aura 2.4s linear infinite; }
+.ob-carte {
+  --tx: 0deg; --ty: 0deg; position: absolute; inset: 0; transform-style: preserve-3d; cursor: pointer; touch-action: manipulation;
+  transition: transform 1s cubic-bezier(.25,.75,.3,1);
+  transform: rotateX(var(--tx)) rotateY(calc(var(--ty) + var(--flip, 0deg)));
+}
+.ob-dos, .ob-face { position: absolute; inset: 0; border-radius: 4.5% / 3.2%; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; box-shadow: 0 18px 40px rgba(0,0,0,0.6); }
+.ob-dos { background: #0c1834; }
+.ob-dos svg { width: 100%; height: 100%; display: block; }
+.ob-face { transform: rotateY(180deg); background: #000; }
+.ob-face img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+/* Battlefield (image paysage) : quart de tour pour remplir le cadre vertical. */
+.ob-face img.ob-paysage { position: absolute; top: 50%; left: 50%; width: 139.65%; height: auto; object-fit: fill; transform: translate(-50%, -50%) rotate(90deg); }
+.ob-carte.ob-retournee { --flip: 180deg; }
+.ob-rayons {
+  position: absolute; width: 270%; aspect-ratio: 1; left: 50%; top: 50%; translate: -50% -50%; z-index: -1; pointer-events: none; opacity: 0;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 65%, transparent) 0 5deg, transparent 5deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 15%, transparent 62%); mask: radial-gradient(circle, #000 15%, transparent 62%);
+  animation: ob-tourne 16s linear infinite; transition: opacity 0.8s;
+}
+.ob-rayons.ob-visibles { opacity: 1; }
+@keyframes ob-tourne { to { rotate: 360deg; } }
+.ob-bandeau-rarete {
+  position: absolute; left: 50%; top: calc(100% + 10px); translate: -50% 6px; white-space: nowrap; z-index: 4;
+  font-family: var(--ob-police-titre); font-size: clamp(1.1rem, 4.5vw, 1.5rem); letter-spacing: 0.12em; color: var(--c);
+  text-shadow: 0 0 16px var(--c), 0 2px 0 #000; opacity: 0; transition: opacity 0.4s, translate 0.4s;
+}
+.ob-bandeau-rarete.ob-visible { opacity: 1; translate: -50% 0; }
+.ob-indication { position: absolute; left: 50%; bottom: calc(100% + 12px); translate: -50% 0; white-space: nowrap; font-family: var(--ob-police-ui); text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; color: var(--ob-texte-doux); transition: opacity 0.3s; }
+.ob-compteur { position: absolute; bottom: calc(2.5% + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 4; flex-wrap: wrap; padding-inline: 16px; }
+.ob-compteur span { font-family: var(--ob-police-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ob-texte-doux); font-variant-numeric: tabular-nums; }
+.ob-overlay button.ob-bouton-second {
+  font-family: var(--ob-police-ui); font-weight: 500; font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; color: #eef2fb;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 11px 16px; min-height: 44px;
+}
+.ob-overlay button.ob-bouton-principal {
+  font-family: var(--ob-police-ui); font-weight: 700; font-size: 1rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #0b0904; background: linear-gradient(180deg, color-mix(in srgb, var(--ob-accent) 75%, #fff), var(--ob-accent)); border: none; border-radius: 10px;
+  padding: 12px 20px; min-height: 44px; box-shadow: 0 6px 22px color-mix(in srgb, var(--ob-accent) 35%, transparent);
+}
+.ob-overlay button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Récapitulatif (React) ---------- */
+.ob-recap { position: absolute; inset: 0; overflow-y: auto; z-index: 5; padding: 64px max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+.ob-recap h2 { font-family: var(--ob-police-titre); font-weight: 400; text-align: center; margin: 4px 0 2px; font-size: clamp(1.4rem, 5vw, 2rem); color: var(--ob-accent); }
+.ob-recap > p { text-align: center; margin: 0 0 16px; color: var(--ob-texte-doux); font-family: var(--ob-police-ui); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.82rem; }
+.ob-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30%, 130px), 1fr)); gap: 12px; max-width: 920px; margin: 0 auto; }
+.ob-overlay button.ob-mini {
+  --c: #9aa7bd; position: relative; display: block; padding: 0; min-height: 0; background: none; border: none; border-radius: 5% / 3.6%;
+  aspect-ratio: 744 / 1039; animation: ob-entre 0.4s ease both; animation-delay: calc(var(--i, 0) * 45ms); cursor: pointer;
+}
+.ob-mini .cadre-carte { position: relative; z-index: 1; border: none; border-radius: 5% / 3.6%; box-shadow: 0 8px 18px rgba(0,0,0,0.5); }
+.ob-mini::before { content: ""; position: absolute; inset: -3px; border-radius: 6.5% / 4.8%; background: var(--c); opacity: 0.85; }
+.ob-mini.ob-discret::before { opacity: 0.35; }
+.ob-mini.ob-foil::before { background: conic-gradient(from var(--ob-angle), var(--ob-arc-en-ciel)); animation: ob-tourne-aura 3s linear infinite; opacity: 1; }
+.ob-mini em { position: absolute; bottom: 6px; right: 6px; z-index: 2; font-style: normal; font-family: var(--ob-police-ui); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.78); color: var(--c); }
+@keyframes ob-entre { from { opacity: 0; transform: translateY(10px) scale(0.95); } }
+.ob-actions-recap { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+.ob-erreur { position: absolute; left: 50%; top: 72px; translate: -50% 0; z-index: 7; max-width: calc(100% - 32px); padding: 10px 14px; border-radius: 10px;
+  background: rgba(60, 10, 14, 0.92); border: 1px solid #e0565b; color: #fff; text-align: center; }
+.ob-avis { position: absolute; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; z-index: 7; padding: 8px 14px; border-radius: 10px;
+  background: rgba(0,0,0,0.8); color: #fff; font-family: var(--ob-police-ui); letter-spacing: 0.08em; font-size: 0.95rem; animation: ob-entre 0.3s ease both; text-align: center; }
+
+/* ---------- Mises en scène par rareté ---------- */
+.ob-scene.ob-secousse { animation: ob-secousse var(--duree, 0.5s) linear; }
+@keyframes ob-secousse {
+  0%, 100% { translate: 0 0; } 10% { translate: -9px 5px; } 20% { translate: 8px -7px; } 30% { translate: -7px -3px; } 40% { translate: 6px 7px; }
+  50% { translate: -5px 2px; } 60% { translate: 4px -4px; } 70% { translate: -3px 3px; } 80% { translate: 2px -1px; } 90% { translate: -1px 1px; } }
+.ob-emplacement.ob-surcharge .ob-aura { opacity: 1; filter: blur(22px); inset: -16px; animation-duration: 0.3s; }
+.ob-emplacement.ob-surcharge .ob-aura::after { inset: 11px; }
+.ob-emplacement.ob-surcharge .ob-carte { animation: ob-frisson 0.06s linear infinite; }
+@keyframes ob-frisson { 0% { translate: -2px 1px; } 50% { translate: 2px -2px; } 100% { translate: -1px 2px; } }
+/* Rotations volontairement lentes : on doit pouvoir suivre la carte qui tourne. */
+.ob-carte.ob-spectaculaire { --flip: 540deg; transition: transform 2.2s cubic-bezier(.2,.75,.25,1.05); }
+.ob-carte.ob-tour-et-demi { --flip: 540deg; transition: transform 1.8s cubic-bezier(.25,.75,.25,1.05); }
+.ob-carte.ob-lente { --flip: 540deg; transition: transform 3s cubic-bezier(.3,.7,.2,1); }
+.ob-carte.ob-ultime-flip { transition: transform 1.6s cubic-bezier(.3,.7,.2,1); }
+.ob-carte.ob-posee { transition: transform 0.25s ease-out; }
+.ob-emplacement.ob-geante { scale: 1.1; transition: scale 0.9s cubic-bezier(.2,1.5,.4,1), translate 0.5s ease, opacity 0.4s; }
+.ob-rayons.ob-rapides { animation-duration: 4s; width: 360%; }
+.ob-onde { position: absolute; left: 50%; top: 50%; width: 90%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; pointer-events: none; z-index: -1;
+  border: 6px solid var(--c); box-shadow: 0 0 30px var(--c), inset 0 0 30px var(--c); animation: ob-onde 1.1s ease-out both; }
+@keyframes ob-onde { from { scale: 0.2; opacity: 1; } to { scale: 4.8; opacity: 0; } }
+.ob-titre-drop { position: absolute; top: 3%; left: 0; right: 0; text-align: center; z-index: 6; pointer-events: none; padding-inline: 12px;
+  font-family: var(--ob-police-titre); font-size: clamp(2.1rem, 11vw, 4.4rem); letter-spacing: 0.05em; line-height: 1;
+  background: linear-gradient(180deg, #fff 8%, var(--c) 52%, #fff4c2 92%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 18px var(--c)) drop-shadow(0 4px 0 #000); animation: ob-slam 0.6s cubic-bezier(.2,1.6,.4,1) both; }
+.ob-titre-drop small { display: block; margin-top: 10px; font-family: var(--ob-police-ui); font-size: 0.95rem; letter-spacing: 0.3em; text-transform: uppercase; -webkit-text-fill-color: #fff; color: #fff; }
+@keyframes ob-slam { from { scale: 3.4; opacity: 0; rotate: -7deg; } 60% { scale: 0.92; opacity: 1; } to { scale: 1; rotate: 0deg; } }
+.ob-titre-drop .ob-compteur-num { display: block; margin-top: 6px; font-family: var(--ob-police-ui); font-size: 1.3rem; letter-spacing: 0.2em; -webkit-text-fill-color: var(--c); color: var(--c); font-variant-numeric: tabular-nums; }
+.ob-titre-drop .ob-theme { display: inline-block; margin-top: 10px; font-family: var(--ob-police-ui); font-style: normal; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.35em;
+  padding: 4px 14px; border-radius: 999px; -webkit-text-fill-color: #fff; color: #fff; animation: ob-pulsation 0.47s ease-in-out infinite alternate; }
+.ob-theme-kda { background: linear-gradient(90deg, #ff4fd8, #8b3dff); box-shadow: 0 0 20px #ff4fd8; }
+.ob-theme-heartsteel { background: linear-gradient(90deg, #2f7dff, #48c8ff); box-shadow: 0 0 20px #48c8ff; }
+@keyframes ob-pulsation { to { scale: 1.08; } }
+.ob-titre-drop.ob-glitch { animation: ob-slam 0.6s cubic-bezier(.2,1.6,.4,1) both, ob-glitch 0.25s steps(2) 0.6s infinite; }
+@keyframes ob-glitch { 0% { translate: 2px 0; filter: drop-shadow(-3px 0 0 #ff2d6f) drop-shadow(3px 0 0 #2df0ff); } 50% { translate: -2px 1px; filter: drop-shadow(3px 0 0 #ff2d6f) drop-shadow(-3px 0 0 #2df0ff); } 100% { translate: 0 -1px; } }
+.ob-emplacement.ob-impact { animation: ob-impact 0.55s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes ob-impact { from { scale: 1.7; } to { scale: 1.1; } }
+.ob-pilier { position: absolute; left: 50%; bottom: 40%; width: 150%; height: 220vh; translate: -50% 0; z-index: -2; pointer-events: none; transform-origin: 50% 100%;
+  background: linear-gradient(to bottom, transparent, rgba(255,244,200,0.5) 60%, rgba(255,255,255,0.95)); filter: blur(10px); animation: ob-pilier 2.4s ease-out both; }
+@keyframes ob-pilier { 0% { scale: 0 1; opacity: 0; } 25% { scale: 1 1; opacity: 1; } 100% { scale: 0.55 1; opacity: 0.55; } }
+.ob-signature { position: absolute; left: 50%; bottom: 27%; width: min(78vw, 420px); translate: -50% 0; z-index: 6; pointer-events: none; overflow: visible; }
+.ob-signature path { fill: none; stroke: #ffe9a6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1600; stroke-dashoffset: 1600;
+  filter: drop-shadow(0 0 6px #ffd45e); animation: ob-signer 1.8s ease-in-out forwards; }
+@keyframes ob-signer { to { stroke-dashoffset: 0; } }
+/* Ultime : les fissures sont sous la pile (z-index 0 contre 1) et dépassent de la carte. */
+.ob-fissures { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
+.ob-fissures path { fill: none; stroke: #e8b3ff; stroke-width: 3; stroke-dasharray: 900; stroke-dashoffset: 900; filter: drop-shadow(0 0 8px #b04dff) drop-shadow(0 0 2px #fff);
+  animation: ob-fissure 0.5s ease-out forwards, ob-eteint 2.5s 1.2s ease forwards; }
+@keyframes ob-fissure { to { stroke-dashoffset: 0; } }
+@keyframes ob-eteint { to { opacity: 0.15; } }
+/* Ultime : l'ombre du Baron traverse l'écran au-dessus de la carte, avant la révélation. */
+.ob-ombre-baron { position: absolute; left: 0; top: 50%; width: 150vmax; height: auto; aspect-ratio: 1000 / 420; z-index: 4; pointer-events: none; opacity: 0;
+  filter: blur(10px) drop-shadow(0 0 24px rgba(176,77,255,0.55)); animation: ob-ombre-passe 2.3s cubic-bezier(.45,.1,.55,.9) forwards; }
+.ob-ombre-baron .ob-silhouette { fill: rgba(3,0,10,0.9); stroke: rgba(3,0,10,0.9); stroke-linecap: round; stroke-linejoin: round; }
+.ob-ombre-baron .ob-yeux { fill: #d68bff; }
+@keyframes ob-ombre-passe {
+  0% { translate: -100% -42%; opacity: 0; }
+  14% { opacity: 1; }
+  50% { translate: calc(50vw - 50%) -56%; }
+  86% { opacity: 1; }
+  100% { translate: 100vw -46%; opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-pilier, .ob-signature path, .ob-fissures path, .ob-emplacement.ob-impact, .ob-titre-drop.ob-glitch, .ob-titre-drop .ob-theme { animation: none; stroke-dashoffset: 0; }
+  .ob-scene.ob-secousse, .ob-emplacement.ob-surcharge .ob-carte, .ob-titre-drop, .ob-onde { animation: none; }
+  .ob-fond, .ob-paquet, .ob-rayons, .ob-projecteurs i, .ob-aura, .ob-aura::after, .ob-emplacement.ob-neon .ob-carte, .ob-mini.ob-foil::before { animation: none; }
+  .ob-carte, .ob-carte.ob-spectaculaire, .ob-carte.ob-tour-et-demi, .ob-carte.ob-lente, .ob-carte.ob-ultime-flip { transition: transform 0.3s; }
+}

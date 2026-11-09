@@ -2,7 +2,7 @@
 
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
-**Dernière mise à jour :** 2026-11-09
+**Dernière mise à jour :** 2026-11-10
 **Étape en cours :** 9 — PWA et responsive (terminée)
 **Prochaine étape :** 10 — Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod. **Pas encore commencée.** Le site est installable (PC, Android, iPhone) et s'ouvre hors ligne (§4sexies).
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
@@ -194,7 +194,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 ## 4ter. Interface boosters et collection (étape 6)
 
 - **Hub d'ouverture (accueil) :** `application-web/composants/panneau-boosters.tsx` affiche le stock `N/15`, un **minuteur** du prochain booster (décompte client, relecture de `/etat` à zéro), le choix du set ouvrable et le bouton Ouvrir.
-- **Animation :** `composants/ouverture-booster.tsx` révèle les 14 cartes **en cascade** (`animation-delay` par carte), avec **halo** sur les rares+ et **voile brillant** sur les foil ; clic = fiche. Respecte `prefers-reduced-motion`.
+- **Animation (refaite le 2026-11-10, d'après le prototype validé par l'utilisateur) :** le bouton Ouvrir affiche une scène plein écran (`composants/ouverture-booster.tsx` + `ouverture-booster.css`, classes préfixées `ob-`). On **déchire le booster officiel du set** (clic, glissement ou Espace/Entrée) ; c'est à ce moment seulement que `POST /api/boosters/ouvrir` part, pendant l'animation. Les cartes se retournent **une par une**, la meilleure en dernier (`outils/ouverture-revelation.ts`, testé). Rares et mieux : même néon arc-en-ciel avant révélation, pour ne rien trahir. Mise en scène propre à l'Epic, l'Alt Art, l'Overnumbered (compteur qui dépasse le total), la Signée (pilier + signature), le Special (cosmos) et l'Ultime (néant, **ombre du Baron qui passe au-dessus de la carte avant le retournement**, fissures violettes **derrière** la carte). Rotations volontairement lentes (1 s à 3 s). Récapitulatif des 14 cartes en React, clic = fiche. Moteur impératif (DOM + canvas de particules) dans `outils/ouverture-scene.ts` ; sons synthétisés, coupés par défaut (`outils/ouverture-sons.ts`), avec deux jingles **originaux** dans le style K/DA et HEARTSTEEL pour les cartes de ces skins (l'utilisateur a renoncé aux vrais morceaux, droits d'auteur). Compatible avec la CSP (aucun style inline en HTML, aucune donnée de carte dans `innerHTML`). Respecte `prefers-reduced-motion` (pauses raccourcies, pas d'ombre ni de particules). Visuels des boosters et fonds de set : `fichiers-statiques/ouverture/` (1,7 Mo, chargés seulement à l'ouverture).
 - **Page Collection (`/collection`) :** `pages/page-collection.tsx` — filtres (set, type, rareté, variante, recherche) + bascules **foil** / **doublons**, grille avec badge quantité (×N) et foil (✨), fiche au clic, pagination, en-tête de **complétion par set** (cartes de base possédées / total).
 - **Composants partagés :** `composants/fiche-carte.tsx`, `filtres-cartes.tsx`, `pagination.tsx` (extraits du catalogue, réutilisés par catalogue, collection et ouverture).
 - **API collection (lecture, connexion obligatoire) :** `GET /api/collection?set=&rarete=&variante=&type=&recherche=&foil=&doublons=&page=` (cartes possédées enrichies depuis le catalogue, 60/page) et `GET /api/collection/resume` (totaux + complétion par set). Aucune donnée de carte en base. `sansAccents` est partagé via `serveur-api/catalogue/recherche-texte.ts`.
@@ -292,6 +292,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Favicon.** Logo de l'utilisateur (spirale orange). Le fond noir devient transparent pour l'onglet. L'icône iPhone et les icônes PWA ont le fond #0b1220. Script `outils/generer-icones.py`. Attention : ne jamais ouvrir puis sauvegarder une image dans VS Code, cela l'enregistre comme du texte et la corrompt (c'est arrivé une fois avec logo-source.png).
 - **2026-11-08 — Filtre par type.** Nouveau filtre `type` (Unité, Sort, Équipement, Légende, Terrain, Rune, Token) dans l'API et sur la page. Il permet notamment de trouver les runes d'Origins, rangées en variante `base`. 70 tests.
 - **2026-11-08 — Terrains et pagination.** Les Battlefields étaient déformés : ils sont maintenant tournés dans la grille et affichés à l'horizontale dans la fiche. Pagination en haut et en bas avec un choix de page. Comparaison avec la galerie officielle : il manque 2 cartes dans la source (voir §3bis). 69 tests.
+- **2026-11-10 — Nouvelle animation d'ouverture.** Le prototype d'ouverture (artifact v7) est porté sur le site (§4ter) : booster officiel à déchirer, cartes une par une, mise en scène par rareté, ombre du Baron Nashor pour l'Ultime, rotations ralenties. L'appel au serveur part au moment de la déchirure. Bug trouvé au test navigateur et corrigé : la table cachée (`display: grid`) captait les clics, d'où la règle `.ob-overlay [hidden]`. Vérifié dans Edge headless (CDP) sur le build de production local : ouverture réelle de bout en bout, récapitulatif, Ultime simulé (ombre puis fissures derrière la carte), aucune erreur CSP ni exception. Ancien CSS de la cascade et `estRarePlus` supprimés. 5 tests de plus (143 au total).
 - **2026-11-09 — Étape 9.** PWA et responsive (§4sexies). Service worker écrit à la main et généré au build (aucune nouvelle dépendance), `/api/*` jamais en cache. Manifeste, icône maskable, carte « Installer l'application », bandeau hors ligne et reconnexion automatique. Marges safe-area, `dvh`, réglages petits écrans et écrans tactiles. 17 nouveaux tests (138 au total), dont l'exécution réelle du service worker dans un bac à sable. Vérifié dans Edge (installable, hors ligne, 3 tailles d'écran). Test d'échange instable corrigé (catalogue périmé après un saut de 48 h).
 - **2026-11-09 — Étape 8.** Monitoring admin en quasi temps réel (§4quinquies). Migration `0005` (tirages remarquables, erreurs serveur, index). Route `GET /api/admin/monitoring` en lecture seule, qui ne prolonge pas l'accès admin. Quotas Cloudflare via l'API GraphQL (jeton à créer par l'utilisateur, §7). Onglet « Monitoring » rafraîchi toutes les 8 s. « En ligne » précis à 2 minutes. 121 tests (8 nouveaux). Vérifié de bout en bout en local.
 - **2026-11-09 — Taux, filtres, images.** À la demande de l'utilisateur : (1) tous les taux Rare+ divisés par 2 (Epic 1/12, Alt 1/24, Over 1/144, Signée 1/480, Special et Ultime 1/2000 boosters), tests statistiques mis à jour ; (2) filtre Champion et Signature (étiquettes `cardTypeLabels`), fixture de test enrichie ; (3) image de secours quand une miniature du CDN ne se charge pas. 113 tests.
@@ -318,7 +319,8 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   pages/page-catalogue.tsx            catalogue : filtres, grille d'images, fiche de carte
   pages/page-collection.tsx           ma collection : cartes possédées, quantités, foil, complétion
   composants/panneau-boosters.tsx     hub : stock, minuteur, choix du set, bouton Ouvrir
-  composants/ouverture-booster.tsx    animation d'ouverture des 14 cartes (cascade, halo, foil)
+  composants/ouverture-booster.tsx    scène d'ouverture plein écran (booster à déchirer, récapitulatif, fiche)
+  composants/ouverture-booster.css    styles de la scène d'ouverture (classes ob-, un thème par set)
   composants/fiche-carte.tsx          fiche détaillée d'une carte (modale), partagée
   composants/filtres-cartes.tsx       barre de filtres partagée (catalogue + collection)
   composants/pagination.tsx           navigation entre pages de résultats, partagée
@@ -331,6 +333,9 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   outils/echanges.ts                  types, libellés des statuts, point de vue « je reçois / je donne »
   outils/libelles-cartes.ts           noms français des raretés et variantes, couleurs, URL d'images redimensionnées
   outils/appels-api.ts                appels au serveur et messages d'erreur en français
+  outils/ouverture-scene.ts           moteur de la scène d'ouverture (booster, cartes, particules, mises en scène)
+  outils/ouverture-revelation.ts      règles pures : catégorie de chaque carte, ordre de révélation, thèmes (testé)
+  outils/ouverture-sons.ts            sons synthétisés de l'ouverture et jingles originaux (coupés par défaut)
   outils/navigation.ts                changement de page sans rechargement, format des dates
   outils/pwa.ts                       PWA : enregistrement du service worker, installation, détection hors ligne
   composants/bandeau-hors-ligne.tsx   bandeau « Hors ligne » en haut de l'écran
@@ -338,6 +343,7 @@ application-web/                      LE SITE (navigateur : téléphone, tablett
   service-worker/modele-service-worker.js  MODÈLE du service worker (règles de cache), complété au build
   styles-globaux.css                  couleurs et mise en page communes
   fichiers-statiques/manifest.webmanifest  manifeste de l'application installable (nom, couleurs, icônes, raccourcis)
+  fichiers-statiques/ouverture/       visuels officiels des boosters (booster-SET-N.webp) et fonds de set (fond-SET.jpg)
   fichiers-statiques/_headers         en-têtes de sécurité du site (nom imposé par Cloudflare)
   fichiers-statiques/logo-source.png  logo d'origine fourni par l'utilisateur (spirale orange)
   fichiers-statiques/favicon.ico      favicon (16, 32, 48 px), GÉNÉRÉ
