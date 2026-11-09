@@ -181,8 +181,9 @@ interface CarteScene {
 }
 
 export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
-  const ambiance = AMBIANCES[options.set] ?? AMBIANCES.ogn!;
-  const setVisuel = AMBIANCES[options.set] ? options.set : "ogn";
+  // Liste blanche : le code du set (venu d'un <select>) n'entre jamais tel quel dans une URL, seule la clé connue sert.
+  const setVisuel = Object.keys(AMBIANCES).find((cle) => cle === options.set) ?? "ogn";
+  const ambiance = AMBIANCES[setVisuel] ?? AMBIANCES.ogn!;
   const reduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ---------- Minuteurs suivis : à la destruction, tout s'arrête et les attentes restent en suspens. ----------
