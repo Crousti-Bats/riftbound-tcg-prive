@@ -1,6 +1,7 @@
 /** Fiche détaillée d'une carte, en fenêtre modale. Partagée par le catalogue, la collection et l'ouverture. */
+import { ImageCarte } from "./image-carte";
 import { useEffect } from "react";
-import { type Carte, classeRarete, LIBELLES_RARETE, LIBELLES_VARIANTE, urlImage } from "../outils/libelles-cartes";
+import { type Carte, classeRarete, LIBELLES_RARETE, LIBELLES_VARIANTE } from "../outils/libelles-cartes";
 
 interface Props {
   carte: Carte;
@@ -28,9 +29,10 @@ export function FicheCarte({ carte, nomSet, surFermeture, possession, foil }: Pr
         aria-label={carte.nom}
         onClick={(e) => e.stopPropagation()}
       >
-        <img
+        <ImageCarte
           className={`image-fiche ${classeRarete(carte)}`}
-          src={urlImage(carte.image, carte.orientation === "paysage" ? 1039 : 744)}
+          image={carte.image}
+          largeur={carte.orientation === "paysage" ? 1039 : 744}
           alt={carte.nom}
         />
         <div className="details-fiche">
@@ -54,7 +56,7 @@ export function FicheCarte({ carte, nomSet, surFermeture, possession, foil }: Pr
             <dt>Variante</dt>
             <dd>{LIBELLES_VARIANTE[carte.variante] ?? carte.variante}</dd>
             <dt>Type</dt>
-            <dd>{carte.type}</dd>
+            <dd>{[carte.type, ...carte.etiquettes].join(" · ")}</dd>
             {carte.domaines.length > 0 && (
               <>
                 <dt>Domaine</dt>

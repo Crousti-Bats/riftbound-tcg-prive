@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
 import type { ContexteApi } from "../types-application";
+import { correspondAuType } from "./classification-cartes";
 import { sansAccents } from "./recherche-texte";
 import { obtenirCatalogue } from "./source-cartes";
 import { RARETES, VARIANTES } from "./types-catalogue";
@@ -45,7 +46,7 @@ routesCatalogue.get("/cartes", async (c) => {
     if (set && carte.set !== set) return false;
     if (rarete && carte.rarete !== rarete) return false;
     if (variante && carte.variante !== variante) return false;
-    if (type && carte.type.toLowerCase() !== type.toLowerCase()) return false;
+    if (type && !correspondAuType(carte, type)) return false;
     if (mots.length) {
       const texte = sansAccents(`${carte.nom} ${carte.sousTitre ?? ""} ${carte.type} ${carte.domaines.join(" ")} ${carte.numero}`);
       if (!mots.every((m) => texte.includes(m))) return false;

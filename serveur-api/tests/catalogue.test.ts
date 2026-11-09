@@ -175,6 +175,17 @@ describe("Routes /api/catalogue", () => {
     const runes = await t.appeler("GET", "/api/catalogue/cartes?type=rune", { cookie });
     expect((runes.json.cartes as Array<{ type: string }>).every((c) => c.type === "Rune")).toBe(true);
     expect((await t.appeler("GET", "/api/catalogue/cartes?type=<script>", { cookie })).statut).toBe(400);
+
+    // Les étiquettes (cardTypeLabels) servent aussi de filtre : Champion, Token…
+    type CarteEtiquetee = { type: string; etiquettes: string[] };
+    const champions = (await t.appeler("GET", "/api/catalogue/cartes?type=Champion", { cookie })).json
+      .cartes as CarteEtiquetee[];
+    expect(champions.length).toBeGreaterThan(0);
+    expect(champions.every((c) => c.etiquettes.includes("Champion"))).toBe(true);
+    const tokens = (await t.appeler("GET", "/api/catalogue/cartes?type=token", { cookie })).json
+      .cartes as CarteEtiquetee[];
+    expect(tokens.some((c) => c.type === "Unit")).toBe(true); // un token Unit est bien un token
+    expect(tokens.every((c) => c.type === "Token" || c.etiquettes.includes("Token"))).toBe(true);
   });
 
   it("refuse des filtres invalides", async () => {

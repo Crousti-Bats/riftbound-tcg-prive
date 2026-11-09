@@ -4,6 +4,7 @@ import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { schemaPseudo } from "../validation-donnees";
 import { exigerConnexion } from "../authentification/sessions";
+import { correspondAuType } from "../catalogue/classification-cartes";
 import { sansAccents } from "../catalogue/recherche-texte";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
 import { RARETES, VARIANTES } from "../catalogue/types-catalogue";
@@ -87,7 +88,7 @@ async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number) 
     if (set && carte.set !== set) continue;
     if (rarete && carte.rarete !== rarete) continue;
     if (variante && carte.variante !== variante) continue;
-    if (type && carte.type.toLowerCase() !== type.toLowerCase()) continue;
+    if (type && !correspondAuType(carte, type)) continue;
     if (seulementFoil && possede.foil === 0) continue;
     if (seulementDoublons && possede.normale + possede.foil < 2) continue;
     if (mots.length) {

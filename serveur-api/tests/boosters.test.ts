@@ -161,12 +161,12 @@ describe("Statistiques sur 100 000 boosters (aléatoire seedé, déterministe)",
   it("respecte les fréquences par booster (Unleashed : Special + Ultime présents)", () => {
     const c = simuler("unl", 12345);
     const f = (n: number) => n / N;
-    dans(f(c.epic), 0.155, 0.179); //   ~16,7 % (2 slots Rare+ + part Foil)
-    dans(f(c.alt), 0.075, 0.092); //    ~8,3 %
-    dans(f(c.over), 0.0115, 0.0165); // ~1,39 %
-    dans(f(c.signee), 0.0031, 0.0053); // ~0,42 %
-    dans(f(c.special), 0.0006, 0.0015); // ~0,1 %
-    dans(f(c.ultime), 0.0006, 0.0015); //  ~0,1 %
+    dans(f(c.epic), 0.075, 0.092); //   ~8,3 % (2 slots Rare+ + part Foil) : 1 booster sur 12
+    dans(f(c.alt), 0.036, 0.047); //    ~4,2 % : 1 sur 24
+    dans(f(c.over), 0.0055, 0.0085); // ~0,69 % : 1 sur 144
+    dans(f(c.signee), 0.0013, 0.0030); // ~0,21 % : 1 sur 480
+    dans(f(c.special), 0.0002, 0.0009); // ~0,05 % : 1 sur 2000
+    dans(f(c.ultime), 0.0002, 0.0009); //  ~0,05 %
     // Slot Foil : 75 % Common, 20 % Uncommon, 4 % Rare, 1 % Epic.
     dans(c.foil.Common / N, 0.73, 0.77);
     dans(c.foil.Uncommon / N, 0.18, 0.22);
@@ -186,8 +186,8 @@ describe("Statistiques sur 100 000 boosters (aléatoire seedé, déterministe)",
     const c = simuler("ven", 2024);
     expect(c.special).toBe(0);
     expect(c.ultime).toBe(0);
-    dans(c.epic / N, 0.155, 0.179); // les autres taux restent inchangés
-    expect(c.rare / N).toBeGreaterThan(1.7); // ~2 Rares par booster (2 slots ≈ 0,872 chacun + les Rare+ ratés)
+    dans(c.epic / N, 0.075, 0.092); // les autres taux restent inchangés
+    expect(c.rare / N).toBeGreaterThan(1.85); // ~1,9 Rare par booster (2 slots ≈ 0,938 chacun + les Rare+ ratés)
   }, 30_000);
 });
 

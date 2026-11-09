@@ -25,6 +25,8 @@ export interface CarteCatalogue {
   rarete: Rarete;
   variante: Variante;
   type: string;
+  /** Étiquettes secondaires de la source (cardTypeLabels sans le type) : Champion, Signature, Token, Basic. */
+  etiquettes: string[];
   domaines: string[];
   image: string;
   /** Les Battlefields sont des images horizontales (1039×744). */
