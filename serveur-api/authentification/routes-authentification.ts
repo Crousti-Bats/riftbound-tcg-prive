@@ -3,6 +3,7 @@
  * Messages d'erreur volontairement génériques : on ne révèle jamais si un pseudo existe.
  */
 import { Hono } from "hono";
+import { BOOSTERS_INITIAUX } from "../boosters/configuration-taux";
 import { journaliser, requeteJournal } from "../journal-evenements";
 import { lireCorps } from "../lecture-requete";
 import { empreinteSha256 } from "../securite/jetons-et-empreintes";
@@ -50,8 +51,11 @@ routesAuthentification.post("/inscription", async (c) => {
   let compte: { id: number } | null;
   try {
     compte = await base
-      .prepare("INSERT INTO comptes (pseudo, hash_mot_de_passe, role, cree_le) VALUES (?, ?, ?, ?) RETURNING id")
-      .bind(pseudo, hash, invitation.role, maintenant)
+      .prepare(
+        `INSERT INTO comptes (pseudo, hash_mot_de_passe, role, cree_le, stock_boosters, boosters_tick)
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+      )
+      .bind(pseudo, hash, invitation.role, maintenant, BOOSTERS_INITIAUX, maintenant)
       .first<{ id: number }>();
   } catch {
     compte = null; // pseudo pris entre-temps (contrainte UNIQUE)

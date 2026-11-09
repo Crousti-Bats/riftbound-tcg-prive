@@ -2,9 +2,9 @@
 
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
-**Dernière mise à jour :** 2026-11-08
-**Étape en cours :** 4 — Catalogue des cartes (terminée)
-**Prochaine étape :** 5 — Moteur de boosters (taux de drop, tirage côté serveur, tests statistiques) et timer 1 booster / 10 min, stock max 15. **Pas encore commencée.** Toutes les décisions sont prises (§4) : on peut la lancer directement.
+**Dernière mise à jour :** 2026-11-09
+**Étape en cours :** 5 — Moteur de boosters (terminée)
+**Prochaine étape :** 6 — Frontend : ouverture de booster animée, page Collection, filtres. **Pas encore commencée.** Le moteur serveur (tirage, stock, collection) et l'API `/api/boosters` sont prêts ; il reste l'interface.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -168,10 +168,24 @@ Les tests de l'étape 5 simuleront au moins 100 000 boosters et vérifieront ces
 **Autres décisions pour l'étape 5 (validées par l'utilisateur le 2026-11-08) :**
 - Un nouveau joueur reçoit **15 boosters** à l'inscription (stock plein). Ensuite, +1 toutes les 10 minutes, 15 au maximum.
 - Le slot Rune sélectionne sur `type === "Rune"` (les runes d'Origins sont en variante `base`). Pour un set sans rune (Spiritforged, Unleashed), on tire un Token du set, sinon une Rune d'Origins (voir §3bis).
-- Points restant à trancher pendant l'étape : les Legends (Rare) et les Battlefields (Uncommon) entrent-ils dans les slots Rare et Uncommon normaux, et peut-on avoir des doublons dans un même booster.
+- **Décisions tranchées à l'étape 5 (par l'utilisateur le 2026-11-09) :**
+  - Les Légendes (type Legend, Rare) et les Terrains (type Battlefield, Uncommon) **entrent** dans leurs pools de rareté normaux.
+  - Les **doublons** à l'intérieur d'un même booster sont **autorisés** (tirages indépendants, statistiquement corrects).
+  - Les cartes **foil** sont stockées **séparément** des normales dans la collection (clé `compte_id, card_code, est_foil`).
 
 Slot Foil (estimation communautaire) : 75 % Common, 20 % Uncommon, 4 % Rare, 1 % Epic.
 Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token du set ou une Rune d'Origins.
+
+## 4bis. Moteur de boosters (étape 5)
+
+- **Taux :** une seule source de vérité, `serveur-api/boosters/configuration-taux.ts` (composition, probabilités Rare+, Foil, Rune, stock). Tout changement de taux se fait là.
+- **Tirage :** `serveur-api/boosters/tirage-booster.ts` est une **fonction pure** (pools + set + aléatoire → 14 cartes), donc testable à fond. L'aléatoire est injectable (`aleatoire.ts`) : `crypto.getRandomValues` en production (côté serveur, non prédictible), PRNG seedé déterministe pour les tests (pas de test instable). Si le pool d'une catégorie Rare+ est vide pour le set, sa probabilité est reversée aux Rares. Slot Rune : rune du set (ou token, ou repli sur une rune d'Origins).
+- **Pools :** `serveur-api/boosters/pools.ts` pré-indexe les cartes par set/rareté/variante/type, mémoïsé sur `catalogue.chargeLe`. Runes et Tokens exclus des pools de rareté ; Légendes et Terrains inclus (décision du 2026-11-09).
+- **Stock paresseux :** `serveur-api/boosters/stock.ts` — `stock = min(15, stockSauve + floor((now − tick)/10 min))`, sans cron. 15 à l'inscription. Au plafond le minuteur s'arrête ; sinon la progression partielle est préservée.
+- **API (connexion obligatoire) :** `GET /api/boosters/etat` (stock, prochain booster, sets ouvrables) ; `POST /api/boosters/ouvrir {set}` (consomme 1 booster, tire 14 cartes, met à jour la collection, renvoie les cartes enrichies). 503 `boosters_indisponibles` si le catalogue est injoignable.
+- **Atomicité / anti-triche :** le décrément du stock est protégé par **concurrence optimiste** (`UPDATE … WHERE stock = ? AND tick = ?`) ; on n'ajoute les cartes (un seul `batch()` : 14 upserts + log d'ouverture) qu'après un décrément confirmé. Deux ouvertures simultanées ne peuvent pas dépenser un seul booster deux fois (la 2ᵉ reçoit 409 `conflit_ouverture`), et aucune carte n'est jamais ajoutée sans consommer de booster. Colonne `stock_boosters` avec `CHECK (0 ≤ stock ≤ 15)` en défense.
+- **Base (migration `0003`) :** colonnes `stock_boosters` / `boosters_tick` sur `comptes` ; table `collection` (`compte_id, card_code, est_foil, quantite`) — **jamais** de donnée de carte, seulement des `cardCode` et des quantités ; table `ouvertures_boosters` (pour le monitoring de l'étape 8).
+- **Tests :** `serveur-api/tests/boosters.test.ts` — stock, pools, structure, **100 000 boosters seedés** (fréquences par booster vérifiées : Epic ≈16,7 %, Alt ≈8,3 %, Over ≈1,39 %, signée ≈0,42 %, Special/Ultime ≈0,1 % ; Foil 75/20/4/1 ; Rune 92/8), redistribution des taux pour un set sans Special/Ultime, et API (15 au départ, ouverture, collection, foil distinct, 409/400/401, régénération dans le temps). Fixture `tests/donnees/` via `catalogue-de-test.ts`.
 
 ## 5. Démarche DevSecOps
 
@@ -198,7 +212,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 | 2 | Compte Cloudflare, Worker et D1, premier déploiement "Hello" via la CI | Terminé |
 | 3 | Authentification : invitations, connexion, sessions, limitation des tentatives. **Rôle admin** (compte de l'utilisateur uniquement), première page `/admin` pour gérer les invitations et les comptes. Règle ESLint qui interdit le SQL non préparé | Terminé |
 | 4 | Catalogue des cartes (fetch et cache du JSON, API sets et cartes) | Terminé |
-| 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | À faire |
+| 5 | Moteur de boosters (taux, tirage, tests statistiques) et timer 10 min / 15 max | Terminé |
 | 6 | Frontend : ouverture de booster animée, collection, filtres | À faire |
 | 7 | Échanges entre joueurs | À faire |
 | 8 | **Admin : monitoring en quasi temps réel** (voir §2bis) | À faire |
@@ -226,6 +240,7 @@ Slot Rune : 92 % Rune, 8 % Rune alt. Si le set n'a pas de rune, on tire un Token
 - **2026-11-08 — Favicon.** Logo de l'utilisateur (spirale orange). Le fond noir devient transparent pour l'onglet. L'icône iPhone et les icônes PWA ont le fond #0b1220. Script `outils/generer-icones.py`. Attention : ne jamais ouvrir puis sauvegarder une image dans VS Code, cela l'enregistre comme du texte et la corrompt (c'est arrivé une fois avec logo-source.png).
 - **2026-11-08 — Filtre par type.** Nouveau filtre `type` (Unité, Sort, Équipement, Légende, Terrain, Rune, Token) dans l'API et sur la page. Il permet notamment de trouver les runes d'Origins, rangées en variante `base`. 70 tests.
 - **2026-11-08 — Terrains et pagination.** Les Battlefields étaient déformés : ils sont maintenant tournés dans la grille et affichés à l'horizontale dans la fiche. Pagination en haut et en bas avec un choix de page. Comparaison avec la galerie officielle : il manque 2 cartes dans la source (voir §3bis). 69 tests.
+- **2026-11-09 — Étape 5.** Moteur de boosters terminé (§4bis). 3 décisions tranchées avec l'utilisateur (Légendes/Terrains dans leurs pools, doublons autorisés, foil stocké à part). Nouveau dossier `serveur-api/boosters/` (config des taux, aléatoire injectable, pools, tirage pur, stock paresseux, routes). Migration `0003` (stock sur les comptes, tables `collection` et `ouvertures_boosters`). API `/api/boosters/etat` et `/ouvrir`. 90 tests passent (dont 100 000 boosters simulés, fréquences par booster vérifiées). Migration validée sur le vrai moteur D1 en local. Un nouveau joueur reçoit 15 boosters à l'inscription.
 - Astuce diagnostic : `Date.now()` n'avance pas pendant le calcul dans un Worker (protection Spectre), donc on ne peut pas mesurer le CPU ainsi. Utiliser le champ `cpuTime` de `wrangler tail --format json`.
 - Astuce : PowerShell `Invoke-WebRequest` refuse les cookies `Secure` sur http://localhost (les navigateurs les acceptent). Pour tester l'API en local, utiliser `curl` avec `-b/-c` dans Git Bash.
 - Astuce Bash : les heredocs contenant des apostrophes françaises échouent dans l'outil Bash de l'assistant. Écrire plutôt les scripts dans un fichier.
@@ -270,15 +285,23 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
   catalogue/classification-cartes.ts  validation de la source et classement en variantes
   catalogue/source-cartes.ts          téléchargement et cache (mémoire, Cache API) de la source
   catalogue/routes-catalogue.ts       /api/catalogue : sets, recherche de cartes, détail
+  boosters/configuration-taux.ts      SOURCE DE VÉRITÉ des taux, composition, stock (doc §4)
+  boosters/aleatoire.ts               aléatoire injectable (crypto en prod, PRNG seedé pour les tests)
+  boosters/pools.ts                   pré-indexe les cartes par set/rareté/variante (mémoïsé)
+  boosters/tirage-booster.ts          tirage PUR des 14 cartes selon les taux
+  boosters/stock.ts                   stock paresseux (+1/10 min, max 15)
+  boosters/routes-boosters.ts         /api/boosters : etat, ouvrir
   tests/                              tests automatiques (vraie base SQLite en mémoire + vraies migrations)
     outils/base-d1-de-test.ts         imite D1 avec node:sqlite
     outils/client-api-de-test.ts      appelle l'API comme un navigateur
+    outils/catalogue-de-test.ts       catalogue synthétique pour les tests de boosters
     donnees/cartes-echantillon.json   47 vraies cartes (une par set et par catégorie)
   types-cloudflare-generes.d.ts       GÉNÉRÉ par `npm run cf-typegen`, ne pas modifier à la main
 
 base-de-donnees/                      BASE SQLITE CLOUDFLARE D1
   migrations/0001_initialisation.sql  table parametres
   migrations/0002_comptes_et_sessions.sql  comptes, sessions, invitations, limitations, journal
+  migrations/0003_boosters_et_collection.sql  stock de boosters, collection, ouvertures
   (les migrations sont numérotées et jamais modifiées après le merge : on en ajoute une nouvelle)
 
 configuration/                        RÉGLAGES DES OUTILS
