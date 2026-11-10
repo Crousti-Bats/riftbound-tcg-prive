@@ -30,5 +30,10 @@
       "database_id": "efbe0899-7a3f-4f63-aad4-4bd9c540eb2d",
       "migrations_dir": "../base-de-donnees/migrations"
     }
-  ]
+  ],
+  // Table de jeu : une salle (Durable Object) par partie. Stockage SQLite, le seul permis sur le plan gratuit.
+  "durable_objects": {
+    "bindings": [{ "name": "SALLES", "class_name": "SalleDeJeu" }]
+  },
+  "migrations": [{ "tag": "v1-salles", "new_sqlite_classes": ["SalleDeJeu"] }]
 }

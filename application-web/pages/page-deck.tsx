@@ -127,7 +127,7 @@ export function PageDeck({ id }: { id: number }) {
   function supprimer() {
     if (!window.confirm(`Supprimer le deck « ${nom} » ? C'est définitif.`)) return;
     appelerApi("DELETE", `/decks/${id}`).then(
-      () => naviguer("/decks"),
+      () => naviguer("/jouer"),
       (e: Error) => setErreur(e.message),
     );
   }
@@ -136,8 +136,8 @@ export function PageDeck({ id }: { id: number }) {
     return (
       <main className="conteneur">
         <p className="message-erreur">{erreur}</p>
-        <button className="secondaire" onClick={() => naviguer("/decks")}>
-          Retour à mes decks
+        <button className="secondaire" onClick={() => naviguer("/jouer")}>
+          Retour à « Jouer »
         </button>
       </main>
     );
@@ -151,8 +151,8 @@ export function PageDeck({ id }: { id: number }) {
   return (
     <main className="conteneur">
       <header className="entete">
-        <button className="secondaire petit" onClick={() => naviguer("/decks")}>
-          ← Mes decks
+        <button className="secondaire petit" onClick={() => naviguer("/jouer")}>
+          ← Jouer
         </button>
         <span className={statut === "erreur" ? "statut-deck statut-deck-erreur" : "statut-deck"} role="status">
           {libelleStatut}

@@ -865,3 +865,113 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
   .selecteur-deck .filtres > label:first-child, .selecteur-deck .filtres > .bascule { grid-column: 1 / -1; }
   .selecteur-deck .filtres select, .selecteur-deck .filtres input:not([type="checkbox"]) { min-height: 38px; padding: 6px 8px; font-size: 0.85rem; }
 }
+
+/* ---------- Jouer : parties ---------- */
+.titre-section { margin: 28px 0 12px; font-size: 1.25rem; }
+.panneau-parties h2 { margin: 0; }
+.parties-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.parties-actions select, .parties-actions input { flex: 1 1 160px; min-width: 0; }
+.liste-parties { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.liste-parties li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: var(--rayon-petit); background: var(--fond-champ); }
+.salon-attente h1 { margin: 0; }
+.code-partie { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: 0.18em; color: var(--accent-vif); font-variant-numeric: tabular-nums; user-select: all; }
+
+/* ---------- Table de jeu ---------- */
+.table-jeu { --l: 62px; padding: 8px max(8px, env(safe-area-inset-right)) 16px max(8px, env(safe-area-inset-left)); max-width: 1500px; margin: 0 auto; }
+.table-entete { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.table-score { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--fond-carte); border: 1px solid var(--bordure); }
+.table-score strong { font-size: 1.3rem; min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; color: var(--accent-vif); }
+.table-score-moi { border-color: var(--bordure-or); }
+.table-score .bouton-icone { width: 30px; height: 30px; min-height: 30px; }
+.table-pseudo { font-weight: 700; }
+.table-pseudo small { color: var(--accent-vif); }
+.table-connexion { margin: 0 auto; font-size: 0.8rem; color: var(--texte-doux); }
+.table-connexion-connecte { color: var(--succes); }
+.table-avis { cursor: pointer; }
+.table-corps { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
+.table-plateau { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.table-cote { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "identite base piles" "reserve reserve piles"; gap: 8px; padding: 8px; border-radius: var(--rayon-petit); background: rgba(255, 255, 255, 0.02); border: 1px solid var(--bordure); }
+.table-cote-adverse { grid-template-areas: "reserve reserve piles" "identite base piles"; }
+.table-zone { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.table-zone-identite { grid-area: identite; }
+.table-zone-base { grid-area: base; }
+.table-zone-reserve { grid-area: reserve; }
+.table-zone-piles { grid-area: piles; display: grid; grid-template-columns: repeat(2, auto); gap: 6px; align-content: start; }
+.table-zone-titre { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texte-doux); }
+.table-rangee { display: flex; flex-wrap: wrap; gap: 6px; min-height: calc(var(--l) * 1.4); align-items: center; }
+.table-rangee-serree { gap: 3px; min-height: calc(var(--l) * 0.9); }
+.table-rangee-serree .carte-table { --l: 40px; }
+
+.carte-table { position: relative; flex: none; width: var(--l); aspect-ratio: 744 / 1039; padding: 0; min-height: 0; border: 2px solid transparent; border-radius: 6px; background: var(--fond-champ); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4); overflow: visible; transition: transform 0.15s ease, margin 0.15s ease; }
+.carte-table img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+.carte-table:hover:not(:disabled) { filter: none; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5); }
+.carte-table-grande { --l: 92px; }
+.carte-table-paysage { aspect-ratio: 1039 / 744; width: calc(var(--l) * 1.4); }
+.carte-table-inclinee { transform: rotate(90deg); margin: 0 calc(var(--l) * 0.2); }
+.carte-table-choisie { border-color: var(--accent-vif); box-shadow: 0 0 0 2px var(--accent-vif), 0 0 18px rgba(243, 207, 134, 0.5); }
+.carte-table-mulligan { border-color: var(--orange); transform: translateY(-8px); }
+.carte-table-mini { --l: 26px; box-shadow: none; }
+.carte-table-cachee { position: absolute; left: 2px; right: 2px; bottom: 2px; font-size: 0.55rem; text-align: center; border-radius: 3px; background: rgba(0, 0, 0, 0.75); color: var(--texte-doux); }
+.carte-table-marqueurs { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 4px; display: grid; place-items: center; border-radius: 999px; font-size: 0.75rem; font-weight: 800; color: var(--accent-texte); background: var(--accent-vif); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+.dos-carte { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 4px; background: radial-gradient(circle at 50% 45%, #2a3f6e 0, #12203d 55%, #0a1224 100%); box-shadow: inset 0 0 0 2px rgba(212, 173, 98, 0.45), inset 0 0 0 5px #0a1224, inset 0 0 0 6px rgba(212, 173, 98, 0.25); }
+.dos-carte span { font-family: Georgia, serif; font-weight: 700; font-size: calc(var(--l, 60px) * 0.4); color: rgba(243, 207, 134, 0.75); }
+.pile-vide { display: block; width: 100%; height: 100%; border-radius: 4px; border: 1px dashed var(--bordure-forte); }
+
+.table-pile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0; min-height: 0; background: none; border: none; box-shadow: none; color: var(--texte); }
+.table-pile:hover:not(:disabled) { filter: brightness(1.1); box-shadow: none; }
+.table-pile:disabled { opacity: 1; cursor: default; }
+.table-pile .carte-table { --l: 46px; }
+.table-pile-legende { font-size: 0.65rem; color: var(--texte-doux); white-space: nowrap; }
+.table-pile-legende strong { color: var(--texte); }
+
+.table-main-adverse { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.table-champs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.table-champ { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--rayon-petit); background: linear-gradient(180deg, rgba(232, 121, 42, 0.05), rgba(90, 169, 255, 0.05)); border: 1px solid var(--bordure-or); min-width: 0; }
+.table-champ-terrain { display: flex; justify-content: center; align-items: center; gap: 6px; min-height: calc(var(--l) * 1.05); padding: 4px; border-radius: 8px; background: rgba(0, 0, 0, 0.25); }
+.table-champ-terrain .carte-table { --l: 70px; }
+.table-champ-lui, .table-champ-moi { justify-content: center; }
+
+.table-main { padding: 8px; border-radius: var(--rayon-petit); background: rgba(212, 173, 98, 0.05); border: 1px solid var(--bordure-or); }
+.table-main-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.table-rangee-main { flex-wrap: nowrap; overflow-x: auto; padding: 10px 2px 4px; }
+.table-commandes { display: flex; flex-wrap: wrap; gap: 6px; }
+.table-bouton-journal { display: none; }
+
+.table-journal { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100dvh - 96px); padding: 12px; border-radius: var(--rayon-petit); background: var(--fond-carte); border: 1px solid var(--bordure); }
+.table-journal h2 { margin: 0; font-size: 1rem; }
+.table-journal-liste { list-style: none; margin: 0; padding: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; min-height: 120px; }
+.table-journal-liste li { padding: 4px 8px; border-radius: 6px; background: var(--fond-champ); overflow-wrap: anywhere; }
+.journal-moi { border-left: 3px solid var(--accent); }
+.journal-lui { border-left: 3px solid #5aa9ff; }
+.journal-table { color: var(--accent-vif); }
+.table-message { display: flex; gap: 6px; }
+.table-message input { flex: 1; min-width: 0; }
+
+.panneau-carte-table { display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: 16px; max-width: 720px; }
+.panneau-carte-image img, .panneau-carte-image .dos-carte { width: 100%; height: auto; aspect-ratio: 744 / 1039; border-radius: 12px; display: block; }
+.panneau-carte-actions { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.panneau-carte-actions h2 { margin: 0; font-size: 1.15rem; }
+.panneau-carte-texte { margin: 0; white-space: pre-line; max-height: 120px; overflow-y: auto; }
+.panneau-carte-destinations { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+
+@media (max-width: 1000px) {
+  .table-corps { grid-template-columns: minmax(0, 1fr); }
+  .table-bouton-journal { display: inline-flex; }
+  .table-journal { display: none; position: static; max-height: 60dvh; }
+  .table-journal.ouvert { display: flex; }
+}
+@media (max-width: 640px) {
+  .table-jeu { --l: 44px; }
+  .carte-table-grande { --l: 64px; }
+  .table-cote, .table-cote-adverse { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "identite piles" "base base" "reserve reserve"; }
+  .table-cote-adverse { grid-template-areas: "reserve reserve" "base base" "identite piles"; }
+  .table-zone-piles { grid-template-columns: repeat(3, auto); }
+  .table-pile .carte-table { --l: 34px; }
+  .table-champs { gap: 4px; }
+  .table-champ { padding: 4px; }
+  .table-champ-terrain .carte-table { --l: 50px; }
+  .panneau-carte-table { grid-template-columns: minmax(0, 1fr); }
+  .panneau-carte-image { max-width: 160px; margin: 0 auto; }
+  body:has(.table-jeu) .nav-bas { display: none; }
+}

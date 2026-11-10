@@ -14,6 +14,7 @@ import { PageCollection } from "./pages/page-collection";
 import { PageConnexion } from "./pages/page-connexion";
 import { PageDeck } from "./pages/page-deck";
 import { PageDecks } from "./pages/page-decks";
+import { PageTable } from "./pages/page-table";
 import { PageEchanges } from "./pages/page-echanges";
 import { PageNouvelEchange } from "./pages/page-nouvel-echange";
 import { PageInscription } from "./pages/page-inscription";
@@ -115,7 +116,11 @@ function Page({
   }
   if (chemin === "/catalogue") return <PageCatalogue />;
   if (chemin === "/collection") return <PageCollection />;
-  if (chemin === "/decks") return <PageDecks />;
+  if (chemin === "/jouer" || chemin === "/decks") return <PageDecks />;
+  if (/^\/table\/[A-Z0-9]{8}$/.test(chemin)) {
+    const code = chemin.slice("/table/".length);
+    return <PageTable key={code} code={code} />;
+  }
   if (/^\/decks\/\d{1,12}$/.test(chemin)) {
     const id = Number(chemin.slice("/decks/".length));
     return <PageDeck key={id} id={id} />;

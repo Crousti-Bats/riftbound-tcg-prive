@@ -18,6 +18,7 @@ import { routesNotifications } from "./notifications/routes-notifications";
 import { routesProfils } from "./profils/routes-profils";
 import { routesWishlist } from "./wishlist/routes-wishlist";
 import { routesDecks } from "./decks/routes-decks";
+import { routesParties } from "./table/routes-parties";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
 
@@ -55,6 +56,7 @@ app.route("/api/notifications", routesNotifications);
 app.route("/api/profils", routesProfils);
 app.route("/api/wishlist", routesWishlist);
 app.route("/api/decks", routesDecks);
+app.route("/api/parties", routesParties);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
@@ -85,6 +87,9 @@ async function tachePlanifiee(_controleur: ScheduledController, env: ContexteApi
     await enregistrerErreurServeur(env.BASE_DE_DONNEES, "CRON", "/boosters-pleins", err).catch(() => undefined);
   }
 }
+
+/** Durable Object de la table de jeu (binding SALLES, voir cloudflare-wrangler.jsonc). */
+export { SalleDeJeu } from "./table/salle-de-jeu";
 
 export default {
   fetch: app.fetch,

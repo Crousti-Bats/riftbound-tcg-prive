@@ -206,3 +206,30 @@ routesDecks.delete("/:id", async (c) => {
   if (!suppression.meta.changes) return c.json({ erreur: "deck_introuvable" }, 404);
   return c.json({ ok: true });
 });
+
+/**
+ * Deck prêt à jouer (table de jeu) : il doit m'appartenir et être valide (règles + possession) au moment où la
+ * partie commence. Renvoie les codes, exemplaire par exemplaire.
+ */
+export async function chargerDeckJouable(
+  base: D1Database,
+  compteId: number,
+  deckId: number,
+): Promise<{ ok: true; deck: { legende: string; champion: string; principal: string[]; runes: string[]; terrains: string[] } } | { ok: false; erreur: string }> {
+  const ligne = await base
+    .prepare("SELECT contenu FROM decks WHERE id = ? AND compte_id = ?")
+    .bind(deckId, compteId)
+    .first<{ contenu: string }>();
+  if (!ligne) return { ok: false, erreur: "deck_introuvable" };
+  const contenu = lireContenu(ligne.contenu);
+  const [possession, catalogue] = await Promise.all([chargerPossession(base, compteId), obtenirCatalogue()]);
+  const { parCode, champions } = indexer(catalogue);
+  if (!validerDeck(contenu, parCode, champions, possession).valide || !contenu.legende || !contenu.champion) {
+    return { ok: false, erreur: "deck_incomplet" };
+  }
+  const deplier = (lignes: Array<{ code: string; n: number }>) => lignes.flatMap((l) => Array<string>(l.n).fill(l.code));
+  return {
+    ok: true,
+    deck: { legende: contenu.legende, champion: contenu.champion, principal: deplier(contenu.principal), runes: deplier(contenu.runes), terrains: [...contenu.terrains] },
+  };
+}

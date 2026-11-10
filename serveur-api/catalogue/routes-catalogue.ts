@@ -75,6 +75,18 @@ routesCatalogue.get("/cartes", async (c) => {
   });
 });
 
+/** Plusieurs cartes d'un coup (table de jeu : les cartes qui apparaissent sur la table). 100 codes au plus. */
+routesCatalogue.get("/lot", async (c) => {
+  const codes = z
+    .string()
+    .regex(/^[a-z0-9-]{3,40}(,[a-z0-9-]{3,40}){0,99}$/)
+    .safeParse(c.req.query("codes"));
+  if (!codes.success) return c.json({ erreur: "donnees_invalides" }, 400);
+  const voulus = new Set(codes.data.split(","));
+  const cartes = (await obtenirCatalogue()).cartes.filter((carte) => voulus.has(carte.code));
+  return c.json({ cartes });
+});
+
 routesCatalogue.get("/cartes/:code", async (c) => {
   const code = c.req.param("code");
   if (!/^[a-z0-9-]{3,40}$/.test(code)) return c.json({ erreur: "introuvable" }, 404);

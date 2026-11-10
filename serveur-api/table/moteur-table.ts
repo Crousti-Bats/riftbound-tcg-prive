@@ -1,0 +1,409 @@
+/**
+ * Moteur de la table de jeu : état d'une partie à deux, actions des joueurs et vue de chacun.
+ * Table « libre » : le site n'applique pas les règles de Riftbound, il transmet les gestes des joueurs (piocher,
+ * jouer, déplacer, incliner…) et garde secrètes les informations cachées (ma main, l'ordre des decks).
+ * Fonctions pures (aucun réseau, aucune base) : l'aléatoire est injecté. Testé dans tests/table.test.ts.
+ */
+import { z } from "zod";
+
+export type IndexJoueur = 0 | 1;
+
+/** Zones de chaque joueur. Les zones « cachées » ne montrent que leur nombre de cartes (sauf la main, à son propriétaire). */
+export const ZONES_JOUEUR = ["main", "deck", "runes", "reserve", "base", "defausse", "bannis", "legende", "champion", "terrains"] as const;
+export type ZoneJoueur = (typeof ZONES_JOUEUR)[number];
+const ZONES_CACHEES: ReadonlySet<string> = new Set(["main", "deck", "runes"]);
+/** Zones « en jeu » : une carte qui les quitte perd ses marqueurs et se redresse. */
+const ZONES_EN_JEU: ReadonlySet<string> = new Set(["reserve", "base", "legende", "champion", "terrains", "champ"]);
+export const NOMBRE_CHAMPS = 2;
+export const MAIN_DE_DEPART = 4;
+export const MAX_JOURNAL = 150;
+
+export interface CarteJeu {
+  id: string;
+  code: string;
+  proprio: IndexJoueur;
+  /** Face visible (une carte jouée face cachée n'est visible que de son propriétaire). */
+  face: boolean;
+  inclinee: boolean;
+  marqueurs: number;
+}
+
+export interface EntreeJournal {
+  t: number;
+  /** Auteur (null : la table elle-même). */
+  j: IndexJoueur | null;
+  texte: string;
+  /** Cartes citées : le client affiche leur nom à la place de {0}, {1}… */
+  cartes?: string[];
+}
+
+export interface JoueurTable {
+  id: number;
+  pseudo: string;
+  points: number;
+}
+
+export interface EtatTable {
+  code: string;
+  joueurs: [JoueurTable, JoueurTable];
+  premier: IndexJoueur;
+  /** Ordre des cartes de chaque zone. Deck et runes : l'indice 0 est le dessus. */
+  zones: Record<string, string[]>;
+  cartes: Record<string, CarteJeu>;
+  journal: EntreeJournal[];
+  /** Le mulligan n'est possible qu'une fois, avant d'avoir joué. */
+  mulliganFait: [boolean, boolean];
+  commenceeLe: number;
+  /** Incrémenté à chaque action (le client ignore une vue plus ancienne). */
+  version: number;
+}
+
+export interface DeckDeTable {
+  legende: string;
+  champion: string;
+  principal: string[];
+  runes: string[];
+  terrains: string[];
+}
+
+export type Aleatoire = () => number;
+
+export function aleatoireCrypto(): number {
+  const tampon = new Uint32Array(1);
+  crypto.getRandomValues(tampon);
+  return (tampon[0] ?? 0) / 2 ** 32;
+}
+
+function melanger<T>(liste: T[], aleatoire: Aleatoire): T[] {
+  const copie = [...liste];
+  for (let i = copie.length - 1; i > 0; i--) {
+    const k = Math.floor(aleatoire() * (i + 1));
+    [copie[i], copie[k]] = [copie[k] as T, copie[i] as T];
+  }
+  return copie;
+}
+
+export const idZone = (j: IndexJoueur, zone: ZoneJoueur) => `${j}.${zone}`;
+export const idChamp = (n: number) => `champ.${n}`;
+
+/** Analyse un identifiant de zone : `0.main`, `1.base`, `champ.0`… */
+export function lireZone(id: string): { proprio: IndexJoueur | null; zone: ZoneJoueur | "champ" } | null {
+  const champ = /^champ\.(\d)$/.exec(id);
+  if (champ) return Number(champ[1]) < NOMBRE_CHAMPS ? { proprio: null, zone: "champ" } : null;
+  const m = /^([01])\.([a-z]+)$/.exec(id);
+  if (!m || !(ZONES_JOUEUR as readonly string[]).includes(m[2] as string)) return null;
+  return { proprio: Number(m[1]) as IndexJoueur, zone: m[2] as ZoneJoueur };
+}
+
+/** Mise en place : Légende, champion, decks mélangés, champs de bataille disponibles, 4 cartes en main. */
+export function creerPartie(
+  code: string,
+  joueurs: [{ id: number; pseudo: string; deck: DeckDeTable }, { id: number; pseudo: string; deck: DeckDeTable }],
+  aleatoire: Aleatoire,
+  maintenant: number,
+): EtatTable {
+  const etat: EtatTable = {
+    code,
+    joueurs: [
+      { id: joueurs[0].id, pseudo: joueurs[0].pseudo, points: 0 },
+      { id: joueurs[1].id, pseudo: joueurs[1].pseudo, points: 0 },
+    ],
+    premier: aleatoire() < 0.5 ? 0 : 1,
+    zones: {},
+    cartes: {},
+    journal: [],
+    mulliganFait: [false, false],
+    commenceeLe: maintenant,
+    version: 1,
+  };
+  for (let n = 0; n < NOMBRE_CHAMPS; n++) etat.zones[idChamp(n)] = [];
+  let compteur = 0;
+  ([0, 1] as const).forEach((j) => {
+    for (const zone of ZONES_JOUEUR) etat.zones[idZone(j, zone)] = [];
+    const deck = joueurs[j].deck;
+    const poser = (zone: ZoneJoueur, codes: string[], face: boolean) => {
+      for (const code of codes) {
+        const id = `c${++compteur}`;
+        etat.cartes[id] = { id, code, proprio: j, face, inclinee: false, marqueurs: 0 };
+        etat.zones[idZone(j, zone)]?.push(id);
+      }
+    };
+    poser("legende", [deck.legende], true);
+    poser("champion", [deck.champion], true);
+    poser("terrains", deck.terrains, true);
+    poser("deck", melanger(deck.principal, aleatoire), false);
+    poser("runes", melanger(deck.runes, aleatoire), false);
+    deplacerDessus(etat, j, "deck", "main", MAIN_DE_DEPART);
+  });
+  journaliser(etat, null, `Partie lancée. ${etat.joueurs[etat.premier].pseudo} commence. Chacun pioche ${MAIN_DE_DEPART} cartes.`, maintenant);
+  return etat;
+}
+
+function journaliser(etat: EtatTable, j: IndexJoueur | null, texte: string, t: number, cartes?: string[]): void {
+  etat.journal.push(cartes?.length ? { t, j, texte, cartes } : { t, j, texte });
+  if (etat.journal.length > MAX_JOURNAL) etat.journal.splice(0, etat.journal.length - MAX_JOURNAL);
+}
+
+/** Déplace les n cartes du dessus d'une zone cachée vers une autre zone du même joueur. Renvoie le nombre déplacé. */
+function deplacerDessus(etat: EtatTable, j: IndexJoueur, de: ZoneJoueur, vers: ZoneJoueur, n: number): number {
+  const source = etat.zones[idZone(j, de)] ?? [];
+  const pris = source.splice(0, n);
+  const face = !ZONES_CACHEES.has(vers);
+  for (const id of pris) {
+    const carte = etat.cartes[id];
+    if (carte) carte.face = face;
+  }
+  etat.zones[idZone(j, vers)]?.push(...pris);
+  return pris.length;
+}
+
+function zoneDe(etat: EtatTable, idCarte: string): string | null {
+  for (const [zone, ids] of Object.entries(etat.zones)) if (ids.includes(idCarte)) return zone;
+  return null;
+}
+
+/** Une carte est visible de tous si elle est face visible dans une zone publique. */
+function estPublique(etat: EtatTable, idCarte: string, zone: string | null): boolean {
+  const carte = etat.cartes[idCarte];
+  const info = zone ? lireZone(zone) : null;
+  return Boolean(carte && info && !ZONES_CACHEES.has(info.zone) && carte.face);
+}
+
+// ---------- Actions ----------
+
+const schemaIdCarte = z.string().regex(/^c\d{1,4}$/);
+const schemaIdZone = z.string().regex(/^([01]\.[a-z]{3,10}|champ\.\d)$/);
+
+export const schemaAction = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("piocher"), n: z.number().int().min(1).max(10) }),
+  z.strictObject({ type: z.literal("canaliser"), n: z.number().int().min(1).max(5) }),
+  z.strictObject({ type: z.literal("melanger"), zone: z.enum(["deck", "runes"]) }),
+  z.strictObject({
+    type: z.literal("deplacer"),
+    carte: schemaIdCarte,
+    vers: schemaIdZone,
+    position: z.enum(["dessus", "dessous"]).optional(),
+    /** Jouer face cachée (seulement vers une zone en jeu). */
+    cachee: z.boolean().optional(),
+  }),
+  z.strictObject({ type: z.literal("incliner"), carte: schemaIdCarte }),
+  z.strictObject({ type: z.literal("retourner"), carte: schemaIdCarte }),
+  z.strictObject({ type: z.literal("marqueur"), carte: schemaIdCarte, delta: z.number().int().min(-5).max(5) }),
+  z.strictObject({ type: z.literal("redresser") }),
+  z.strictObject({ type: z.literal("points"), delta: z.number().int().min(-5).max(5) }),
+  z.strictObject({ type: z.literal("reveler"), carte: schemaIdCarte }),
+  z.strictObject({ type: z.literal("mulligan"), cartes: z.array(schemaIdCarte).max(2) }),
+  z.strictObject({ type: z.literal("de") }),
+  z.strictObject({ type: z.literal("dire"), texte: z.string().trim().min(1).max(200) }),
+]);
+export type ActionTable = z.infer<typeof schemaAction>;
+
+export type ResultatAction = { ok: true } | { ok: false; erreur: string };
+
+const NOMS_ZONES: Record<string, string> = {
+  main: "sa main",
+  deck: "son deck",
+  runes: "son deck de runes",
+  reserve: "sa réserve de runes",
+  base: "sa base",
+  defausse: "sa défausse",
+  bannis: "ses cartes bannies",
+  legende: "sa zone de Légende",
+  champion: "sa zone de champion",
+  terrains: "ses champs de bataille disponibles",
+};
+const nomZone = (id: string) => {
+  const info = lireZone(id);
+  if (!info) return id;
+  return info.zone === "champ" ? `le champ de bataille ${Number(id.slice(6)) + 1}` : (NOMS_ZONES[info.zone] ?? info.zone);
+};
+
+/**
+ * Applique l'action d'un joueur. Modifie l'état en place (le Durable Object l'enregistre ensuite).
+ * Droits : je manipule mes cartes partout ; les cartes de l'adversaire seulement si elles sont visibles en jeu
+ * (pour les incliner, y poser un marqueur, les détruire vers SA défausse…), et toujours vers SES zones à lui.
+ */
+export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionTable, aleatoire: Aleatoire, t: number): ResultatAction {
+  const moi = etat.joueurs[j].pseudo;
+  const carteManipulable = (id: string): { carte: CarteJeu; zone: string } | null => {
+    const carte = etat.cartes[id];
+    const zone = carte ? zoneDe(etat, id) : null;
+    if (!carte || !zone) return null;
+    if (carte.proprio === j || estPublique(etat, id, zone)) return { carte, zone };
+    return null;
+  };
+
+  switch (action.type) {
+    case "piocher": {
+      const n = deplacerDessus(etat, j, "deck", "main", action.n);
+      if (n === 0) return { ok: false, erreur: "deck_vide" };
+      journaliser(etat, j, `${moi} pioche ${n} carte${n > 1 ? "s" : ""}.`, t);
+      break;
+    }
+    case "canaliser": {
+      const avant = etat.zones[idZone(j, "reserve")]?.length ?? 0;
+      const n = deplacerDessus(etat, j, "runes", "reserve", action.n);
+      if (n === 0) return { ok: false, erreur: "runes_vides" };
+      const nouvelles = etat.zones[idZone(j, "reserve")]?.slice(avant) ?? [];
+      journaliser(etat, j, `${moi} canalise ${nouvelles.map((_, i) => `{${i}}`).join(", ")}.`, t, nouvelles.map((id) => etat.cartes[id]?.code ?? ""));
+      break;
+    }
+    case "melanger": {
+      const zone = idZone(j, action.zone);
+      etat.zones[zone] = melanger(etat.zones[zone] ?? [], aleatoire);
+      journaliser(etat, j, `${moi} mélange ${nomZone(zone)}.`, t);
+      break;
+    }
+    case "deplacer": {
+      const prise = carteManipulable(action.carte);
+      if (!prise) return { ok: false, erreur: "carte_interdite" };
+      const { carte, zone: depart } = prise;
+      const arrivee = lireZone(action.vers);
+      if (!arrivee) return { ok: false, erreur: "zone_inconnue" };
+      // On ne pose jamais une carte dans les zones de l'autre joueur (sauf les champs de bataille, communs).
+      if (arrivee.proprio !== null && arrivee.proprio !== carte.proprio) return { ok: false, erreur: "zone_interdite" };
+      const etaitPublique = estPublique(etat, carte.id, depart);
+      const source = etat.zones[depart] ?? [];
+      source.splice(source.indexOf(carte.id), 1);
+      const cible = etat.zones[action.vers] ?? [];
+      const cachee = ZONES_CACHEES.has(arrivee.zone);
+      if (action.position === "dessous" || !cachee) cible.push(carte.id);
+      else cible.unshift(carte.id);
+      etat.zones[action.vers] = cible;
+      carte.face = cachee ? false : !(action.cachee && carte.proprio === j && ZONES_EN_JEU.has(arrivee.zone));
+      if (!ZONES_EN_JEU.has(arrivee.zone)) {
+        carte.inclinee = false;
+        carte.marqueurs = 0;
+      }
+      const devientPublique = estPublique(etat, carte.id, action.vers);
+      const qui = carte.proprio === j ? moi : `${moi} (carte de ${etat.joueurs[carte.proprio].pseudo})`;
+      const ou = arrivee.zone === "deck" || arrivee.zone === "runes" ? `${action.position === "dessous" ? "sous" : "sur"} ${nomZone(action.vers)}` : `vers ${nomZone(action.vers)}`;
+      if (etaitPublique || devientPublique) journaliser(etat, j, `${qui} déplace {0} ${ou}.`, t, [carte.code]);
+      else journaliser(etat, j, `${qui} déplace une carte cachée de ${nomZone(depart)} ${ou}.`, t);
+      break;
+    }
+    case "incliner": {
+      const prise = carteManipulable(action.carte);
+      if (!prise) return { ok: false, erreur: "carte_interdite" };
+      prise.carte.inclinee = !prise.carte.inclinee;
+      const public_ = estPublique(etat, prise.carte.id, prise.zone);
+      journaliser(etat, j, `${moi} ${prise.carte.inclinee ? "incline" : "redresse"} ${public_ ? "{0}" : "une carte cachée"}.`, t, public_ ? [prise.carte.code] : undefined);
+      break;
+    }
+    case "retourner": {
+      const carte = etat.cartes[action.carte];
+      const zone = carte ? zoneDe(etat, carte.id) : null;
+      const info = zone ? lireZone(zone) : null;
+      if (!carte || carte.proprio !== j || !info || !ZONES_EN_JEU.has(info.zone)) return { ok: false, erreur: "carte_interdite" };
+      carte.face = !carte.face;
+      journaliser(etat, j, carte.face ? `${moi} retourne face visible {0}.` : `${moi} retourne une carte face cachée.`, t, carte.face ? [carte.code] : undefined);
+      break;
+    }
+    case "marqueur": {
+      const prise = carteManipulable(action.carte);
+      if (!prise) return { ok: false, erreur: "carte_interdite" };
+      prise.carte.marqueurs = Math.max(-99, Math.min(99, prise.carte.marqueurs + action.delta));
+      journaliser(etat, j, `${moi} met ${prise.carte.marqueurs} marqueur${Math.abs(prise.carte.marqueurs) > 1 ? "s" : ""} sur {0}.`, t, [prise.carte.code]);
+      break;
+    }
+    case "redresser": {
+      for (const carte of Object.values(etat.cartes)) if (carte.proprio === j) carte.inclinee = false;
+      journaliser(etat, j, `${moi} redresse toutes ses cartes.`, t);
+      break;
+    }
+    case "points": {
+      const joueur = etat.joueurs[j];
+      joueur.points = Math.max(0, Math.min(99, joueur.points + action.delta));
+      journaliser(etat, j, `${moi} passe à ${joueur.points} point${joueur.points > 1 ? "s" : ""}.`, t);
+      break;
+    }
+    case "reveler": {
+      const carte = etat.cartes[action.carte];
+      if (!carte || carte.proprio !== j || zoneDe(etat, carte.id) !== idZone(j, "main")) return { ok: false, erreur: "carte_interdite" };
+      journaliser(etat, j, `${moi} révèle {0} de sa main.`, t, [carte.code]);
+      break;
+    }
+    case "mulligan": {
+      if (etat.mulliganFait[j]) return { ok: false, erreur: "mulligan_deja_fait" };
+      const main = etat.zones[idZone(j, "main")] ?? [];
+      if (new Set(action.cartes).size !== action.cartes.length || !action.cartes.every((id) => main.includes(id))) {
+        return { ok: false, erreur: "carte_interdite" };
+      }
+      // Riftbound : on met de côté jusqu'à 2 cartes, on en pioche autant, puis elles vont sous le deck.
+      etat.zones[idZone(j, "main")] = main.filter((id) => !action.cartes.includes(id));
+      deplacerDessus(etat, j, "deck", "main", action.cartes.length);
+      for (const id of action.cartes) {
+        const carte = etat.cartes[id];
+        if (carte) carte.face = false;
+        etat.zones[idZone(j, "deck")]?.push(id);
+      }
+      etat.mulliganFait[j] = true;
+      journaliser(etat, j, `${moi} garde sa main${action.cartes.length ? ` après avoir changé ${action.cartes.length} carte${action.cartes.length > 1 ? "s" : ""}` : ""}.`, t);
+      break;
+    }
+    case "de": {
+      journaliser(etat, j, `${moi} lance un dé : ${1 + Math.floor(aleatoire() * 6)}.`, t);
+      break;
+    }
+    case "dire": {
+      journaliser(etat, j, `${moi} : ${action.texte}`, t);
+      break;
+    }
+  }
+  etat.version++;
+  return { ok: true };
+}
+
+// ---------- Vue d'un joueur ----------
+
+export interface CarteVue {
+  id: string;
+  /** null : face cachée pour moi. */
+  code: string | null;
+  proprio: IndexJoueur;
+  face: boolean;
+  inclinee: boolean;
+  marqueurs: number;
+}
+
+export interface VueTable {
+  code: string;
+  moi: IndexJoueur | null;
+  joueurs: [JoueurTable, JoueurTable];
+  premier: IndexJoueur;
+  /** Zones visibles : les cartes ; zones cachées : seulement leur nombre. */
+  zones: Record<string, CarteVue[] | number>;
+  journal: EntreeJournal[];
+  mulliganFait: [boolean, boolean];
+  version: number;
+}
+
+/** Ce que voit un joueur (ou un spectateur, `moi = null`) : jamais la main de l'autre ni l'ordre des decks. */
+export function vuePour(etat: EtatTable, moi: IndexJoueur | null): VueTable {
+  const zones: VueTable["zones"] = {};
+  for (const [id, ids] of Object.entries(etat.zones)) {
+    const info = lireZone(id);
+    if (!info) continue;
+    const maMain = info.zone === "main" && info.proprio === moi;
+    if (ZONES_CACHEES.has(info.zone) && !maMain) {
+      zones[id] = ids.length;
+      continue;
+    }
+    zones[id] = ids.flatMap((cid) => {
+      const c = etat.cartes[cid];
+      if (!c) return [];
+      const visible = c.face || c.proprio === moi;
+      return [{ id: c.id, code: visible ? c.code : null, proprio: c.proprio, face: c.face, inclinee: c.inclinee, marqueurs: c.marqueurs }];
+    });
+  }
+  return {
+    code: etat.code,
+    moi,
+    joueurs: etat.joueurs,
+    premier: etat.premier,
+    zones,
+    journal: etat.journal,
+    mulliganFait: etat.mulliganFait,
+    version: etat.version,
+  };
+}
