@@ -7,6 +7,8 @@ import { useEffect, useRef } from "react";
 export interface ChoixBooster {
   code: string;
   nom: string;
+  /** Numéro de l'illustration affichée (le booster ouvert reprend la même). */
+  illustration: number;
   /** Visuel du booster (/ouverture/booster-<set>-<n>.webp). */
   image: string;
 }

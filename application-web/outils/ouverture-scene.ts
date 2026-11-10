@@ -34,7 +34,8 @@ export interface OptionsScene {
 
 export interface Scene {
   /** Nouveau booster du même set (après le récapitulatif ou une erreur). */
-  recommencer: () => void;
+  /** Nouveau booster ; `illustration` : celle à afficher (sinon au hasard). */
+  recommencer: (illustration?: number) => void;
   detruire: () => void;
 }
 
@@ -1091,7 +1092,8 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   afficherPaquet();
 
   return {
-    recommencer: () => {
+    recommencer: (illustration?: number) => {
+      premiereIllustration = illustration;
       cartes = [];
       afficherPaquet();
     },

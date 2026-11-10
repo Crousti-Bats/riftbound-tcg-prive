@@ -101,8 +101,16 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   // Carrousel « Changer de set » : chaque booster avec l'illustration affichée pour son set.
   const choixBoosters = (etat?.sets ?? []).map((s) => {
     const cle = s.code in ILLUSTRATIONS_PAR_SET ? s.code : "ogn";
-    return { code: s.code, nom: s.nom, image: `/ouverture/booster-${cle}-${illustrations[cle] ?? 1}.webp` };
+    const numero = illustrations[cle] ?? 1;
+    return { code: s.code, nom: s.nom, illustration: numero, image: `/ouverture/booster-${cle}-${numero}.webp` };
   });
+
+  /** À chaque ouverture du carrousel : une nouvelle illustration pour chaque set qui en a plusieurs. */
+  function changerToutesLesIllustrations() {
+    const suivantes: Record<string, number> = { ...illustrations };
+    for (const [cle, nombre] of Object.entries(ILLUSTRATIONS_PAR_SET)) suivantes[cle] = autreIllustration(illustrations[cle] ?? 1, nombre);
+    setIllustrations(suivantes);
+  }
   const peutOuvrir = Boolean(set) && actuel >= 1;
 
   return (
@@ -196,6 +204,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
             restants={actuel}
             boosters={choixBoosters}
             surChangerSet={setSet}
+            surOuvrirCarrousel={changerToutesLesIllustrations}
             surFermer={fermer}
           />,
           document.body,
