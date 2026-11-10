@@ -1050,3 +1050,5 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
 .panneau-carte-manuel[open] > summary { margin-bottom: 8px; }
 .panneau-carte-manuel > * + * { margin-top: 8px; }
 .table-aide-auto { font-size: 0.85rem; color: var(--texte-doux); }
+.table-champ-combat { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.table-combat { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 8px; margin-bottom: 4px; border-radius: var(--rayon-petit); background: rgba(212, 173, 98, 0.12); font-size: 0.85rem; }

@@ -356,15 +356,17 @@ export const ETAPES: readonly EtapeTutoriel[] = [
   {
     titre: "Fin du combat",
     texte: [
-      "Il ne reste plus d'attaquant : Garen ne conquiert pas, tu **gardes ton champ de bataille**. (S'il ne restait que des attaquants, ils l'auraient conquis ; s'il reste un défenseur, les attaquants survivants rentrent à leur base.)",
+      "Les dégâts sont faits : il ne reste plus d'attaquant. Quand le combat est résolu, clique sur **« Terminer le combat »** (sur le champ de bataille) : la table applique l'issue toute seule.",
+      "Ici, Garen ne conquiert pas : tu **gardes ton champ**. S'il ne restait que des attaquants, ils l'auraient conquis (+1 point pour eux, compté automatiquement) ; s'il reste un défenseur, les attaquants survivants rentrent à leur base.",
       "Après un combat, **toutes les unités guérissent** : on retire les dégâts.",
     ],
-    consignes: ["Clique sur Legion Rearguard → « − marqueur »."],
+    consignes: ["Clique sur « Terminer le combat » au champ de bataille 1.", "Clique sur Legion Rearguard → « − marqueur »."],
     reussie: (etat) => {
       const id = unite(M, C.rearguard)(etat);
-      return !id || etat.cartes[id]?.marqueurs === 0;
+      return !etat.combat && (!id || etat.cartes[id]?.marqueurs === 0);
     },
     aide: [
+      (etat) => (etat.combat ? { type: "finCombat" } : null),
       (etat) => {
         const id = unite(M, C.rearguard)(etat);
         const n = id ? (etat.cartes[id]?.marqueurs ?? 0) : 0;

@@ -313,6 +313,7 @@ const GESTES: Array<[string, string]> = [
   ["Jouer une unité ou un équipement", "Clic sur la carte → « Jouer dans ma base » : les runes sont inclinées et recyclées pour toi, l'unité arrive inclinée"],
   ["Jouer un sort", "Clic sur la carte → « Lancer le sort » (paiement automatique), puis applique son effet"],
   ["Déplacer une unité, conquérir", "Clic sur l'unité → « Conquérir… (+1) », « Attaquer… » ou « Revenir à ma base » : elle s'incline, la conquête est comptée"],
+  ["Fin d'un combat", "Après les dégâts, bouton « Terminer le combat » sur le champ : conquête (+1), retour à la base des attaquants ou champ gardé, appliqués pour toi"],
   ["Infliger des dégâts", "Clic sur l'unité → « + marqueur » (un marqueur = 1 dégât)"],
   ["Une unité meurt", "Clic sur l'unité → « Défausse » (même celle de l'adversaire : elle va dans SA défausse)"],
   ["Créer un token (Recruit, Bomb…)", "Bouton « Créer un token »"],

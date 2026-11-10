@@ -68,6 +68,10 @@ export interface EtatTable {
   version: number;
   /** Nombre de « Début de mon tour » de chaque joueur (aide automatique ; absent : parties plus anciennes). */
   tours?: [number, number];
+  /** Combat en cours (aide automatique) : déclenché par « bouger » sur un champ adverse, clos par « finCombat ». */
+  combat?: { champ: number; attaquant: IndexJoueur };
+  /** Champs de bataille marqués (tenus ou conquis) par chaque joueur depuis son dernier « Début de mon tour » (8e point). */
+  marques?: [number[], number[]];
 }
 
 export interface DeckDeTable {
@@ -192,6 +196,25 @@ function zoneDe(etat: EtatTable, idCarte: string): string | null {
   return null;
 }
 
+/** Conquête d'un champ : +1 point. Le 8e point ne vient jamais d'une conquête : on pioche 1 carte à la place (règle simplifiée). */
+function conquerir(etat: EtatTable, j: IndexJoueur, n: number, comment: string, t: number, cartes?: string[]): void {
+  const joueur = etat.joueurs[j];
+  const marques = (etat.marques ??= [[], []])[j];
+  if (!marques.includes(n)) marques.push(n);
+  // Exception (règle du point final) : il est permis si tous les champs de bataille ont été marqués ce tour-ci.
+  const tousMarques = Array.from({ length: NOMBRE_CHAMPS }, (_, k) => k).every((k) => marques.includes(k));
+  if (joueur.points >= 7 && tousMarques) {
+    joueur.points += 1;
+    journaliser(etat, j, `${joueur.pseudo} conquiert le champ de bataille ${n + 1}${comment} : tous les champs marqués ce tour, +1 point.`, t, cartes);
+  } else if (joueur.points >= 7) {
+    deplacerDessus(etat, j, "deck", "main", 1);
+    journaliser(etat, j, `${joueur.pseudo} conquiert le champ de bataille ${n + 1}${comment} : pas de 8e point par une conquête, il pioche 1 carte.`, t, cartes);
+  } else {
+    joueur.points += 1;
+    journaliser(etat, j, `${joueur.pseudo} conquiert le champ de bataille ${n + 1}${comment} (+1 point).`, t, cartes);
+  }
+}
+
 /** Unités d'un joueur sur un champ de bataille (sans la carte du champ lui-même). */
 function unitesSur(etat: EtatTable, n: number, j: IndexJoueur): string[] {
   return (etat.zones[idChamp(n)] ?? []).filter((id) => {
@@ -279,9 +302,11 @@ export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionT
       // tour du second joueur), piocher 1 carte.
       const tours = (etat.tours ??= [0, 0]);
       const premierTour = tours[j] === 0;
+      delete etat.combat; // un combat oublié ne survit pas au tour suivant
       tours[j] += 1;
       for (const carte of Object.values(etat.cartes)) if (carte.proprio === j) carte.inclinee = false;
       const tenus = champsControles(etat, j);
+      (etat.marques ??= [[], []])[j] = [...tenus];
       const joueur = etat.joueurs[j];
       joueur.points = Math.min(99, joueur.points + tenus.length);
       const runes = deplacerDessus(etat, j, "runes", "reserve", premierTour && j !== etat.premier ? 3 : 2);
@@ -359,18 +384,37 @@ export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionT
       const visible = carte.face ? "{0}" : "une carte cachée";
       const cartes = carte.face ? [carte.code] : undefined;
       if (n < 0) journaliser(etat, j, `${moi} ramène ${visible} dans sa base.`, t, cartes);
-      else if (adverses > 0) journaliser(etat, j, `${moi} envoie ${visible} au champ de bataille ${n + 1} : combat !`, t, cartes);
-      else if (amies > 0) journaliser(etat, j, `${moi} envoie ${visible} au champ de bataille ${n + 1}.`, t, cartes);
-      else {
-        // Conquête. Le 8e point ne vient jamais d'une conquête : on pioche 1 carte à la place (règle simplifiée).
-        const joueur = etat.joueurs[j];
-        if (joueur.points >= 7) {
-          deplacerDessus(etat, j, "deck", "main", 1);
-          journaliser(etat, j, `${moi} conquiert le champ de bataille ${n + 1} avec ${visible} : pas de 8e point par une conquête, il pioche 1 carte.`, t, cartes);
-        } else {
-          joueur.points += 1;
-          journaliser(etat, j, `${moi} conquiert le champ de bataille ${n + 1} avec ${visible} (+1 point).`, t, cartes);
-        }
+      else if (adverses > 0) {
+        etat.combat = { champ: n, attaquant: j };
+        journaliser(etat, j, `${moi} envoie ${visible} au champ de bataille ${n + 1} : combat !`, t, cartes);
+      } else if (amies > 0) journaliser(etat, j, `${moi} envoie ${visible} au champ de bataille ${n + 1}.`, t, cartes);
+      else conquerir(etat, j, n, ` avec ${visible}`, t, cartes);
+      break;
+    }
+    case "finCombat": {
+      // Les joueurs ont résolu les dégâts à la main (marqueurs, défausse) ; la table applique l'issue du combat.
+      const combat = etat.combat;
+      if (!combat) return { ok: false, erreur: "pas_de_combat" };
+      delete etat.combat;
+      const n = combat.champ;
+      const att = combat.attaquant;
+      const def = (1 - att) as IndexJoueur;
+      const attaquants = unitesSur(etat, n, att);
+      const defenseurs = unitesSur(etat, n, def);
+      const champ = `champ de bataille ${n + 1}`;
+      if (attaquants.length && !defenseurs.length) {
+        // Il ne reste que des attaquants : ils conquièrent le champ.
+        conquerir(etat, att, n, " après le combat", t);
+      } else if (attaquants.length) {
+        // Il reste au moins un défenseur : pas de conquête, les attaquants survivants rentrent à leur base.
+        const champZone = etat.zones[idChamp(n)] ?? [];
+        etat.zones[idChamp(n)] = champZone.filter((id) => !attaquants.includes(id));
+        etat.zones[idZone(att, "base")]?.push(...attaquants);
+        journaliser(etat, j, `Fin du combat au ${champ} : ${etat.joueurs[def].pseudo} le garde, les attaquants de ${etat.joueurs[att].pseudo} rentrent à leur base.`, t);
+      } else if (defenseurs.length) {
+        journaliser(etat, j, `Fin du combat au ${champ} : ${etat.joueurs[def].pseudo} garde le champ.`, t);
+      } else {
+        journaliser(etat, j, `Fin du combat au ${champ} : plus aucune unité, le champ est libre.`, t);
       }
       break;
     }
@@ -383,6 +427,14 @@ export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionT
       // On ne pose jamais une carte dans les zones de l'autre joueur (sauf les champs de bataille, communs).
       if (arrivee.proprio !== null && arrivee.proprio !== carte.proprio) return { ok: false, erreur: "zone_interdite" };
       const etaitPublique = estPublique(etat, carte.id, depart);
+      // Aide automatique sur un déplacement fait « à la main » : une de mes unités va de ma base (ou d'un champ) vers un
+      // champ de bataille → conquête s'il est vide, combat s'il est occupé par l'adversaire (sans incliner : geste libre).
+      const nChamp = arrivee.zone === "champ" ? Number(action.vers.slice(6)) : -1;
+      const compter =
+        Boolean(action.compter) && nChamp >= 0 && carte.proprio === j && !carte.terrain && depart !== action.vers &&
+        (depart === idZone(j, "base") || lireZone(depart)?.zone === "champ");
+      const avantAdverses = compter ? unitesSur(etat, nChamp, (1 - j) as IndexJoueur).length : 0;
+      const avantAmies = compter ? unitesSur(etat, nChamp, j).length : 0;
       const source = etat.zones[depart] ?? [];
       source.splice(source.indexOf(carte.id), 1);
       const cible = etat.zones[action.vers] ?? [];
@@ -407,6 +459,10 @@ export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionT
       const ou = arrivee.zone === "deck" || arrivee.zone === "runes" ? `${action.position === "dessous" ? "sous" : "sur"} ${nomZone(action.vers)}` : `vers ${nomZone(action.vers)}`;
       if (etaitPublique || devientPublique) journaliser(etat, j, `${qui} déplace {0} ${ou}.`, t, [carte.code]);
       else journaliser(etat, j, `${qui} déplace une carte cachée de ${nomZone(depart)} ${ou}.`, t);
+      if (compter && avantAdverses > 0) {
+        etat.combat = { champ: nChamp, attaquant: j };
+        journaliser(etat, j, `Combat au champ de bataille ${nChamp + 1} !`, t);
+      } else if (compter && avantAmies === 0) conquerir(etat, j, nChamp, "", t);
       break;
     }
     case "incliner": {
@@ -533,6 +589,8 @@ export interface VueTable {
   mulliganFait: [boolean, boolean];
   /** Tokens du jeu que l'on peut créer. */
   tokens: string[];
+  /** Combat en cours (aide automatique). */
+  combat: { champ: number; attaquant: IndexJoueur } | null;
   version: number;
 }
 
@@ -574,6 +632,7 @@ export function vuePour(etat: EtatTable, moi: IndexJoueur | null): VueTable {
     journal: etat.journal,
     mulliganFait: etat.mulliganFait,
     tokens: etat.tokens ?? [],
+    combat: etat.combat ?? null,
     version: etat.version,
   };
 }

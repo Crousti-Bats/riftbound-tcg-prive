@@ -323,7 +323,7 @@ export function PlateauTable({
 
           <section className="table-champs">
             {[0, 1].map((n) => (
-              <ChampDeBataille key={n} vue={vue} n={n} moi={moi} {...propsCarte} />
+              <ChampDeBataille key={n} vue={vue} n={n} moi={moi} {...propsCarte} surFinCombat={() => jouer({ type: "finCombat" })} />
             ))}
           </section>
 
@@ -713,14 +713,35 @@ function CoteJoueur({
   );
 }
 
-function ChampDeBataille({ vue, n, moi, ...props }: PropsCartes & { vue: VueTable; n: number; moi: IndexJoueur }) {
+/** Ce que fera « Terminer le combat », d'après les unités encore sur le champ. */
+function issueCombat(vue: VueTable, n: number, attaquant: IndexJoueur, cartes: Record<string, Carte>): string {
+  const defenseur = (1 - attaquant) as IndexJoueur;
+  const att = unitesSurChamp(vue, n, attaquant, cartes).length;
+  const def = unitesSurChamp(vue, n, defenseur, cartes).length;
+  if (att && !def) return `${vue.joueurs[attaquant].pseudo} conquiert le champ (+1)`;
+  if (att) return `${vue.joueurs[defenseur].pseudo} garde le champ, les attaquants rentrent à leur base`;
+  return def ? `${vue.joueurs[defenseur].pseudo} garde le champ` : "le champ est libre";
+}
+
+function ChampDeBataille({ vue, n, moi, surFinCombat, ...props }: PropsCartes & { vue: VueTable; n: number; moi: IndexJoueur; surFinCombat: () => void }) {
+  const combat = vue.combat?.champ === n ? vue.combat : null;
   const zone = `champ.${n}`;
   const toutes = cartesZone(vue, zone);
   const terrains = toutes.filter((c) => c.code && props.cartes[c.code]?.type === "Battlefield");
   const unites = toutes.filter((c) => !terrains.includes(c));
   const groupe = (j: IndexJoueur) => unites.filter((c) => c.proprio === j).map((c) => <CarteTable key={c.id} carte={c} zone={zone} {...props} />);
   return (
-    <div className="table-champ" aria-label={`Champ de bataille ${n + 1}`}>
+    <div className={combat ? "table-champ table-champ-combat" : "table-champ"} aria-label={`Champ de bataille ${n + 1}`}>
+      {combat && (
+        <div className="table-combat" role="status">
+          <span>
+            <strong>⚔ Combat</strong> · résous les dégâts (marqueurs, défausse), puis : {issueCombat(vue, n, combat.attaquant, props.cartes)}
+          </span>
+          <button className="petit" onClick={surFinCombat}>
+            Terminer le combat
+          </button>
+        </div>
+      )}
       <div className="table-rangee table-champ-lui">{groupe((1 - moi) as IndexJoueur)}</div>
       <div className="table-champ-terrain">
         {terrains.length ? terrains.map((c) => <CarteTable key={c.id} carte={c} zone={zone} {...props} />) : <span className="aide">Champ de bataille {n + 1}</span>}
@@ -756,7 +777,15 @@ function PanneauCarte({
   const aMoi = p === moi;
   const enJeu = !/\.(main|deck|runes|defausse|bannis)$/.test(zone);
   const deplacer = (vers: string, position?: "dessus" | "dessous") => {
-    jouer({ type: "deplacer", carte: c.id, vers, ...(position ? { position } : {}), ...(cachee && aMoi ? { cachee: true } : {}) });
+    jouer({
+      type: "deplacer",
+      carte: c.id,
+      vers,
+      ...(position ? { position } : {}),
+      ...(cachee && aMoi ? { cachee: true } : {}),
+      // Avec l'aide automatique, une conquête ou un combat est compté même pour un déplacement fait à la main.
+      ...(aide && aMoi && vers.startsWith("champ.") ? { compter: true } : {}),
+    });
     surFermer();
   };
   const destinations: Array<[string, string, ("dessus" | "dessous")?]> = [
