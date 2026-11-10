@@ -29,6 +29,36 @@ export function PageNouvelEchange() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
+  // Pré-remplissage depuis une annonce du marché : ?avec=Bob&donne=ogn-001:0 ou &demande=ogn-001:1.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const avec = params.get("avec");
+    const prefill: Array<[Cote, string | null, string]> = [
+      ["donne", params.get("donne"), "/collection"],
+      ["demande", params.get("demande"), avec ? `/collection/joueur/${encodeURIComponent(avec)}` : ""],
+    ];
+    for (const [cote, valeur, source] of prefill) {
+      const [code, foilTexte] = (valeur ?? "").split(":");
+      if (!code || !source || !/^[a-z0-9-]{3,40}$/.test(code)) continue;
+      const foil = foilTexte === "1";
+      appelerApi<{ cartes: CartePossedee[] }>("GET", `${source}?code=${encodeURIComponent(code)}`).then(
+        (r) => {
+          const carte = r.cartes[0];
+          const max = carte ? (foil ? carte.quantiteFoil : carte.quantite) : 0;
+          if (!carte || max < 1) {
+            setErreur(cote === "donne" ? "Tu n'as pas (ou plus) cette carte." : `${avec} n'a plus cette carte.`);
+            return;
+          }
+          const ligne: LignePanier = { carte, foil, quantite: 1, max };
+          const maj = (p: Map<string, LignePanier>) => new Map(p).set(cleLigne(carte.code, foil), ligne);
+          if (cote === "donne") setDonne(maj);
+          else setDemande(maj);
+        },
+        () => undefined,
+      );
+    }
+  }, []);
+
   useEffect(() => {
     appelerApi<{ joueurs: string[] }>("GET", "/echanges/joueurs").then((r) => setJoueurs(r.joueurs), (e: Error) => setErreur(e.message));
     appelerApi<{ sets: SetInfo[] }>("GET", "/catalogue/sets").then((r) => setSets(r.sets), () => undefined);

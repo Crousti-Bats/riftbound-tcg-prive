@@ -24,6 +24,7 @@ function regleDeLaCle(cle: string): RegleLimitation | null {
   if (cle.startsWith("inscription:ip:")) return REGLES.inscriptionParIp;
   if (cle.startsWith("reinitialisation:ip:")) return REGLES.reinitialisationParIp;
   if (cle.startsWith("elevation:compte:")) return REGLES.elevationAdmin;
+  if (cle.startsWith("messages:compte:")) return REGLES.messagesParCompte;
   return null;
 }
 

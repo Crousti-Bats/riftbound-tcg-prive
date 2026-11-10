@@ -18,6 +18,12 @@ const RACCOURCIS: Array<{ chemin: string; titre: string; texte: string; icone: R
     icone: <span aria-hidden="true">⇄</span>,
   },
   {
+    chemin: "/marche",
+    titre: "Marché",
+    texte: "Qui a ? Qui veut ? Annonces, salon et messages privés.",
+    icone: <span aria-hidden="true">✉</span>,
+  },
+  {
     chemin: "/catalogue",
     titre: "Catalogue",
     texte: "Toutes les cartes de Riftbound, set par set.",
