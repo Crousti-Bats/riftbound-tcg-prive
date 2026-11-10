@@ -19,6 +19,8 @@ import {
   idZone,
   vuePour,
 } from "../../serveur-api/table/moteur-table";
+import type { Carte } from "./libelles-cartes";
+import { calculerPaiement } from "./paiement";
 
 /** Cartes du scénario (codes du catalogue). */
 export const C = {
@@ -153,21 +155,50 @@ const pas = {
   },
   fixe: (action: ActionTable): Pas => () => action,
 };
-/** Incline n runes prêtes (une par pas). */
-const inclinerRunes = (j: IndexJoueur, n: number): Pas[] => Array.from({ length: n }, () => pas.incliner((etat) => runesPretes(etat, j)[0]));
-/** Recycle une rune de ce domaine : elle retourne sous le deck de runes (on prend d'abord une rune déjà inclinée). */
-const recycler = (j: IndexJoueur, code: string): Pas =>
-  pas.deplacer((etat) => {
-    const candidates = ids(etat, idZone(j, "reserve")).filter((id) => etat.cartes[id]?.code === code);
-    return candidates.find((id) => inclinee(etat, id)) ?? candidates[0];
-  }, idZone(j, "runes"), "dessous");
-/** Jouer une unité : de la main (ou de la zone de champion) vers la base, puis l'incliner (elle arrive inclinée). */
-const jouerUnite = (j: IndexJoueur, code: string, depuis: "main" | "champion" = "main"): Pas[] => [
-  pas.deplacer((etat) => carteDans(etat, idZone(j, depuis), code), idZone(j, "base")),
-  pas.incliner((etat) => carteDans(etat, idZone(j, "base"), code)),
-];
+/** Jouer une carte comme avec l'aide automatique du site : mêmes runes choisies (outils/paiement.ts). */
+const jouerAide =
+  (
+    j: IndexJoueur,
+    code: string,
+    cout: { energie: number; puissance?: number; rune?: string },
+    options: { depuis?: "main" | "champion"; vers?: string; inclinee?: boolean } = {},
+  ): Pas =>
+  (etat) => {
+    const id = carteDans(etat, idZone(j, options.depuis ?? "main"), code);
+    if (!id) return null;
+    const reserve = ids(etat, idZone(j, "reserve")).map((r) => ({ id: r, code: etat.cartes[r]?.code ?? null, inclinee: inclinee(etat, r) }));
+    // Domaine fictif « tuto » : seule la rune demandée (Fury, Chaos…) peut payer la puissance.
+    const domaine = { domaines: ["tuto"] } as unknown as Carte;
+    const carte = { energie: cout.energie, puissance: cout.puissance ?? null, domaines: ["tuto"] } as unknown as Carte;
+    const paiement = calculerPaiement(carte, reserve, cout.rune ? { [cout.rune]: domaine } : {});
+    if (!paiement.ok) return null;
+    return {
+      type: "jouer",
+      carte: id,
+      vers: options.vers ?? idZone(j, "base"),
+      inclinee: options.inclinee ?? true,
+      payer: { incliner: paiement.incliner, recycler: paiement.recycler },
+    };
+  };
 const unite = (j: IndexJoueur, code: string) => (etat: EtatTable) =>
   [idZone(j, "base"), "champ.0", "champ.1"].map((z) => carteDans(etat, z, code)).find(Boolean);
+/** Déplacer une unité avec l'aide automatique (elle s'incline ; conquête comptée par la table). */
+const bouger =
+  (j: IndexJoueur, code: string, vers: string): Pas =>
+  (etat) => {
+    const id = unite(j, code)(etat);
+    return id ? { type: "bouger", carte: id, vers } : null;
+  };
+/** Redresse une rune inclinée (capacité de Dark Child en fin de tour). */
+const redresserRune: Pas = (etat) => {
+  const id = runesInclinees(etat, MOI)[0];
+  return id ? { type: "incliner", carte: id } : null;
+};
+/** « Début de mon tour » fait : tout redressé, 2 runes de plus, 1 carte de plus. */
+const debutTourFait = (etat: EtatTable, depart: EtatTable) =>
+  rienIncline(etat, MOI) &&
+  nombre(etat, idZone(MOI, "reserve")) >= nombre(depart, idZone(MOI, "reserve")) + 2 &&
+  nombre(etat, idZone(MOI, "main")) >= nombre(depart, idZone(MOI, "main")) + 1;
 
 // ---------- Les étapes ----------
 
@@ -196,8 +227,8 @@ export const ETAPES: readonly EtapeTutoriel[] = [
     titre: "Bienvenue sur la table",
     texte: [
       "Tu joues **Annie** (deck de démo Fury + Chaos) contre **Garen**, joué par l'ordinateur. Ton côté est en bas, le sien en haut.",
-      "À gauche de ton côté : ta **Légende** (Dark Child) et ton **champion** (Annie), prêts à servir. Au milieu de la table : les **2 champs de bataille**, un tiré dans chaque deck. Le premier à **8 points** gagne, en contrôlant ces champs.",
-      "Clique sur n'importe quelle carte pour la voir en grand, avec son texte et ce que tu peux en faire.",
+      "À gauche de ton côté : ta **Légende** (Dark Child) et ton **champion** (Annie). Au milieu : les **2 champs de bataille**. Le premier à **8 points** gagne, en contrôlant ces champs.",
+      "L'**aide automatique** est activée : tu choisis quoi jouer, le site fait les gestes (payer avec tes runes, incliner tes unités, compter tes points). Clique sur une carte pour la voir en grand et la jouer.",
     ],
     bouton: "C'est parti",
   },
@@ -211,94 +242,58 @@ export const ETAPES: readonly EtapeTutoriel[] = [
     surBouton: [pas.fixe({ type: "mulligan", cartes: [] })],
   },
   {
-    titre: "Tour 1 · Canaliser 2 runes",
+    titre: "Tour 1 · Début de ton tour",
     texte: [
-      "Tu commences. Ton tour commence par le **Réveil** (rien à redresser pour l'instant), puis tu **canalises 2 runes** : elles passent du deck de runes à ta réserve. Ce sont elles qui paient tes cartes.",
+      "Chaque tour commence pareil : le **Réveil** (tu redresses tes cartes), **1 point par champ de bataille que tu tiens**, tu **canalises 2 runes** (elles vont dans ta réserve et paieront tes cartes) et tu **pioches 1 carte**.",
+      "Un seul bouton fait tout ça pour toi.",
     ],
-    consignes: ["Clique 2 fois sur ton paquet « Runes » (à droite de ton côté), ou 2 fois sur « Canaliser une rune »."],
-    reussie: (etat, depart) => nombre(etat, idZone(M, "reserve")) >= nombre(depart, idZone(M, "reserve")) + 2,
-    aide: [pas.fixe({ type: "canaliser", n: 2 })],
-  },
-  {
-    titre: "Tour 1 · Piocher",
-    texte: ["Ensuite, tu **pioches 1 carte**. Il n'y a pas de limite de cartes en main."],
-    consignes: ["Clique sur ton paquet « Deck », ou sur « Piocher »."],
-    reussie: (etat, depart) => nombre(etat, idZone(M, "main")) >= nombre(depart, idZone(M, "main")) + 1,
-    aide: [pas.fixe({ type: "piocher", n: 1 })],
+    consignes: ["Clique sur « Début de mon tour » (sous ta main)."],
+    reussie: debutTourFait,
+    aide: [pas.fixe({ type: "debutTour" })],
   },
   {
     titre: "Tour 1 · Jouer une unité",
     texte: [
-      "**Legion Rearguard** coûte **2** (le nombre en haut à gauche) : c'est de l'**énergie**. Pour la payer, on **incline** (tourne) 2 runes.",
+      "**Legion Rearguard** coûte **2** (le nombre en haut à gauche) : c'est de l'**énergie**. On la paie en **inclinant** 2 runes. Le site s'en charge.",
       "Une unité arrive **inclinée** : elle ne pourra pas bouger avant ton prochain tour.",
     ],
-    consignes: [
-      "Clique sur chacune de tes 2 runes → « Incliner ».",
-      "Clique sur Legion Rearguard dans ta main → « Base ».",
-      "Clique sur Legion Rearguard dans ta base → « Incliner ».",
-    ],
+    consignes: ["Clique sur Legion Rearguard dans ta main → « Jouer dans ma base »."],
     reussie: (etat) => inclinee(etat, carteDans(etat, idZone(M, "base"), C.rearguard)) && runesInclinees(etat, M).length >= 2,
-    aide: [...inclinerRunes(M, 2), ...jouerUnite(M, C.rearguard)],
+    aide: [jouerAide(M, C.rearguard, { energie: 2 })],
   },
   {
     titre: "Tour 1 · Fin du tour",
     texte: [
       "Tu n'as plus de runes prêtes : ton tour s'arrête là. Mais ta Légende, **Dark Child**, dit : « à la fin de ton tour, redresse jusqu'à 2 runes ». Profitons-en.",
     ],
-    consignes: ["Clique sur chacune de tes runes inclinées → « Redresser »."],
+    consignes: ["Clique sur chacune de tes 2 runes inclinées → « Redresser »."],
     reussie: (etat) => runesInclinees(etat, M).length === 0,
-    aide: [pas.redresser((etat) => runesInclinees(etat, M)[0]), pas.redresser((etat) => runesInclinees(etat, M)[0])],
+    aide: [redresserRune, redresserRune],
   },
   {
     titre: "Tour de Garen",
     texte: [
-      "Garen redresse ses cartes, puis canalise **3 runes** : le joueur qui commence en second en reçoit une de plus à son premier tour.",
-      "Il pioche, puis joue **Crackshot Corsair** (3 énergie) dans sa base. Regarde le journal à droite (ou en bas sur téléphone).",
+      "Garen commence son tour. Comme il joue en second, il canalise **3 runes** à son premier tour au lieu de 2.",
+      "Il joue **Crackshot Corsair** (3 énergie) dans sa base. Regarde le journal à droite (ou en bas sur téléphone).",
     ],
-    adversaire: [
-      pas.fixe({ type: "redresser" }),
-      pas.fixe({ type: "canaliser", n: 3 }),
-      pas.fixe({ type: "piocher", n: 1 }),
-      ...inclinerRunes(A, 3),
-      ...jouerUnite(A, C.corsair),
-      pas.fixe({ type: "dire", texte: "À toi !" }),
-    ],
+    adversaire: [pas.fixe({ type: "debutTour" }), jouerAide(A, C.corsair, { energie: 3 }), pas.fixe({ type: "dire", texte: "À toi !" })],
   },
   {
-    titre: "Tour 2 · Réveil",
-    texte: [
-      "Nouveau tour. **Réveil** : tu redresses toutes tes cartes inclinées (unités, runes, Légende). Legion Rearguard est de nouveau prête.",
-      "Puis vient le **Début** du tour : tu marques 1 point par champ de bataille que tu contrôles. Tu n'en contrôles aucun : pas de point pour l'instant.",
-    ],
-    consignes: ["Clique sur « Tout redresser »."],
-    reussie: (etat) => rienIncline(etat, M),
-    aide: [pas.fixe({ type: "redresser" })],
+    titre: "Tour 2 · Début de ton tour",
+    texte: ["Nouveau tour : Legion Rearguard se redresse, 2 nouvelles runes, 1 carte. Tu ne tiens encore aucun champ de bataille : pas de point."],
+    consignes: ["« Début de mon tour »."],
+    reussie: debutTourFait,
+    aide: [pas.fixe({ type: "debutTour" })],
   },
   {
-    titre: "Tour 2 · Canaliser et piocher",
-    texte: ["Comme à chaque tour : **2 runes**, puis **1 carte**."],
-    consignes: ["Canalise 2 runes, puis pioche 1 carte."],
-    reussie: (etat, depart) =>
-      nombre(etat, idZone(M, "reserve")) >= nombre(depart, idZone(M, "reserve")) + 2 &&
-      nombre(etat, idZone(M, "main")) >= nombre(depart, idZone(M, "main")) + 1,
-    aide: [pas.fixe({ type: "canaliser", n: 2 }), pas.fixe({ type: "piocher", n: 1 })],
-  },
-  {
-    titre: "Tour 2 · Bouger et conquérir",
+    titre: "Tour 2 · Conquérir un champ",
     texte: [
       "Pour se déplacer, une unité **s'incline** : de ta base vers un champ de bataille (ou l'inverse).",
-      "Le champ de bataille 1 est **vide** : il suffit d'y arriver pour le **conquérir**, et la conquête rapporte **1 point**. Tu le contrôles tant qu'il te reste une unité dessus.",
+      "Le champ de bataille 1 est **vide** : il suffit d'y arriver pour le **conquérir**, et ça rapporte **1 point**. Tu le contrôles tant qu'il te reste une unité dessus.",
     ],
-    consignes: [
-      "Clique sur Legion Rearguard → « Incliner », puis → « Champ de bataille 1 ».",
-      "Marque ton point avec le « + » à côté de ton score (en haut).",
-    ],
+    consignes: ["Clique sur Legion Rearguard (dans ta base) → « Conquérir le champ de bataille 1 (+1) »."],
     reussie: (etat, depart) => inclinee(etat, carteDans(etat, "champ.0", C.rearguard)) && points(etat, M) >= points(depart, M) + 1,
-    aide: [
-      pas.incliner(unite(M, C.rearguard)),
-      pas.deplacer((etat) => carteDans(etat, idZone(M, "base"), C.rearguard), "champ.0"),
-      pas.fixe({ type: "points", delta: 1 }),
-    ],
+    aide: [bouger(M, C.rearguard, "champ.0")],
   },
   {
     titre: "Tour 2 · Une autre unité",
@@ -306,9 +301,9 @@ export const ETAPES: readonly EtapeTutoriel[] = [
       "Avec tes 4 runes, joue **Dangerous Duo** (3 énergie) dans ta base.",
       "Son effet **Legion** ne s'active que si tu as déjà joué une autre carte ce tour-ci. Déplacer une unité ne compte pas : pas de bonus cette fois.",
     ],
-    consignes: ["Incline 3 runes.", "Dangerous Duo → « Base », puis « Incliner »."],
+    consignes: ["Dangerous Duo → « Jouer dans ma base »."],
     reussie: (etat) => inclinee(etat, carteDans(etat, idZone(M, "base"), C.duo)) && runesInclinees(etat, M).length >= 3,
-    aide: [...inclinerRunes(M, 3), ...jouerUnite(M, C.duo)],
+    aide: [jouerAide(M, C.duo, { energie: 3 })],
   },
   {
     titre: "Tour 2 · Fin du tour",
@@ -317,20 +312,17 @@ export const ETAPES: readonly EtapeTutoriel[] = [
     ],
     consignes: ["Redresse 2 de tes runes inclinées."],
     reussie: (etat) => runesPretes(etat, M).length >= 3,
-    aide: [pas.redresser((etat) => runesInclinees(etat, M)[0]), pas.redresser((etat) => runesInclinees(etat, M)[0])],
+    aide: [redresserRune, redresserRune],
   },
   {
     titre: "Tour de Garen · Il attaque !",
     texte: [
-      "Garen redresse, canalise, pioche… et envoie **Crackshot Corsair** sur ton champ de bataille 1. Une unité qui arrive sur un champ occupé par l'adversaire déclenche un **combat**.",
+      "Garen commence son tour… et envoie **Crackshot Corsair** sur ton champ de bataille 1. Une unité qui arrive sur un champ occupé par l'adversaire déclenche un **combat**.",
       "Quand il attaque, Crackshot Corsair inflige **1 dégât** à une unité ennemie : un marqueur sur ta Legion Rearguard.",
     ],
     adversaire: [
-      pas.fixe({ type: "redresser" }),
-      pas.fixe({ type: "canaliser", n: 2 }),
-      pas.fixe({ type: "piocher", n: 1 }),
-      pas.incliner(unite(A, C.corsair)),
-      pas.deplacer(unite(A, C.corsair), "champ.0"),
+      pas.fixe({ type: "debutTour" }),
+      bouger(A, C.corsair, "champ.0"),
       (etat) => {
         const id = carteDans(etat, "champ.0", C.rearguard);
         return id ? { type: "marqueur", carte: id, delta: 1 } : null;
@@ -343,14 +335,12 @@ export const ETAPES: readonly EtapeTutoriel[] = [
     texte: [
       "Si on se bat maintenant : Corsair (Might **3**) contre Rearguard (Might **2**). Ta Rearguard mourrait et Garen prendrait ton champ.",
       "Mais avant les dégâts vient l'**affrontement** : chacun peut jouer des cartes **Action** ou **Réaction**, même pendant le tour adverse. **Void Seeker** est une Action : 4 dégâts à une unité sur un champ de bataille, et tu pioches 1 carte.",
-      "Son coût : **3 énergie** (incliner 3 runes) et **1 symbole Fury** : c'est la **puissance**. On la paie en **recyclant** une rune Fury, c'est-à-dire en la remettant sous le deck de runes (même une rune que tu viens d'incliner).",
+      "Son coût : **3 énergie** et **1 symbole Fury**, la **puissance**. La puissance se paie en **recyclant** une rune Fury (elle retourne sous ton deck de runes). Le site choisit les bonnes runes.",
     ],
     consignes: [
-      "Incline tes 3 runes prêtes.",
-      "Clique sur une rune Fury (rouge) → « Sous le deck de runes ».",
-      "Void Seeker → « Défausse » (un sort fait son effet puis part à la défausse).",
+      "Void Seeker (dans ta main) → « Lancer le sort ».",
       "4 dégâts ≥ Might 3 : Crackshot Corsair meurt. Clique dessus → « Défausse » (il va dans SA défausse).",
-      "Pioche 1 carte.",
+      "L'effet de Void Seeker te fait piocher : « Piocher ».",
     ],
     reussie: (etat, depart) =>
       estDans(etat, idZone(M, "defausse"), C.voidSeeker) &&
@@ -358,9 +348,7 @@ export const ETAPES: readonly EtapeTutoriel[] = [
       nombre(etat, idZone(M, "runes")) > nombre(depart, idZone(M, "runes")) &&
       nombre(etat, idZone(M, "main")) >= nombre(depart, idZone(M, "main")),
     aide: [
-      ...inclinerRunes(M, 3),
-      recycler(M, C.fury),
-      pas.deplacer((etat) => carteDans(etat, idZone(M, "main"), C.voidSeeker), idZone(M, "defausse")),
+      jouerAide(M, C.voidSeeker, { energie: 3, puissance: 1, rune: C.fury }, { vers: idZone(M, "defausse"), inclinee: false }),
       pas.deplacer((etat) => carteDans(etat, "champ.0", C.corsair), idZone(A, "defausse")),
       pas.fixe({ type: "piocher", n: 1 }),
     ],
@@ -368,15 +356,17 @@ export const ETAPES: readonly EtapeTutoriel[] = [
   {
     titre: "Fin du combat",
     texte: [
-      "Il ne reste plus d'attaquant : Garen ne conquiert pas, tu **gardes ton champ de bataille**. (S'il ne restait que des attaquants, ils l'auraient conquis ; s'il reste un défenseur, les attaquants survivants rentrent à leur base.)",
+      "Les dégâts sont faits : il ne reste plus d'attaquant. Quand le combat est résolu, clique sur **« Terminer le combat »** (sur le champ de bataille) : la table applique l'issue toute seule.",
+      "Ici, Garen ne conquiert pas : tu **gardes ton champ**. S'il ne restait que des attaquants, ils l'auraient conquis (+1 point pour eux, compté automatiquement) ; s'il reste un défenseur, les attaquants survivants rentrent à leur base.",
       "Après un combat, **toutes les unités guérissent** : on retire les dégâts.",
     ],
-    consignes: ["Clique sur Legion Rearguard → « − marqueur »."],
+    consignes: ["Clique sur « Terminer le combat » au champ de bataille 1.", "Clique sur Legion Rearguard → « − marqueur »."],
     reussie: (etat) => {
       const id = unite(M, C.rearguard)(etat);
-      return !id || etat.cartes[id]?.marqueurs === 0;
+      return !etat.combat && (!id || etat.cartes[id]?.marqueurs === 0);
     },
     aide: [
+      (etat) => (etat.combat ? { type: "finCombat" } : null),
       (etat) => {
         const id = unite(M, C.rearguard)(etat);
         const n = id ? (etat.cartes[id]?.marqueurs ?? 0) : 0;
@@ -390,32 +380,21 @@ export const ETAPES: readonly EtapeTutoriel[] = [
       "Garen joue **Pit Rookie** puis **First Mate**, qui redresse une autre unité (Pit Rookie). Ses deux unités restent dans sa base : aucune ne garde de champ de bataille.",
     ],
     adversaire: [
-      ...inclinerRunes(A, 2),
-      ...jouerUnite(A, C.rookie),
-      ...inclinerRunes(A, 3),
-      ...jouerUnite(A, C.firstMate),
+      jouerAide(A, C.rookie, { energie: 2 }),
+      jouerAide(A, C.firstMate, { energie: 3 }),
       pas.redresser((etat) => carteDans(etat, idZone(A, "base"), C.rookie)),
       pas.fixe({ type: "dire", texte: "Fin de mon tour." }),
     ],
   },
   {
-    titre: "Tour 3 · Réveil et tenir",
+    titre: "Tour 3 · Tenir un champ",
     texte: [
-      "Réveil : redresse tout. Puis, au début de ton tour, tu **tiens** le champ de bataille 1 (tu y as toujours une unité) : **+1 point**.",
+      "Au début de ton tour, tu **tiens** le champ de bataille 1 (tu y as toujours une unité, Garen aucune) : **+1 point**, compté automatiquement.",
       "Tenir un champ rapporte 1 point **à chacun de tes tours** : c'est le cœur du jeu.",
     ],
-    consignes: ["« Tout redresser », puis « + » à côté de ton score."],
-    reussie: (etat, depart) => rienIncline(etat, M) && points(etat, M) >= points(depart, M) + 1,
-    aide: [pas.fixe({ type: "redresser" }), pas.fixe({ type: "points", delta: 1 })],
-  },
-  {
-    titre: "Tour 3 · Canaliser et piocher",
-    texte: ["Tu connais la suite : 2 runes, 1 carte."],
-    consignes: ["Canalise 2 runes, puis pioche 1 carte."],
-    reussie: (etat, depart) =>
-      nombre(etat, idZone(M, "reserve")) >= nombre(depart, idZone(M, "reserve")) + 2 &&
-      nombre(etat, idZone(M, "main")) >= nombre(depart, idZone(M, "main")) + 1,
-    aide: [pas.fixe({ type: "canaliser", n: 2 }), pas.fixe({ type: "piocher", n: 1 })],
+    consignes: ["« Début de mon tour », et regarde ton score."],
+    reussie: (etat, depart) => debutTourFait(etat, depart) && points(etat, M) >= points(depart, M) + 1,
+    aide: [pas.fixe({ type: "debutTour" })],
   },
   {
     titre: "Tour 3 · Un deuxième champ",
@@ -423,29 +402,19 @@ export const ETAPES: readonly EtapeTutoriel[] = [
       "Le champ de bataille 2 est vide, et les unités de Garen sont dans sa base. Envoie **Dangerous Duo** le conquérir : encore **1 point**.",
       "Ta Rearguard, elle, ne peut pas y aller directement : passer d'un champ de bataille à un autre demande le mot-clé **Ganking**.",
     ],
-    consignes: ["Dangerous Duo → « Incliner », puis « Champ de bataille 2 ».", "« + » à côté de ton score."],
+    consignes: ["Dangerous Duo → « Conquérir le champ de bataille 2 (+1) »."],
     reussie: (etat, depart) => estDans(etat, "champ.1", C.duo) && points(etat, M) >= points(depart, M) + 1,
-    aide: [
-      pas.incliner(unite(M, C.duo)),
-      pas.deplacer((etat) => carteDans(etat, idZone(M, "base"), C.duo), "champ.1"),
-      pas.fixe({ type: "points", delta: 1 }),
-    ],
+    aide: [bouger(M, C.duo, "champ.1")],
   },
   {
     titre: "Tour 3 · Ton champion entre en jeu",
     texte: [
       "**Annie, Stubborn** attend dans ta zone de champion. Elle coûte **4 énergie + 1 Chaos**. Quand tu la joues, elle **renvoie un sort de ta défausse dans ta main** : Void Seeker revient !",
     ],
-    consignes: [
-      "Incline 4 runes, puis recycle une rune Chaos (violette) → « Sous le deck de runes ».",
-      "Annie (zone de champion) → « Base », puis « Incliner ».",
-      "Ouvre ta défausse → Void Seeker → « Main ».",
-    ],
+    consignes: ["Annie (à côté de ta Légende) → « Jouer dans ma base ».", "Son effet : ouvre ta défausse → Void Seeker → « Main »."],
     reussie: (etat) => estDans(etat, idZone(M, "base"), C.annie) && estDans(etat, idZone(M, "main"), C.voidSeeker),
     aide: [
-      ...inclinerRunes(M, 4),
-      recycler(M, C.chaos),
-      ...jouerUnite(M, C.annie, "champion"),
+      jouerAide(M, C.annie, { energie: 4, puissance: 1, rune: C.chaos }, { depuis: "champion" }),
       pas.deplacer((etat) => carteDans(etat, idZone(M, "defausse"), C.voidSeeker), idZone(M, "main")),
     ],
   },
@@ -453,8 +422,8 @@ export const ETAPES: readonly EtapeTutoriel[] = [
     titre: "Bravo, tu sais jouer !",
     texte: [
       "Tu as **3 points** et tu tiens **2 champs de bataille** : au début de ton prochain tour, **+2 points**.",
-      "Dernière règle : le **8e point** ne peut pas venir d'une simple conquête. Il faut le marquer en **tenant** un champ, ou en conquérant **tous** les champs dans le même tour. Sinon, tu pioches 1 carte à la place.",
-      "Tu peux continuer cette partie librement (Garen ne jouera plus), relancer le tuto, ou défier un ami pour de vrai.",
+      "Dernière règle : le **8e point** ne peut pas venir d'une simple conquête. Il faut le marquer en **tenant** un champ (ou en conquérant tous les champs dans le même tour). Sinon, tu pioches 1 carte à la place.",
+      "En partie, l'aide automatique est aussi activée ; tu peux la couper (case « Aide automatique ») pour tout faire à la main. Continue cette partie librement, relance le tuto, ou défie un ami.",
     ],
     bouton: "Continuer librement",
   },

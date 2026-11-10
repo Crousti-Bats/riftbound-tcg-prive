@@ -216,6 +216,182 @@ describe("Table de jeu : actions", () => {
   });
 });
 
+describe("Table de jeu : aide automatique", () => {
+  it("début de tour : redresse, canalise 2 (3 au premier tour du second joueur), pioche 1, marque les champs tenus", () => {
+    const etat = partie();
+    const second = (1 - etat.premier) as IndexJoueur;
+    expect(jouer(etat, second, { type: "debutTour" })).toEqual({ ok: true });
+    expect(cartesDe(etat, idZone(second, "reserve"))).toHaveLength(3);
+    expect(cartesDe(etat, idZone(second, "main"))).toHaveLength(5);
+    jouer(etat, second, { type: "debutTour" });
+    expect(cartesDe(etat, idZone(second, "reserve"))).toHaveLength(5);
+    // Une unité seule sur le champ 1 : il est tenu, +1 point au tour suivant. Tout est redressé.
+    const unite = cartesDe(etat, idZone(second, "main"))[0] as string;
+    jouer(etat, second, { type: "deplacer", carte: unite, vers: "champ.0" });
+    jouer(etat, second, { type: "incliner", carte: unite });
+    jouer(etat, second, { type: "debutTour" });
+    expect(etat.joueurs[second].points).toBe(1);
+    expect(etat.cartes[unite]?.inclinee).toBe(false);
+    expect(etat.journal.at(-1)?.texte).toMatch(/tient le champ de bataille 1 \(\+1 point\)/);
+    // La carte du champ de bataille ne compte pas comme une unité : l'adversaire ne tient rien.
+    jouer(etat, etat.premier, { type: "debutTour" });
+    expect(etat.joueurs[etat.premier].points).toBe(0);
+  });
+
+  it("jouer : incline et recycle les runes choisies, pose la carte inclinée, refuse un paiement truqué", () => {
+    const etat = partie();
+    jouer(etat, 0, { type: "canaliser", n: 3 });
+    const [r1, r2, r3] = cartesDe(etat, idZone(0, "reserve")) as [string, string, string];
+    const carte = cartesDe(etat, idZone(0, "main"))[0] as string;
+    const autre = cartesDe(etat, idZone(1, "reserve"))[0] ?? cartesDe(etat, idZone(1, "legende"))[0] as string;
+    expect(jouer(etat, 0, { type: "jouer", carte, vers: "0.base", inclinee: true, payer: { incliner: [r1, r1], recycler: [] } })).toEqual({ ok: false, erreur: "paiement_invalide" });
+    expect(jouer(etat, 0, { type: "jouer", carte, vers: "0.base", inclinee: true, payer: { incliner: [autre], recycler: [] } })).toEqual({ ok: false, erreur: "paiement_invalide" });
+    expect(jouer(etat, 0, { type: "jouer", carte, vers: "1.base", payer: { incliner: [], recycler: [] } })).toEqual({ ok: false, erreur: "zone_interdite" });
+    expect(jouer(etat, 0, { type: "jouer", carte, vers: "0.base", inclinee: true, payer: { incliner: [r1, r2], recycler: [r2] } })).toEqual({ ok: true });
+    expect(cartesDe(etat, idZone(0, "base"))).toEqual([carte]);
+    expect(etat.cartes[carte]).toMatchObject({ inclinee: true, face: true });
+    expect(etat.cartes[r1]?.inclinee).toBe(true);
+    expect(cartesDe(etat, idZone(0, "reserve"))).toEqual([r1, r3]);
+    expect(cartesDe(etat, idZone(0, "runes")).at(-1)).toBe(r2);
+    expect(etat.journal.at(-1)?.texte).toBe("Alice joue {0} vers sa base (paie 2 énergie + 1 puissance).");
+    // Une rune déjà inclinée ne paie plus d'énergie ; un sort part à la défausse.
+    const sort = cartesDe(etat, idZone(0, "main"))[0] as string;
+    expect(jouer(etat, 0, { type: "jouer", carte: sort, vers: "0.defausse", payer: { incliner: [r1], recycler: [] } })).toEqual({ ok: false, erreur: "paiement_invalide" });
+    expect(jouer(etat, 0, { type: "jouer", carte: sort, vers: "0.defausse", inclinee: true, payer: { incliner: [r3], recycler: [] } })).toEqual({ ok: true });
+    expect(etat.cartes[sort]?.inclinee).toBe(false);
+    expect(etat.journal.at(-1)?.texte).toBe("Alice lance {0} (paie 1 énergie).");
+  });
+
+  it("bouger : s'incline, conquiert un champ vide (+1), combat sur un champ adverse, refuse une unité inclinée", () => {
+    const etat = partie();
+    const [a, b] = cartesDe(etat, idZone(0, "main")) as [string, string];
+    const [x] = cartesDe(etat, idZone(1, "main")) as [string];
+    jouer(etat, 0, { type: "deplacer", carte: a, vers: "0.base" });
+    jouer(etat, 0, { type: "deplacer", carte: b, vers: "0.base" });
+    jouer(etat, 1, { type: "deplacer", carte: x, vers: "1.base" });
+    expect(jouer(etat, 0, { type: "bouger", carte: a, vers: "champ.0" })).toEqual({ ok: true });
+    expect(etat.cartes[a]?.inclinee).toBe(true);
+    expect(etat.joueurs[0].points).toBe(1);
+    expect(etat.journal.at(-1)?.texte).toBe("Alice conquiert le champ de bataille 1 avec {0} (+1 point).");
+    expect(jouer(etat, 0, { type: "bouger", carte: a, vers: "0.base" })).toEqual({ ok: false, erreur: "unite_inclinee" });
+    expect(jouer(etat, 1, { type: "bouger", carte: a, vers: "champ.1" })).toEqual({ ok: false, erreur: "carte_interdite" });
+    expect(jouer(etat, 1, { type: "bouger", carte: x, vers: "champ.0" })).toEqual({ ok: true });
+    expect(etat.joueurs[1].points).toBe(0);
+    expect(etat.journal.at(-1)?.texte).toBe("Bob envoie {0} au champ de bataille 1 : combat !");
+    // Le 8e point ne vient pas d'une conquête : on pioche à la place (nouveau tour : seul le champ 2 sera marqué).
+    jouer(etat, 0, { type: "debutTour" });
+    etat.joueurs[0].points = 7;
+    const main = cartesDe(etat, idZone(0, "main")).length;
+    jouer(etat, 0, { type: "bouger", carte: b, vers: "champ.1" });
+    expect(etat.joueurs[0].points).toBe(7);
+    expect(cartesDe(etat, idZone(0, "main"))).toHaveLength(main + 1);
+  });
+});
+
+describe("Table de jeu : fin de combat (aide automatique)", () => {
+  /** Alice a a1 sur le champ 1 ; Bob y envoie b1 (et b2 s'il le faut) : combat. */
+  function combat(bobEnvoie = 1) {
+    const etat = partie();
+    const [a1] = cartesDe(etat, idZone(0, "main")) as [string];
+    const [b1, b2] = cartesDe(etat, idZone(1, "main")) as [string, string];
+    jouer(etat, 0, { type: "deplacer", carte: a1, vers: "0.base" });
+    jouer(etat, 0, { type: "bouger", carte: a1, vers: "champ.0" });
+    for (const b of [b1, b2].slice(0, bobEnvoie)) {
+      jouer(etat, 1, { type: "deplacer", carte: b, vers: "1.base" });
+      jouer(etat, 1, { type: "bouger", carte: b, vers: "champ.0" });
+    }
+    return { etat, a1, b1, b2 };
+  }
+
+  it("le combat est connu de la table et visible des deux joueurs", () => {
+    const { etat } = combat();
+    expect(etat.combat).toEqual({ champ: 0, attaquant: 1 });
+    expect(vuePour(etat, 0).combat).toEqual({ champ: 0, attaquant: 1 });
+    expect(jouer(partie(), 0, { type: "finCombat" })).toEqual({ ok: false, erreur: "pas_de_combat" });
+  });
+
+  it("il ne reste que des attaquants : conquête (+1) pour l'attaquant", () => {
+    const { etat, a1 } = combat();
+    jouer(etat, 1, { type: "deplacer", carte: a1, vers: "0.defausse" }); // l'unité d'Alice meurt
+    expect(jouer(etat, 0, { type: "finCombat" })).toEqual({ ok: true });
+    expect(etat.joueurs[1].points).toBe(1);
+    expect(etat.combat).toBeUndefined();
+    expect(etat.journal.at(-1)?.texte).toBe("Bob conquiert le champ de bataille 1 après le combat (+1 point).");
+  });
+
+  it("il reste un défenseur : pas de point, les attaquants survivants rentrent à leur base", () => {
+    const { etat, a1, b1, b2 } = combat(2);
+    expect(jouer(etat, 1, { type: "finCombat" })).toEqual({ ok: true });
+    expect(etat.joueurs[1].points).toBe(0);
+    expect(cartesDe(etat, "champ.0")).toContain(a1);
+    expect(cartesDe(etat, "champ.0")).not.toContain(b1);
+    expect(cartesDe(etat, idZone(1, "base"))).toEqual(expect.arrayContaining([b1, b2]));
+    expect(etat.journal.at(-1)?.texte).toMatch(/Alice le garde, les attaquants de Bob rentrent à leur base/);
+  });
+
+  it("plus d'attaquant : le défenseur garde le champ ; un nouveau tour clôt un combat oublié", () => {
+    const { etat, b1 } = combat();
+    jouer(etat, 0, { type: "deplacer", carte: b1, vers: "1.defausse" });
+    jouer(etat, 0, { type: "finCombat" });
+    expect(etat.journal.at(-1)?.texte).toBe("Fin du combat au champ de bataille 1 : Alice garde le champ.");
+    expect(etat.joueurs[0].points).toBe(1); // seulement sa conquête de départ
+    const autre = combat();
+    jouer(autre.etat, 0, { type: "debutTour" });
+    expect(autre.etat.combat).toBeUndefined();
+  });
+});
+
+describe("Table de jeu : 8e point et déplacements comptés", () => {
+  function deuxUnitesEnBase() {
+    const etat = partie();
+    const [a, b] = cartesDe(etat, idZone(0, "main")) as [string, string];
+    for (const id of [a, b]) jouer(etat, 0, { type: "deplacer", carte: id, vers: "0.base" });
+    return { etat, a, b };
+  }
+
+  it("le 8e point vient d'une conquête si tous les champs ont été marqués ce tour-ci", () => {
+    const { etat, a, b } = deuxUnitesEnBase();
+    jouer(etat, 0, { type: "debutTour" });
+    etat.joueurs[0].points = 6;
+    jouer(etat, 0, { type: "bouger", carte: a, vers: "champ.0" }); // 7e point
+    jouer(etat, 0, { type: "bouger", carte: b, vers: "champ.1" }); // 2e champ marqué ce tour : 8e point accordé
+    expect(etat.joueurs[0].points).toBe(8);
+    expect(etat.journal.at(-1)?.texte).toMatch(/tous les champs marqués ce tour, \+1 point/);
+  });
+
+  it("sinon, à 7 points, une conquête fait piocher au lieu de marquer ; un nouveau tour remet le compte à zéro", () => {
+    const { etat, a, b } = deuxUnitesEnBase();
+    jouer(etat, 0, { type: "debutTour" });
+    jouer(etat, 0, { type: "bouger", carte: a, vers: "champ.0" });
+    jouer(etat, 0, { type: "debutTour" }); // tient le champ 1 : il est marqué pour ce nouveau tour
+    etat.joueurs[0].points = 7;
+    jouer(etat, 0, { type: "bouger", carte: b, vers: "champ.1" });
+    expect(etat.joueurs[0].points).toBe(8); // champ 1 tenu + champ 2 conquis : tous marqués
+    const autre = deuxUnitesEnBase();
+    jouer(autre.etat, 0, { type: "debutTour" });
+    autre.etat.joueurs[0].points = 7;
+    jouer(autre.etat, 0, { type: "bouger", carte: autre.a, vers: "champ.0" });
+    expect(autre.etat.joueurs[0].points).toBe(7);
+  });
+
+  it("un déplacement à la main avec « compter » : conquête d'un champ vide, combat sur un champ adverse, sans incliner", () => {
+    const { etat, a } = deuxUnitesEnBase();
+    jouer(etat, 0, { type: "deplacer", carte: a, vers: "champ.0", compter: true });
+    expect(etat.joueurs[0].points).toBe(1);
+    expect(etat.cartes[a]?.inclinee).toBe(false);
+    const [x] = cartesDe(etat, idZone(1, "main")) as [string];
+    jouer(etat, 1, { type: "deplacer", carte: x, vers: "1.base" });
+    jouer(etat, 1, { type: "deplacer", carte: x, vers: "champ.0", compter: true });
+    expect(etat.combat).toEqual({ champ: 0, attaquant: 1 });
+    // Sans « compter » (aide coupée), rien n'est compté ; depuis la main non plus (c'est jouer une carte).
+    const sans = deuxUnitesEnBase();
+    jouer(sans.etat, 0, { type: "deplacer", carte: sans.a, vers: "champ.0" });
+    const main = cartesDe(sans.etat, idZone(0, "main"))[0] as string;
+    jouer(sans.etat, 0, { type: "deplacer", carte: main, vers: "champ.1", compter: true });
+    expect(sans.etat.joueurs[0].points).toBe(0);
+  });
+});
+
 describe("API /api/parties (salon)", () => {
   type Env = ReturnType<typeof creerEnvironnementDeTest>;
   interface Appel {
