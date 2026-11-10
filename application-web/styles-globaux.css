@@ -700,3 +700,24 @@ button.bandeau-annonce-fermer:hover:not(:disabled) { color: var(--texte); border
 .apercu-progression { max-width: 420px; }
 .apercu-plus { align-self: center; }
 @media (max-width: 600px) { .apercu-rangee { grid-auto-columns: 84px; } }
+
+/* ---------- Nouvel échange : clic sur la carte pour l'ajouter, comparaison des collections ---------- */
+.vignette-cliquable .cadre-carte { cursor: pointer; }
+.vignette-cliquable .cadre-carte:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.vignette-cliquable:hover .indice-ajout, .vignette-cliquable .cadre-carte:focus-visible .indice-ajout { opacity: 1; }
+.vignette-epuisee .cadre-carte { cursor: default; }
+.vignette-epuisee .cadre-carte img { filter: brightness(0.5); }
+.indice-ajout {
+  position: absolute; inset: 0; display: grid; place-items: center; font-size: 2.6rem; font-weight: 300; color: #fff;
+  background: rgba(5, 8, 15, 0.45); opacity: 0; transition: opacity 0.15s; pointer-events: none;
+}
+.badge-manque {
+  position: absolute; top: 6px; left: 6px; right: 6px; padding: 2px 6px; border-radius: 8px; text-align: center;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; color: #1b1307; background: var(--accent-vif);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.badge-dans-echange {
+  position: absolute; bottom: 6px; left: 6px; padding: 2px 7px; border-radius: 10px; font-size: 0.72rem; font-weight: 700;
+  color: #d8ffe8; background: rgba(46, 125, 82, 0.92); border: 1px solid rgba(127, 220, 166, 0.6);
+}
+@media (hover: none) { .indice-ajout { display: none; } }

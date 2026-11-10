@@ -186,7 +186,9 @@ export function PageNouvelEchange() {
             </button>
           </nav>
           <p className="aide">
-            {vue === "demande" ? `Clique sur « + » pour demander une carte à ${joueur}.` : "Clique sur « + » pour ajouter une de tes cartes à ce que tu donnes."}
+            {vue === "demande"
+              ? `Clique sur une carte pour la demander à ${joueur}. « Tu ne l'as pas » : une carte qui te manque.`
+              : `Clique sur une carte pour la donner. « Il ne l'a pas » : une carte qui manque à ${joueur}.`}
           </p>
 
           {vue === "demande" ? (
@@ -196,6 +198,7 @@ export function PageNouvelEchange() {
               sets={sets}
               dejaChoisi={dejaChoisiDemande}
               surAjout={(carte, foil) => ajouter("demande", carte, foil)}
+              comparaison={{ parametre: "comparer=1", manque: "Tu ne l'as pas", filtre: "Seulement celles que je n'ai pas" }}
             />
           ) : (
             <SelecteurCartes
@@ -204,6 +207,7 @@ export function PageNouvelEchange() {
               sets={sets}
               dejaChoisi={dejaChoisiDonne}
               surAjout={(carte, foil) => ajouter("donne", carte, foil)}
+              comparaison={{ parametre: `comparer=${joueur}`, manque: "Il ne l'a pas", filtre: `Seulement celles que ${joueur} n'a pas` }}
             />
           )}
         </>

@@ -3,15 +3,18 @@
  * et permet d'ajouter des cartes à une proposition d'échange (version normale ou foil).
  */
 import { ImageCarte } from "./image-carte";
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 import { appelerApi } from "../outils/appels-api";
 import { cleLigne } from "../outils/echanges";
 import { type CartePossedee, classeRarete, libelleRarete, type SetInfo } from "../outils/libelles-cartes";
 import { FiltresCartes } from "./filtres-cartes";
 import { Pagination } from "./pagination";
 
+/** Carte possédée, avec, en préparation d'échange, le nombre d'exemplaires chez l'autre joueur. */
+type CarteComparee = CartePossedee & { chezAutre?: number };
+
 interface ReponseCollection {
-  cartes: CartePossedee[];
+  cartes: CarteComparee[];
   total: number;
   page: number;
   parPage: number;
@@ -29,9 +32,17 @@ interface Props {
    * "vitrine" : une seule fois chaque version. "avatar" : un seul bouton « Choisir », foil ou non.
    */
   mode?: "echange" | "vitrine" | "avatar";
+  /**
+   * Échange : compare avec l'autre collection. `parametre` est ajouté à la requête (`comparer=<pseudo>` ou
+   * `comparer=1`) ; `manque` est le badge d'une carte que l'autre n'a pas (« Il ne l'a pas », « Tu ne l'as pas »).
+   */
+  comparaison?: { parametre: string; manque: string; filtre: string };
 }
 
-export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "echange" }: Props) {
+export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "echange", comparaison }: Props) {
+  const [seulementManquantes, setSeulementManquantes] = useState(false);
+  // Chaîne plutôt qu'objet dans les dépendances : l'objet `comparaison` est recréé à chaque rendu du parent.
+  const parametreComparaison = comparaison?.parametre;
   const [filtreSet, setFiltreSet] = useState("");
   const [rarete, setRarete] = useState("");
   const [variante, setVariante] = useState("");
@@ -57,6 +68,11 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
     if (rarete) parametres.set("rarete", rarete);
     if (variante) parametres.set("variante", variante);
     if (tri) parametres.set("tri", tri);
+    if (parametreComparaison) {
+      const [cle, valeur] = parametreComparaison.split("=");
+      if (cle && valeur) parametres.set(cle, valeur);
+      if (seulementManquantes) parametres.set("manquantes", "1");
+    }
     if (typeCarte) parametres.set("type", typeCarte);
     if (rechercheAppliquee) parametres.set("recherche", rechercheAppliquee);
     appelerApi<ReponseCollection>("GET", `${source}?${parametres.toString()}`).then(
@@ -66,7 +82,7 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
       },
       (e: Error) => setErreur(e.message),
     );
-  }, [source, filtreSet, rarete, variante, tri, typeCarte, rechercheAppliquee, page]);
+  }, [source, filtreSet, rarete, variante, tri, typeCarte, rechercheAppliquee, page, parametreComparaison, seulementManquantes]);
 
   const nbPages = resultat ? Math.max(1, Math.ceil(resultat.total / resultat.parPage)) : 1;
   const changerFiltre = (maj: () => void) => {
@@ -90,7 +106,14 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
         surVariante={(v) => changerFiltre(() => setVariante(v))}
         tri={tri}
         surTri={(v) => changerFiltre(() => setTri(v))}
-      />
+      >
+        {comparaison && (
+          <label className="bascule">
+            <input type="checkbox" checked={seulementManquantes} onChange={(e) => changerFiltre(() => setSeulementManquantes(e.target.checked))} />{" "}
+            {comparaison.filtre}
+          </label>
+        )}
+      </FiltresCartes>
       {erreur && <p className="message-erreur">{erreur}</p>}
       {!resultat && !erreur && <p className="aide">Chargement…</p>}
       {resultat && resultat.total === 0 && <p className="aide">Aucune carte.</p>}
@@ -100,9 +123,32 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
         {resultat?.cartes.map((carte) => {
           const resteNormale = carte.quantite - (dejaChoisi.get(cleLigne(carte.code, false)) ?? 0);
           const resteFoil = carte.quantiteFoil - (dejaChoisi.get(cleLigne(carte.code, true)) ?? 0);
+          const dansEchange = (dejaChoisi.get(cleLigne(carte.code, false)) ?? 0) + (dejaChoisi.get(cleLigne(carte.code, true)) ?? 0);
+          // Échange : un clic sur la carte ajoute un exemplaire normal (ou foil s'il ne reste que des foil).
+          const ajoutDirect = mode === "echange" ? (resteNormale > 0 ? false : resteFoil > 0 ? true : null) : null;
+          const ajouterEnCliquant = () => {
+            if (ajoutDirect !== null) surAjout(carte, ajoutDirect);
+          };
           return (
-            <div key={carte.code} className={`vignette-carte ${classeRarete(carte)}`} title={carte.nom}>
-              <span className={`cadre-carte ${carte.quantiteFoil > 0 ? "voile-foil" : ""}`}>
+            <div key={carte.code} className={`vignette-carte ${classeRarete(carte)} ${mode === "echange" ? "vignette-cliquable" : ""} ${ajoutDirect === null && mode === "echange" ? "vignette-epuisee" : ""}`} title={carte.nom}>
+              <span
+                className={`cadre-carte ${carte.quantiteFoil > 0 ? "voile-foil" : ""}`}
+                {...(mode === "echange"
+                  ? {
+                      role: "button",
+                      tabIndex: ajoutDirect === null ? -1 : 0,
+                      "aria-disabled": ajoutDirect === null,
+                      "aria-label": `Ajouter ${carte.nom} à l'échange`,
+                      onClick: ajouterEnCliquant,
+                      onKeyDown: (e: KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          ajouterEnCliquant();
+                        }
+                      },
+                    }
+                  : {})}
+              >
                 <ImageCarte
                   className={carte.orientation === "paysage" ? "image-paysage" : undefined}
                   image={carte.image}
@@ -111,24 +157,28 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
                   paresseuse
                 />
                 <span className="badge-quantite">×{carte.quantite + carte.quantiteFoil}</span>
+                {comparaison && carte.chezAutre === 0 && <span className="badge-manque">{comparaison.manque}</span>}
+                {dansEchange > 0 && <span className="badge-dans-echange">+{dansEchange} dans l'échange</span>}
+                {mode === "echange" && ajoutDirect !== null && (
+                  <span className="indice-ajout" aria-hidden="true">
+                    +
+                  </span>
+                )}
               </span>
               <span className="legende-carte">
                 {carte.nom}
                 <small>{libelleRarete(carte)}</small>
               </span>
               {mode === "echange" ? (
-              <span className="boutons-ajout">
-                {carte.quantite > 0 && (
-                  <button className="petit" disabled={resteNormale <= 0} onClick={() => surAjout(carte, false)}>
-                    + Normale ({resteNormale})
-                  </button>
-                )}
-                {carte.quantiteFoil > 0 && (
-                  <button className="petit" disabled={resteFoil <= 0} onClick={() => surAjout(carte, true)}>
-                    + Foil ✨ ({resteFoil})
-                  </button>
-                )}
-              </span>
+                // Le clic sur la carte ajoute une normale ; un bouton reste pour la version foil quand il y a les deux.
+                carte.quantite > 0 &&
+                carte.quantiteFoil > 0 && (
+                  <span className="boutons-ajout">
+                    <button className="petit secondaire" disabled={resteFoil <= 0} onClick={() => surAjout(carte, true)}>
+                      + Foil ✨ ({resteFoil})
+                    </button>
+                  </span>
+                )
               ) : mode === "vitrine" ? (
                 <span className="boutons-ajout">
                   {carte.quantite > 0 && (
