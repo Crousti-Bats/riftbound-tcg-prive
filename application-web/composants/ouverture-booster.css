@@ -293,3 +293,64 @@
   .ob-fond, .ob-paquet, .ob-rayons, .ob-projecteurs i, .ob-aura, .ob-aura::after, .ob-emplacement.ob-neon .ob-carte, .ob-mini.ob-foil::before { animation: none; }
   .ob-carte, .ob-carte.ob-spectaculaire, .ob-carte.ob-tour-et-demi, .ob-carte.ob-lente, .ob-carte.ob-ultime-flip { transition: transform 0.3s; }
 }
+
+/* PC uniquement : les trois boutons du récapitulatif sur une seule ligne (« Ouvrir un autre » au milieu). */
+@media (min-width: 761px) {
+  .ob-actions-recap { flex-direction: row; justify-content: center; align-items: stretch; gap: 14px; }
+  .ob-actions-secondaires { display: contents; }
+  .ob-actions-secondaires > :first-child { order: 0; }
+  .ob-overlay button.ob-bouton-encore { order: 1; width: auto; min-height: 60px; padding: 10px 30px; }
+  .ob-actions-secondaires > :last-child { order: 2; }
+  .ob-overlay .ob-actions-recap button.ob-bouton-pilule { min-height: 60px; min-width: 190px; }
+}
+
+/* ---------- Carrousel « Changer de set » ---------- */
+.ob-carrousel {
+  position: absolute; inset: 0; z-index: 8; display: grid; place-items: center;
+  grid-template-columns: minmax(0, 1fr); /* la colonne prend la largeur de l'écran, pas celle des 5 boosters */
+  padding: max(16px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+  background: rgba(4, 5, 10, 0.86); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  animation: ob-carrousel-apparait 0.25s ease both;
+}
+@keyframes ob-carrousel-apparait { from { opacity: 0; } }
+.ob-carrousel-contenu { display: flex; flex-direction: column; align-items: center; gap: 18px; width: 100%; max-width: 1100px; }
+.ob-carrousel-entete { text-align: center; padding-inline: 16px; }
+.ob-carrousel-entete h2 { margin: 0; font-family: var(--ob-police-titre); font-weight: 400; font-size: clamp(1.5rem, 6vw, 2.2rem); color: var(--ob-accent); }
+.ob-carrousel-entete p { margin: 4px 0 0; font-family: var(--ob-police-ui); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.85rem; color: var(--ob-texte-doux); }
+.ob-carrousel-zone { display: flex; align-items: center; gap: 8px; width: 100%; }
+.ob-carrousel-piste {
+  position: relative; flex: 1; min-width: 0; display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
+  padding: 18px calc(50% - clamp(150px, 46vw, 220px) / 2) 26px; scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.ob-carrousel-piste::-webkit-scrollbar { display: none; }
+.ob-overlay button.ob-carrousel-booster {
+  position: relative; flex: none; width: clamp(150px, 46vw, 220px); scroll-snap-align: center; padding: 0; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; background: none; border: none; box-shadow: none; color: #eef2fb; filter: none;
+  transition: transform 0.2s ease;
+}
+.ob-carrousel-booster img {
+  display: block; width: 100%; height: auto; border-radius: 10px; pointer-events: none;
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.6)); transition: filter 0.2s ease, transform 0.2s ease;
+}
+.ob-overlay button.ob-carrousel-booster:hover:not(:disabled) img,
+.ob-overlay button.ob-carrousel-booster:focus-visible img { transform: translateY(-6px) scale(1.03); filter: drop-shadow(0 0 22px color-mix(in srgb, var(--ob-accent) 55%, transparent)) drop-shadow(0 16px 26px rgba(0, 0, 0, 0.6)); }
+.ob-overlay button.ob-carrousel-booster:disabled { opacity: 0.45; }
+.ob-carrousel-booster[aria-current="true"] img { outline: 3px solid var(--ob-accent); outline-offset: 4px; }
+.ob-carrousel-nom { font-family: var(--ob-police-titre); font-size: 1.15rem; letter-spacing: 0.04em; }
+.ob-carrousel-actuel {
+  position: absolute; top: -10px; left: 50%; translate: -50% 0; padding: 3px 12px; border-radius: 999px; font-family: var(--ob-police-ui);
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0b0904; background: var(--ob-accent);
+}
+.ob-overlay button.ob-carrousel-fleche {
+  flex: none; width: 48px; height: 48px; min-height: 0; padding: 0; border-radius: 50%; font-size: 1.8rem; line-height: 1; color: #eef2fb;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.22); box-shadow: none; filter: none;
+}
+.ob-overlay button.ob-carrousel-fleche:hover { border-color: var(--ob-accent); }
+.ob-overlay button.ob-carrousel-annuler { min-width: 200px; min-height: 52px; }
+/* Téléphone : on glisse au doigt, pas de flèches. */
+@media (max-width: 760px) {
+  .ob-overlay button.ob-carrousel-fleche { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-carrousel, .ob-carrousel-piste { animation: none; scroll-behavior: auto; }
+}

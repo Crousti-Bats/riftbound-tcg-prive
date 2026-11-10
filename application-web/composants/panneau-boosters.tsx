@@ -98,6 +98,11 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
     setIllustrations({ ...illustrations, [cle]: autreIllustration(illustrations[cle] ?? 1, ILLUSTRATIONS_PAR_SET[cle] ?? 1) });
   }
   const nomSet = etat?.sets.find((s) => s.code === set)?.nom ?? set;
+  // Carrousel « Changer de set » : chaque booster avec l'illustration affichée pour son set.
+  const choixBoosters = (etat?.sets ?? []).map((s) => {
+    const cle = s.code in ILLUSTRATIONS_PAR_SET ? s.code : "ogn";
+    return { code: s.code, nom: s.nom, image: `/ouverture/booster-${cle}-${illustrations[cle] ?? 1}.webp` };
+  });
   const peutOuvrir = Boolean(set) && actuel >= 1;
 
   return (
@@ -183,11 +188,14 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
         set &&
         createPortal(
           <OuvertureBooster
+            key={set}
             set={set}
             nomSet={nomSet}
             illustration={illustration}
             ouvrir={ouvrirSetChoisi}
             restants={actuel}
+            boosters={choixBoosters}
+            surChangerSet={setSet}
             surFermer={fermer}
           />,
           document.body,
