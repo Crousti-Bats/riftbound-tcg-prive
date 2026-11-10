@@ -39,10 +39,11 @@ interface Evenement {
   details: string | null;
 }
 
-type Onglet = "monitoring" | "invitations" | "comptes" | "journal";
+type Onglet = "monitoring" | "annonce" | "invitations" | "comptes" | "journal";
 
 const LIBELLES_ONGLETS: Record<Onglet, string> = {
   monitoring: "Monitoring",
+  annonce: "Annonce",
   invitations: "Invitations",
   comptes: "Comptes",
   journal: "Journal",
@@ -82,6 +83,7 @@ export function PageAdmin({ compte, surChangementCompte }: Props) {
             ))}
           </nav>
           {onglet === "monitoring" && <TableauMonitoring surExpiration={surChangementCompte} />}
+          {onglet === "annonce" && <OngletAnnonce surExpiration={surChangementCompte} />}
           {onglet === "invitations" && <OngletInvitations surExpiration={surChangementCompte} />}
           {onglet === "comptes" && <OngletComptes moi={compte.pseudo} surExpiration={surChangementCompte} />}
           {onglet === "journal" && <OngletJournal surExpiration={surChangementCompte} />}
@@ -144,6 +146,90 @@ function useDonneesAdmin<T>(chemin: string, surExpiration: () => Promise<void>) 
     appelerApi<T>("GET", chemin).then(setDonnees, gererErreur);
   }, [chemin, gererErreur]);
   return { donnees, erreur, recharger, setErreur };
+}
+
+const LONGUEUR_MAX_ANNONCE = 300;
+
+/** Bandeau d'annonce : une seule annonce à la fois, affichée en grand à tous les joueurs connectés. */
+function OngletAnnonce({ surExpiration }: { surExpiration: () => Promise<void> }) {
+  const { donnees, erreur, recharger, setErreur } = useDonneesAdmin<{ annonce: { id: number; texte: string; creeLe: number } | null }>(
+    "/annonce-site",
+    surExpiration,
+  );
+  const [texte, setTexte] = useState("");
+  const [info, setInfo] = useState<string | null>(null);
+
+  async function agir(action: () => Promise<unknown>, succes: string) {
+    setInfo(null);
+    try {
+      await action();
+      setInfo(succes);
+      await recharger();
+    } catch (err) {
+      if (err instanceof ErreurApi && err.code === "elevation_requise") await surExpiration();
+      else setErreur((err as Error).message);
+    }
+  }
+
+  async function publier(e: FormEvent) {
+    e.preventDefault();
+    await agir(async () => {
+      await appelerApi("POST", "/admin/annonce-site", { texte: texte.trim() });
+      setTexte("");
+    }, "Annonce publiée : tous les joueurs la voient en haut du site.");
+  }
+
+  async function retirer() {
+    if (!window.confirm("Retirer l'annonce pour tout le monde ?")) return;
+    await agir(() => appelerApi("DELETE", "/admin/annonce-site"), "Annonce retirée.");
+  }
+
+  const annonce = donnees?.annonce ?? null;
+  return (
+    <section className="pile">
+      <div className="carte pile">
+        <h2>Annonce en cours</h2>
+        {annonce ? (
+          <>
+            <p className="apercu-annonce">
+              <strong>{annonce.texte}</strong>
+            </p>
+            <p className="aide">Publiée le {formaterDate(annonce.creeLe)}.</p>
+            <div className="barre-actions">
+              <button className="secondaire" onClick={() => void retirer()}>
+                Retirer l'annonce
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="aide">Aucune annonce affichée.</p>
+        )}
+      </div>
+      <form className="carte formulaire" onSubmit={publier}>
+        <h2>{annonce ? "Remplacer l'annonce" : "Publier une annonce"}</h2>
+        <p className="aide">
+          Affichée en grand bandeau en haut du site pour tous les joueurs connectés. Chacun peut la fermer ; une nouvelle annonce
+          réapparaît pour tout le monde.
+        </p>
+        <label>
+          Texte ({texte.trim().length}/{LONGUEUR_MAX_ANNONCE})
+          <textarea
+            value={texte}
+            onChange={(e) => setTexte(e.target.value)}
+            maxLength={LONGUEUR_MAX_ANNONCE}
+            rows={3}
+            required
+            placeholder="Ex. : Tous les boosters sont remis à 15/15, bonnes ouvertures !"
+          />
+        </label>
+        <button type="submit" disabled={!texte.trim()}>
+          Publier le bandeau
+        </button>
+      </form>
+      {info && <p className="aide">{info}</p>}
+      {erreur && <p className="message-erreur">{erreur}</p>}
+    </section>
+  );
 }
 
 function statutInvitation(i: Invitation): string {

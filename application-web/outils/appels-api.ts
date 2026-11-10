@@ -36,6 +36,9 @@ const MESSAGES: Record<string, string> = {
   echange_introuvable_ou_deja_traite: "Échange introuvable ou déjà traité.",
   cartes_plus_disponibles: "Échange impossible : une des cartes n'est plus disponible chez l'un de vous deux. Rien n'a été transféré.",
   collection_indisponible: "La collection est momentanément indisponible. Réessaie dans une minute.",
+  notifications_non_configurees: "Les notifications ne sont pas encore configurées sur le serveur.",
+  aucun_abonnement: "Aucun appareil abonné : active d'abord les notifications.",
+  aucune_annonce: "Aucune annonce en cours.",
   hors_ligne: "Pas de connexion Internet. Réessaie quand tu seras de nouveau en ligne.",
   serveur_injoignable: "Le serveur ne répond pas. Réessaie dans un instant.",
 };

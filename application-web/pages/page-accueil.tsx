@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CarteInstallation } from "../composants/carte-installation";
+import { CarteNotifications } from "../composants/carte-notifications";
 import { PanneauBoosters } from "../composants/panneau-boosters";
 import type { CompteCourant } from "../outils/appels-api";
 import { naviguer } from "../outils/navigation";
@@ -59,6 +60,7 @@ export function PageAccueil({ compte }: { compte: CompteCourant }) {
         ))}
       </section>
 
+      <CarteNotifications />
       <CarteInstallation />
     </main>
   );

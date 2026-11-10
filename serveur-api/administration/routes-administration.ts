@@ -14,6 +14,7 @@ import {
 } from "../authentification/sessions";
 import { journaliser, requeteJournal } from "../journal-evenements";
 import { lireCorps } from "../lecture-requete";
+import { schemaAnnonceSite } from "../annonce-site/routes-annonce-site";
 import { collecterMonitoring } from "./monitoring";
 import { empreinteSha256, jetonAleatoire } from "../securite/jetons-et-empreintes";
 import { compterTentative, REGLES, reinitialiser } from "../securite/limitation-tentatives";
@@ -272,6 +273,44 @@ routesAdministration.post("/collections/vider", async (c) => {
     }),
   ]);
   return c.json({ ok: true, lignesSupprimees: suppression?.meta.changes ?? 0 });
+});
+
+// ---------- Bandeau d'annonce ----------
+// Une seule annonce à la fois : publier remplace la précédente.
+
+routesAdministration.post("/annonce-site", async (c) => {
+  const admin = c.get("compte");
+  const lecture = await lireCorps(c, schemaAnnonceSite);
+  if (!lecture.ok || !admin) return lecture.ok ? c.json({ erreur: "non_connecte" }, 401) : lecture.reponse;
+  const base = c.env.BASE_DE_DONNEES;
+  const maintenant = Date.now();
+  const [, insertion] = await base.batch<{ id: number }>([
+    base.prepare("UPDATE annonce_site SET retiree_le = ? WHERE retiree_le IS NULL").bind(maintenant),
+    base
+      .prepare("INSERT INTO annonce_site (texte, cree_par, cree_le) VALUES (?, ?, ?) RETURNING id")
+      .bind(lecture.donnees.texte, admin.id, maintenant),
+    requeteJournal(base, {
+      categorie: "admin",
+      type: "annonce_publiee",
+      compteId: admin.id,
+      pseudo: admin.pseudo,
+      ip: ipClient(c),
+      details: { texte: lecture.donnees.texte },
+    }),
+  ]);
+  return c.json({ id: insertion?.results[0]?.id }, 201);
+});
+
+routesAdministration.delete("/annonce-site", async (c) => {
+  const admin = c.get("compte");
+  if (!admin) return c.json({ erreur: "non_connecte" }, 401);
+  const base = c.env.BASE_DE_DONNEES;
+  const [maj] = await base.batch([
+    base.prepare("UPDATE annonce_site SET retiree_le = ? WHERE retiree_le IS NULL").bind(Date.now()),
+    requeteJournal(base, { categorie: "admin", type: "annonce_retiree", compteId: admin.id, pseudo: admin.pseudo, ip: ipClient(c) }),
+  ]);
+  if (!maj?.meta.changes) return c.json({ erreur: "aucune_annonce" }, 404);
+  return c.json({ ok: true });
 });
 
 // ---------- Journal ----------

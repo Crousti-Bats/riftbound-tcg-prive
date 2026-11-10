@@ -80,5 +80,5 @@ export function creerEnvironnementDeTest() {
     return r.cookie;
   }
 
-  return { bd, env, appeler, creerInvitation, inscrire };
+  return { bd, d1, env, appeler, creerInvitation, inscrire };
 }
