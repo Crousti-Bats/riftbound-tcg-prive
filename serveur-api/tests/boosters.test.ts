@@ -198,7 +198,7 @@ describe("Statistiques sur 100 000 boosters (aléatoire seedé, déterministe)",
 });
 
 describe("API /api/boosters", () => {
-  type Etat = { stock: { actuel: number; max: number; prochainDansMs: number | null }; sets: Array<{ code: string }> };
+  type Etat = { stock: { actuel: number; max: number; prochainDansMs: number | null; offerts: number }; sets: Array<{ code: string }> };
   type Ouverture = { set: string; cartes: Array<{ code: string; foil: boolean; slot: string }>; stock: Etat["stock"] };
 
   beforeEach(() => amorcerCataloguePourTest(catalogueDeTest()));
@@ -275,6 +275,42 @@ describe("API /api/boosters", () => {
     expect(r.statut).toBe(409);
     expect(r.json.erreur).toBe("aucun_booster");
     expect(totalCollection(env.bd, "Alice")).toBe(0);
+  });
+
+  it("ouvre les boosters offerts une fois le stock normal épuisé", async () => {
+    const env = creerEnvironnementDeTest();
+    const cookie = await env.inscrire("Alice", "motdepasse");
+    // Un nouveau compte n'a pas de booster offert.
+    const avant = await env.appeler("GET", "/api/boosters/etat", { cookie });
+    expect((avant.json as unknown as Etat).stock.offerts).toBe(0);
+
+    env.bd.prepare("UPDATE comptes SET stock_boosters = 1, boosters_tick = ?, boosters_bonus = 2 WHERE pseudo = ?").run(Date.now(), "Alice");
+    const etat = await env.appeler("GET", "/api/boosters/etat", { cookie });
+    expect((etat.json as unknown as Etat).stock).toMatchObject({ actuel: 1, offerts: 2 });
+
+    // 1er : le stock normal passe en premier.
+    const r1 = await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn" } });
+    expect((r1.json as unknown as Ouverture).stock).toMatchObject({ actuel: 0, offerts: 2 });
+    // 2e et 3e : les boosters offerts.
+    const r2 = await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn" } });
+    expect(r2.statut).toBe(200);
+    expect((r2.json as unknown as Ouverture).stock).toMatchObject({ actuel: 0, offerts: 1 });
+    const r3 = await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn" } });
+    expect((r3.json as unknown as Ouverture).stock).toMatchObject({ actuel: 0, offerts: 0 });
+    expect(totalCollection(env.bd, "Alice")).toBe(42);
+
+    // Plus rien : 409, et le minuteur du stock normal tourne toujours.
+    const r4 = await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn" } });
+    expect(r4.statut).toBe(409);
+    expect(r4.json.erreur).toBe("aucun_booster");
+  });
+
+  it("garde les boosters offerts au-delà du plafond de 10", async () => {
+    const env = creerEnvironnementDeTest();
+    const cookie = await env.inscrire("Alice", "motdepasse");
+    env.bd.prepare("UPDATE comptes SET boosters_bonus = 10 WHERE pseudo = ?").run("Alice");
+    const etat = await env.appeler("GET", "/api/boosters/etat", { cookie });
+    expect((etat.json as unknown as Etat).stock).toMatchObject({ actuel: STOCK_MAX, max: STOCK_MAX, offerts: 10 });
   });
 
   it("refuse un set non ouvrable ou inconnu (400)", async () => {

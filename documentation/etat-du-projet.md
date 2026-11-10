@@ -313,6 +313,15 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **« Animations coupées »** (correction de §4undecies, à la demande de l'utilisateur) : on ouvre toujours le booster et on révèle les cartes **une par une**, mais sans retournement, particules, flash, secousse, vibration, ombre du Baron, fissures ni signature, avec des pauses très courtes (mode « sobre » du moteur, le même que le réglage système « réduire les animations », relu à chaque instant). Seul « Passer l'animation » ou « Tout révéler » va directement au récapitulatif.
 - **Vérifications** : 228 tests (dont `manquantes=1`). Edge headless sur le vrai moteur local : « Qui a ? » 1 265 cartes manquantes, Ultime en premier, pagination ; « Qui veut ? » 142 cartes ; tableau trié par rareté (Baron Nashor en premier) ; animations coupées → booster scellé, déchirure, « Carte 1 / 14 », carte retournée sans transition (0 s), clic suivant → « Carte 2 / 14 » ; aucune erreur console, aucun défilement horizontal (1280 et 390 px).
 
+## 4quattuordecies. Boosters offerts (demandé le 2026-11-10)
+
+- **Cadeau unique de 10 boosters** à chaque compte existant, appliqué par la migration `0014_boosters_offerts.sql` au déploiement (une migration ne s'applique qu'une fois). Les comptes créés après ne le reçoivent pas.
+- **Colonne `comptes.boosters_bonus`** (`CHECK ≥ 0`) : boosters offerts **en plus** du stock normal, qui reste plafonné à 10 et se régénère comme avant. Pas de régénération ni de plafond pour les offerts. Pourquoi une colonne séparée : `regenerer` ramène à 10 tout stock au-dessus du plafond, et `stock_boosters` a un `CHECK ≤ 15` (migration 0003).
+- **Ordre de consommation** : le stock normal d'abord (le minuteur repart tout de suite), puis les boosters offerts. Même concurrence optimiste que pour le stock (`UPDATE … WHERE boosters_bonus = ?`).
+- **API** : `stock.offerts` dans `GET /api/boosters/etat` et `POST /api/boosters/ouvrir`. **Accueil** : « 🎁 + N boosters offerts » sous la jauge ; le bouton Ouvrir et « N restants » comptent stock + offerts.
+- **Offrir à nouveau plus tard** : `npx wrangler d1 execute riftbound-tcg --remote --config configuration/cloudflare-wrangler.jsonc --command "UPDATE comptes SET boosters_bonus = boosters_bonus + 10;"`.
+- **Vérifications** : 230 tests (2 nouveaux : ordre de consommation, offerts au-delà du plafond).
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
