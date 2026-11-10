@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categorieRevelation, numerosCarte, ordreRevelation, themeCarte } from "./ouverture-revelation";
+import { categorieRevelation, numerosCarte, ordreRecapitulatif, ordreRevelation, themeCarte } from "./ouverture-revelation";
 import type { CarteOuverte } from "./libelles-cartes";
 
 type Mini = Pick<CarteOuverte, "slot" | "rarete" | "variante"> & { id: string };
@@ -36,6 +36,24 @@ describe("ordre de révélation", () => {
       carte("rune", "runeToken", "Common", "rune"),
     ];
     expect(ordreRevelation(booster).map((c) => c.id)).toEqual(["c1", "c2", "u1", "f", "rune", "rare", "ultime"]);
+  });
+});
+
+describe("ordre du récapitulatif", () => {
+  it("met les plus rares en premier, la foil devant à rareté égale", () => {
+    type Recap = Pick<CarteOuverte, "rarete" | "variante" | "foil"> & { id: string };
+    const r = (id: string, rarete: string, variante = "base", foil = false): Recap => ({ id, rarete, variante, foil });
+    const cartes = [
+      r("c1", "Common"),
+      r("c2", "Common"),
+      r("u1", "Uncommon"),
+      r("rune", "Common", "rune"),
+      r("rareFoil", "Rare", "base", true),
+      r("rare", "Rare"),
+      r("epic", "Epic"),
+      r("alt", "Showcase", "alt"),
+    ];
+    expect(ordreRecapitulatif(cartes).map((c) => c.id)).toEqual(["alt", "epic", "rareFoil", "rare", "u1", "rune", "c1", "c2"]);
   });
 });
 

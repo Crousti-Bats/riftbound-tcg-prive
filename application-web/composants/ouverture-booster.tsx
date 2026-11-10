@@ -7,7 +7,7 @@ import { FicheCarte } from "./fiche-carte";
 import { ImageCarte } from "./image-carte";
 import type { CarteOuverte } from "../outils/libelles-cartes";
 import { naviguer } from "../outils/navigation";
-import { REVELATION, categorieRevelation } from "../outils/ouverture-revelation";
+import { REVELATION, categorieRevelation, ordreRecapitulatif } from "../outils/ouverture-revelation";
 import { type Scene, monterScene } from "../outils/ouverture-scene";
 import { definirSon, sonActif } from "../outils/ouverture-sons";
 
@@ -85,7 +85,8 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
         setScelle(false);
         return appelOuvrir.current();
       },
-      surTerminee: setRecap,
+      // Récapitulatif : les plus rares en premier (la révélation, elle, garde la meilleure pour la fin).
+      surTerminee: (cartes) => setRecap(ordreRecapitulatif(cartes)),
       surErreur: setErreur,
       surAvis: setAvis,
       sansAnimation: () => sansAnimationRef.current,
