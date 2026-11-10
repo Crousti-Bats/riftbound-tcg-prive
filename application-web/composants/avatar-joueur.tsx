@@ -14,7 +14,9 @@ export function AvatarJoueur({ pseudo, avatar, taille = "normal" }: Props) {
   const classe = `avatar ${taille === "normal" ? "" : `avatar-${taille}`} ${avatar ? "avatar-image" : ""}`;
   return (
     <span className={classe} aria-hidden="true">
-      {avatar ? (
+      {avatar?.photo ? (
+        <img src={avatar.image} alt="" className="avatar-photo" loading="lazy" decoding="async" />
+      ) : avatar ? (
         <ImageCarte
           image={avatar.image}
           largeur={300}

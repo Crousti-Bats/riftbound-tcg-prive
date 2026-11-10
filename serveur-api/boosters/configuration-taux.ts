@@ -25,21 +25,23 @@ export const TOTAL_CARTES_BOOSTER =
 export type CategorieRarePlus = "ultime" | "special" | "signee" | "overnumbered" | "alt" | "epic" | "rare";
 
 /**
- * Probabilités par slot Rare+ (il y a 2 slots indépendants par booster).
- * 2026-11-09 : tous les taux Rare+ divisés par 2 à la demande de l'utilisateur (Epic 1/12, Alt 1/24,
- * Over 1/144, Signée 1/480, Special et Ultime 1/2000 boosters). La différence revient aux Rares.
- * Lues dans l'ordre, de façon cumulative. Tout le reste (~87 %) va à "rare".
+ * Probabilités par slot Rare+ (il y a 2 slots indépendants par booster : « 1 booster sur N » = 1/(2N) par slot).
+ * 2026-11-09 : tous les taux Rare+ divisés par 2 (Epic 1/12, Alt 1/24, Over 1/144, Signée 1/480, Special et
+ * Ultime 1/2000 boosters).
+ * 2026-11-10 : de nouveau divisés par 2 à la demande de l'utilisateur. PAR BOOSTER : Epic 1/24, Alt Art 1/48,
+ * Overnumbered 1/288, Signée 1/960, Special et Ultime 1/4000. La différence revient aux Rares.
+ * Lues dans l'ordre, de façon cumulative. Tout le reste (~97 %) va à "rare".
  * Si le pool d'une catégorie est vide pour le set ouvert, le tirage retombe sur "rare"
  * (sa probabilité est ainsi automatiquement reversée aux Rares).
  */
 export const TAUX_RARE_PLUS: ReadonlyArray<{ categorie: Exclude<CategorieRarePlus, "rare">; p: number }> = [
-  { categorie: "ultime", p: 0.00025 }, //       1 booster / 2000 → 1/4000 par slot (Baron Nashor, Unleashed)
-  { categorie: "special", p: 0.00025 }, //      1 booster / 2000 → 1/4000 par slot (Special Alt)
-  { categorie: "signee", p: 0.00104 }, //       1 booster / 480 → 1/960 par slot (Overnumbered signée)
-  { categorie: "overnumbered", p: 0.00347 }, // 1 booster / 144 → 1/288 par slot (Overnumbered)
-  { categorie: "alt", p: 0.0208 }, //           1 booster / 24 → 1/48 par slot (Alt Art)
-  { categorie: "epic", p: 0.03667 }, //         (1/12 − 0,01) / 2 (Epic 1 booster / 12, après retrait de la part Foil)
-  // reste ≈ 0,93767 → "rare"
+  { categorie: "ultime", p: 1 / 8000 }, //        1 booster / 4000 → 1/8000 par slot (Baron Nashor, Unleashed)
+  { categorie: "special", p: 1 / 8000 }, //       1 booster / 4000 → 1/8000 par slot (Special Alt)
+  { categorie: "signee", p: 1 / 1920 }, //        1 booster / 960 → 1/1920 par slot (Overnumbered signée)
+  { categorie: "overnumbered", p: 1 / 576 }, //   1 booster / 288 → 1/576 par slot (Overnumbered)
+  { categorie: "alt", p: 1 / 96 }, //             1 booster / 48 → 1/96 par slot (Alt Art)
+  { categorie: "epic", p: (1 / 24 - 0.01) / 2 }, // Epic 1 booster / 24, après retrait de la part Foil (1 %)
+  // reste ≈ 0,9714 → "rare"
 ];
 
 /** Slot Foil : rareté de la carte brillante (estimation communautaire). Le reste (0,75) est Common. */

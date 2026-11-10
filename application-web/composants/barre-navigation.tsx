@@ -80,7 +80,6 @@ export function BarreNavigation({
   surDeconnexion: () => Promise<void>;
 }) {
   const [recuesEnAttente, setRecuesEnAttente] = useState(0);
-  const [messagesNonLus, setMessagesNonLus] = useState(0);
   const [avatar, setAvatar] = useState<AvatarLeger | null>(null);
   const liens = compte.role === "admin" ? [...LIENS, LIEN_ADMIN] : LIENS;
 
@@ -90,18 +89,6 @@ export function BarreNavigation({
       (r) => setRecuesEnAttente(r.recuesEnAttente),
       () => undefined,
     );
-  }, [chemin]);
-
-  // Messages non lus (salon + privés) : relus à chaque page et toutes les 30 s tant que l'onglet est visible.
-  useEffect(() => {
-    const lire = () =>
-      appelerApi<{ salon: number; prive: number }>("GET", "/marche/non-lus").then(
-        (r) => setMessagesNonLus(r.salon + r.prive),
-        () => undefined,
-      );
-    void lire();
-    const t = window.setInterval(() => document.visibilityState === "visible" && void lire(), 30_000);
-    return () => window.clearInterval(t);
   }, [chemin]);
 
   // Mon avatar : lu au chargement, puis relu quand je modifie mon profil.
@@ -117,7 +104,6 @@ export function BarreNavigation({
 
   const pastilles: Record<string, { nombre: number; libelle: string }> = {
     "/echanges": { nombre: recuesEnAttente, libelle: "proposition(s) reçue(s)" },
-    "/marche": { nombre: messagesNonLus, libelle: "message(s) non lu(s)" },
   };
 
   async function seDeconnecter() {

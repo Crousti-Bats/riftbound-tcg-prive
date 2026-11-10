@@ -167,6 +167,18 @@ describe("Profil d'un joueur", () => {
     expect(reponses.filter((r) => r.statut === 429)).toHaveLength(2);
   });
 
+  it("affiche la wishlist (cartes pas encore obtenues) avec ce que le visiteur en possède", async () => {
+    const { env, alice, bob } = await deuxJoueurs();
+    for (const code of ["ogn-e0", "ogn-alt0", "ogn-c3"]) await env.appeler("POST", "/api/wishlist", { cookie: alice, corps: { code } });
+    donner(env, "Alice", "ogn-c3", 1); // obtenue : n'est plus affichée
+    donner(env, "Bob", "ogn-e0", 2);
+    const vue = (await env.appeler("GET", "/api/profils/joueur/Alice", { cookie: bob })).json.wishlist as Array<{ carte: { code: string }; jePossede: number }>;
+    expect(vue.map((w) => [w.carte.code, w.jePossede])).toEqual([
+      ["ogn-alt0", 0],
+      ["ogn-e0", 2],
+    ]);
+  });
+
   it("modération : seul un admin dont l'accès est ouvert peut effacer une bio (journalisé)", async () => {
     const { env, alice, bob } = await deuxJoueurs();
     await enregistrer(env, alice, { bio: "bio à modérer", avatar: null, vitrine: [] });

@@ -80,6 +80,11 @@ export function cartesManquantes(pools: PoolsSet, possedees: ReadonlySet<string>
   return { total: vues.size, manquantes };
 }
 
+/** Tous les cardCode qu'un booster de ce set peut contenir. */
+export function codesDuBooster(pools: PoolsSet): Set<string> {
+  return new Set(ORDRE_POOLS.flatMap((nom) => pools[nom]));
+}
+
 /** Carte enrichie pour l'affichage : quantités possédées et présence dans ma wishlist. */
 export function carteApercu(
   carte: CarteCatalogue,

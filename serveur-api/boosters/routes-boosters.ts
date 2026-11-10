@@ -10,7 +10,7 @@ import type { CarteCatalogue } from "../catalogue/types-catalogue";
 import { lireCorps } from "../lecture-requete";
 import type { ContexteApi } from "../types-application";
 import { aleatoireCrypto } from "./aleatoire";
-import { carteApercu, cartesManquantes, plusRares } from "./apercu-booster";
+import { carteApercu, cartesManquantes, codesDuBooster, plusRares } from "./apercu-booster";
 import { STOCK_MAX } from "./configuration-taux";
 import { construirePools } from "./pools";
 import { prochainDansMs, regenerer } from "./stock";
@@ -117,6 +117,32 @@ routesBoosters.get("/apercu", async (c) => {
       cartes: enrichir(manquantes.slice(debut, debut + MANQUANTES_PAR_PAGE)),
     },
   });
+});
+
+/**
+ * Cœurs sur les boosters : pour chaque set ouvrable, le nombre de cartes de ma wishlist que je n'ai pas encore
+ * et que ce booster peut contenir.
+ */
+routesBoosters.get("/wishlist", async (c) => {
+  const compte = c.get("compte");
+  if (!compte) return c.json({ erreur: "non_connecte" }, 401);
+  const { results } = await c.env.BASE_DE_DONNEES.prepare(
+    `SELECT w.card_code FROM wishlist w
+     WHERE w.compte_id = ?
+       AND NOT EXISTS (SELECT 1 FROM collection x WHERE x.compte_id = w.compte_id AND x.card_code = w.card_code AND x.quantite > 0)`,
+  )
+    .bind(compte.id)
+    .all<{ card_code: string }>();
+  const catalogue = await obtenirCatalogue();
+  const pools = construirePools(catalogue);
+  const parSet: Record<string, number> = {};
+  for (const s of catalogue.sets) {
+    const poolsSet = pools.parSet[s.code];
+    if (!s.ouvrable || !poolsSet) continue;
+    const codes = codesDuBooster(poolsSet);
+    parSet[s.code] = results.filter((r) => codes.has(r.card_code)).length;
+  }
+  return c.json({ parSet });
 });
 
 routesBoosters.post("/ouvrir", async (c) => {

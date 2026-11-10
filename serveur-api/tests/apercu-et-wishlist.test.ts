@@ -34,10 +34,12 @@ const wishlists = async (env: Env, cookie: string) =>
 
 describe("Aperçu d'un booster", () => {
   it("chances par booster calculées depuis les taux (2 slots Rare+, plus le slot Foil pour les Epic)", () => {
-    expect(unBoosterSur("ultime")).toBe(2000);
-    expect(unBoosterSur("signee")).toBe(481);
-    expect(unBoosterSur("alt")).toBe(24);
-    expect(unBoosterSur("epic")).toBe(12);
+    expect(unBoosterSur("ultime")).toBe(4000);
+    expect(unBoosterSur("special")).toBe(4000);
+    expect(unBoosterSur("signee")).toBe(960);
+    expect(unBoosterSur("overnumbered")).toBe(288);
+    expect(unBoosterSur("alt")).toBe(48);
+    expect(unBoosterSur("epic")).toBe(24);
   });
 
   it("les plus rares : seulement les catégories présentes dans le set, la plus rare d'abord", async () => {
@@ -73,6 +75,18 @@ describe("Aperçu d'un booster", () => {
     expect((await env.appeler("GET", "/api/boosters/apercu?set=ogs", { cookie: alice })).statut).toBe(400);
     expect((await env.appeler("GET", "/api/boosters/apercu?set=../x", { cookie: alice })).statut).toBe(400);
     expect((await env.appeler("GET", "/api/boosters/apercu?set=ogn")).statut).toBe(401);
+  });
+});
+
+describe("Cœurs de wishlist sur les boosters", () => {
+  it("compte, par set, les cartes de ma wishlist pas encore obtenues que ce booster peut donner", async () => {
+    const env = creerEnvironnementDeTest();
+    const alice = await env.inscrire("Alice", "mot-de-passe-alice");
+    for (const code of ["ven-alt0", "ven-sig0", "ogn-e0", "ogs-c0"]) await env.appeler("POST", "/api/wishlist", { cookie: alice, corps: { code } });
+    donner(env, "Alice", "ven-sig0", 1); // obtenue : ne compte plus
+    const r = await env.appeler("GET", "/api/boosters/wishlist", { cookie: alice });
+    expect(r.json.parSet).toMatchObject({ ven: 1, ogn: 1, sfd: 0, unl: 0 });
+    expect("ogs" in (r.json.parSet as object)).toBe(false); // set non ouvrable en booster
   });
 });
 

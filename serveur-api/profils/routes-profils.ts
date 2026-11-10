@@ -20,6 +20,7 @@ import { lireCorps } from "../lecture-requete";
 import { compterTentative, REGLES } from "../securite/limitation-tentatives";
 import type { CompteConnecte, ContexteApi } from "../types-application";
 import { schemaPseudo } from "../validation-donnees";
+import { avatarAffiche, verifierPhoto } from "./avatar";
 
 export const routesProfils = new Hono<ContexteApi>();
 
@@ -75,15 +76,19 @@ interface LigneJoueur {
   cree_le: number;
   bio: string | null;
   avatar_card_code: string | null;
+  avatar_photo_le: number | null;
 }
 
 /** Mon avatar seul (barre de navigation) : lecture légère, sans statistiques. */
 routesProfils.get("/avatar", async (c) => {
-  const ligne = await c.env.BASE_DE_DONNEES.prepare("SELECT avatar_card_code FROM comptes WHERE id = ?")
-    .bind(moi(c).id)
-    .first<{ avatar_card_code: string | null }>();
-  const carte = ligne?.avatar_card_code ? ((await cartesParCode()).get(ligne.avatar_card_code) ?? null) : null;
-  return c.json({ avatar: carte });
+  const compte = moi(c);
+  const ligne = await c.env.BASE_DE_DONNEES.prepare("SELECT avatar_card_code, avatar_photo_le FROM comptes WHERE id = ?")
+    .bind(compte.id)
+    .first<{ avatar_card_code: string | null; avatar_photo_le: number | null }>();
+  const parCode = ligne?.avatar_card_code ? await cartesParCode() : new Map<string, CarteCatalogue>();
+  return c.json({
+    avatar: avatarAffiche(parCode, { id: compte.id, carte: ligne?.avatar_card_code ?? null, photoLe: ligne?.avatar_photo_le ?? null }),
+  });
 });
 
 /** Profil public d'un joueur. */
@@ -93,12 +98,12 @@ routesProfils.get("/joueur/:pseudo", async (c) => {
   const pseudo = schemaPseudo.safeParse(c.req.param("pseudo"));
   if (!pseudo.success) return c.json({ erreur: "joueur_introuvable" }, 404);
   const joueur = await base
-    .prepare("SELECT id, pseudo, cree_le, bio, avatar_card_code FROM comptes WHERE pseudo = ? AND actif = 1")
+    .prepare("SELECT id, pseudo, cree_le, bio, avatar_card_code, avatar_photo_le FROM comptes WHERE pseudo = ? AND actif = 1")
     .bind(pseudo.data)
     .first<LigneJoueur>();
   if (!joueur) return c.json({ erreur: "joueur_introuvable" }, 404);
 
-  const [vitrine, possession, boosters, echanges] = await base.batch([
+  const [vitrine, possession, boosters, echanges, souhaits] = await base.batch([
     // Seulement les cartes encore possédées (normale ou foil, selon ce qui a été exposé).
     base
       .prepare(
@@ -114,6 +119,17 @@ routesProfils.get("/joueur/:pseudo", async (c) => {
     base
       .prepare("SELECT COUNT(*) AS n FROM echanges WHERE statut = 'accepte' AND (auteur_id = ? OR destinataire_id = ?)")
       .bind(joueur.id, joueur.id),
+    // Wishlist : les cartes recherchées pas encore obtenues, avec ce que JE (le visiteur) en possède.
+    base
+      .prepare(
+        `SELECT w.card_code,
+                COALESCE((SELECT SUM(m.quantite) FROM collection m WHERE m.compte_id = ? AND m.card_code = w.card_code), 0) AS moi
+         FROM wishlist w
+         WHERE w.compte_id = ?
+           AND NOT EXISTS (SELECT 1 FROM collection x WHERE x.compte_id = w.compte_id AND x.card_code = w.card_code AND x.quantite > 0)
+         ORDER BY w.ajoutee_le DESC LIMIT 100`,
+      )
+      .bind(compte.id, joueur.id),
   ]);
 
   const catalogue = await obtenirCatalogue();
@@ -137,9 +153,15 @@ routesProfils.get("/joueur/:pseudo", async (c) => {
     membreDepuis: joueur.cree_le,
     bio: joueur.bio ?? "",
     avatar: joueur.avatar_card_code ? (parCode.get(joueur.avatar_card_code) ?? null) : null,
+    /** Photo personnelle (adresse) : si elle existe, elle s'affiche à la place de l'avatar « carte ». */
+    photo: avatarAffiche(parCode, { id: joueur.id, carte: null, photoLe: joueur.avatar_photo_le })?.image ?? null,
     vitrine: (vitrine?.results as Array<{ card_code: string; est_foil: number }>)
       .map((v) => ({ carte: parCode.get(v.card_code) ?? null, foil: v.est_foil === 1 }))
       .filter((v): v is { carte: CarteCatalogue; foil: boolean } => v.carte !== null),
+    wishlist: (souhaits?.results as Array<{ card_code: string; moi: number }>).flatMap((w) => {
+      const carte = parCode.get(w.card_code);
+      return carte ? [{ carte, jePossede: w.moi }] : [];
+    }),
     statistiques: {
       totalCartes,
       cartesDistinctes: distinctes.size,
@@ -221,5 +243,85 @@ routesProfils.delete("/joueur/:pseudo/bio", async (c) => {
     pseudo: compte.pseudo,
     details: { joueur: joueur.pseudo },
   });
+  return c.json({ ok: true });
+});
+
+// ---------- Photo de profil personnelle ----------
+
+const schemaPhoto = z.strictObject({ image: z.string().min(16).max(210_000) });
+
+/** Envoie (ou remplace) ma photo. Le navigateur l'a déjà recadrée en 256 x 256 ; le serveur vérifie tout. */
+routesProfils.post("/photo", async (c) => {
+  const compte = moi(c);
+  const base = c.env.BASE_DE_DONNEES;
+  const lecture = await lireCorps(c, schemaPhoto);
+  if (!lecture.ok) return lecture.reponse;
+  const photo = verifierPhoto(lecture.donnees.image);
+  if (!photo) return c.json({ erreur: "photo_invalide" }, 400);
+  if (!(await compterTentative(base, `profil:compte:${compte.id}`, REGLES.profilParCompte)).autorisee) {
+    return c.json({ erreur: "trop_de_modifications" }, 429);
+  }
+  const maintenant = Date.now();
+  await base.batch([
+    base
+      .prepare(
+        `INSERT INTO photos_profil (compte_id, type, donnees, maj_le) VALUES (?, ?, ?, ?)
+         ON CONFLICT (compte_id) DO UPDATE SET type = excluded.type, donnees = excluded.donnees, maj_le = excluded.maj_le`,
+      )
+      .bind(compte.id, photo.type, photo.base64, maintenant),
+    base.prepare("UPDATE comptes SET avatar_photo_le = ? WHERE id = ?").bind(maintenant, compte.id),
+  ]);
+  return c.json({ ok: true, photo: avatarAffiche(new Map(), { id: compte.id, carte: null, photoLe: maintenant })?.image }, 201);
+});
+
+async function supprimerPhoto(base: D1Database, compteId: number): Promise<boolean> {
+  const [suppression] = await base.batch([
+    base.prepare("DELETE FROM photos_profil WHERE compte_id = ?").bind(compteId),
+    base.prepare("UPDATE comptes SET avatar_photo_le = NULL WHERE id = ?").bind(compteId),
+  ]);
+  return (suppression?.meta.changes ?? 0) > 0;
+}
+
+/** Retire ma photo (l'avatar « carte », s'il y en a un, revient). */
+routesProfils.delete("/photo", async (c) => {
+  await supprimerPhoto(c.env.BASE_DE_DONNEES, moi(c).id);
+  return c.json({ ok: true });
+});
+
+/**
+ * Affiche une photo (réservé aux joueurs connectés, comme tout le site). Adresse versionnée : mise en cache
+ * longue dans le navigateur. En-têtes stricts : le navigateur ne doit jamais l'interpréter autrement qu'en image.
+ */
+routesProfils.get("/photo/:id", async (c) => {
+  const id = z.coerce.number().int().positive().safeParse(c.req.param("id"));
+  if (!id.success) return c.json({ erreur: "introuvable" }, 404);
+  const ligne = await c.env.BASE_DE_DONNEES.prepare(
+    "SELECT p.type, p.donnees FROM photos_profil p JOIN comptes c ON c.id = p.compte_id WHERE p.compte_id = ? AND c.actif = 1",
+  )
+    .bind(id.data)
+    .first<{ type: string; donnees: string }>();
+  if (!ligne) return c.json({ erreur: "introuvable" }, 404);
+  const octets = Uint8Array.from(atob(ligne.donnees), (car) => car.charCodeAt(0));
+  return new Response(octets, {
+    headers: {
+      "Content-Type": ligne.type,
+      "Cache-Control": "private, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; sandbox",
+      "Content-Disposition": "inline",
+    },
+  });
+});
+
+/** Modération : un admin (accès admin ouvert) retire la photo d'un joueur (journalisé). */
+routesProfils.delete("/joueur/:pseudo/photo", async (c) => {
+  const compte = moi(c);
+  if (!estModerateur(compte)) return c.json({ erreur: "interdit" }, 403);
+  const pseudo = schemaPseudo.safeParse(c.req.param("pseudo"));
+  if (!pseudo.success) return c.json({ erreur: "joueur_introuvable" }, 404);
+  const base = c.env.BASE_DE_DONNEES;
+  const joueur = await base.prepare("SELECT id, pseudo FROM comptes WHERE pseudo = ?").bind(pseudo.data).first<{ id: number; pseudo: string }>();
+  if (!joueur || !(await supprimerPhoto(base, joueur.id))) return c.json({ erreur: "joueur_introuvable" }, 404);
+  await journaliser(base, { categorie: "admin", type: "photo_retiree", compteId: compte.id, pseudo: compte.pseudo, details: { joueur: joueur.pseudo } });
   return c.json({ ok: true });
 });

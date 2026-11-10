@@ -5,6 +5,7 @@ import { ApercuBooster } from "./apercu-booster";
 import { OuvertureBooster } from "./ouverture-booster";
 import { appelerApi } from "../outils/appels-api";
 import { type CarteOuverte, formaterDuree } from "../outils/libelles-cartes";
+import { useWishlist } from "../outils/wishlist";
 
 interface Stock {
   actuel: number;
@@ -44,6 +45,12 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
     setVersionCollection((v) => v + 1);
   }, []);
   const rechargement = useRef(false);
+  // ♥ N sur chaque booster : cartes de ma wishlist pas encore obtenues que ce booster peut donner.
+  const [coeurs, setCoeurs] = useState<Record<string, number>>({});
+  const wishlist = useWishlist();
+  useEffect(() => {
+    appelerApi<{ parSet: Record<string, number> }>("GET", "/boosters/wishlist").then((r) => setCoeurs(r.parSet), () => undefined);
+  }, [wishlist, versionCollection]);
 
   const appliquerEtat = useCallback((e: EtatBoosters) => {
     setEtat(e);
@@ -108,7 +115,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const choixBoosters = (etat?.sets ?? []).map((s) => {
     const cle = s.code in ILLUSTRATIONS_PAR_SET ? s.code : "ogn";
     const numero = illustrations[cle] ?? 1;
-    return { code: s.code, nom: s.nom, illustration: numero, image: `/ouverture/booster-${cle}-${numero}.webp` };
+    return { code: s.code, nom: s.nom, illustration: numero, image: `/ouverture/booster-${cle}-${numero}.webp`, coeurs: coeurs[s.code] ?? 0 };
   });
 
   /** À chaque ouverture du carrousel : une nouvelle illustration pour chaque set qui en a plusieurs. */
@@ -166,6 +173,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                       onClick={() => choisirSet(s.code)}
                     >
                       {s.nom}
+                      {(coeurs[s.code] ?? 0) > 0 && <CoeurWishlist nombre={coeurs[s.code] ?? 0} />}
                     </button>
                   ))}
                 </div>
@@ -193,6 +201,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                 width="621"
                 height="1100"
               />
+              {(coeurs[set] ?? 0) > 0 && <CoeurWishlist nombre={coeurs[set] ?? 0} grand />}
             </button>
           )}
         </div>
@@ -219,5 +228,15 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
       </section>
       {etat && set && <ApercuBooster set={set} nomSet={nomSet} version={versionCollection} />}
     </>
+  );
+}
+
+/** ♥ N : nombre de cartes de ma wishlist (pas encore obtenues) que ce booster peut contenir. */
+export function CoeurWishlist({ nombre, grand }: { nombre: number; grand?: boolean }) {
+  const texte = `${nombre} carte${nombre > 1 ? "s" : ""} de ta wishlist dans ce booster`;
+  return (
+    <span className={grand ? "coeur-wishlist coeur-wishlist-grand" : "coeur-wishlist"} title={texte} aria-label={texte}>
+      <span aria-hidden="true">♥</span> {nombre}
+    </span>
   );
 }

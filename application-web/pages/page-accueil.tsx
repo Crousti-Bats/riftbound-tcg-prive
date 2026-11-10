@@ -21,7 +21,7 @@ const RACCOURCIS: Array<{ chemin: string; titre: string; texte: string; icone: R
   {
     chemin: "/marche",
     titre: "Marché",
-    texte: "Qui a ? Qui veut ? Annonces, salon et messages privés.",
+    texte: "Qui a ? Qui veut ? Annonces et wishlists des joueurs.",
     icone: <span aria-hidden="true">✉</span>,
   },
   {

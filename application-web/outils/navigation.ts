@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 
 const EVENEMENT = "navigation";
 
-export function naviguer(chemin: string): void {
+export function naviguer(chemin: string, options: { remplacer?: boolean } = {}): void {
   if (chemin === window.location.pathname) return;
-  window.history.pushState(null, "", chemin);
+  if (options.remplacer) window.history.replaceState(null, "", chemin);
+  else window.history.pushState(null, "", chemin);
   window.dispatchEvent(new Event(EVENEMENT));
 }
 

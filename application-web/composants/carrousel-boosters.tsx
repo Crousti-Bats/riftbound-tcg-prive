@@ -11,6 +11,8 @@ export interface ChoixBooster {
   illustration: number;
   /** Visuel du booster (/ouverture/booster-<set>-<n>.webp). */
   image: string;
+  /** Cartes de ma wishlist (pas encore obtenues) que ce booster peut contenir. */
+  coeurs?: number;
 }
 
 interface Props {
@@ -65,6 +67,11 @@ export function CarrouselBoosters({ boosters, actuel, restants, surChoix, surFer
                 <img src={b.image} alt="" width="621" height="1100" draggable={false} />
                 <span className="ob-carrousel-nom">{b.nom}</span>
                 {b.code === actuel && <span className="ob-carrousel-actuel">Actuel</span>}
+                {(b.coeurs ?? 0) > 0 && (
+                  <span className="coeur-wishlist coeur-wishlist-grand" title={`${b.coeurs} carte(s) de ta wishlist dans ce booster`}>
+                    <span aria-hidden="true">♥</span> {b.coeurs}
+                  </span>
+                )}
               </button>
             ))}
           </div>
