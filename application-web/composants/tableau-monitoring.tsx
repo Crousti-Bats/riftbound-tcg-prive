@@ -66,6 +66,7 @@ const LIBELLES_SECURITE: Record<string, string> = {
   connexion_echouee: "Connexions échouées",
   connexion_bloquee: "Connexions bloquées",
   inscription_refusee: "Inscriptions refusées",
+  reinitialisation_refusee: "Réinitialisations refusées",
   elevation_echouee: "Ouvertures admin refusées",
 };
 

@@ -13,6 +13,7 @@ const MESSAGES: Record<string, string> = {
   trop_de_tentatives: "Trop de tentatives. Réessaie dans 15 minutes.",
   invitation_invalide: "Ce code d'invitation est invalide, expiré, déjà utilisé ou réservé à un autre pseudo.",
   pseudo_indisponible: "Ce pseudo est déjà pris.",
+  lien_invalide: "Ce lien est invalide, expiré ou déjà utilisé. Demande un nouveau lien à l'administrateur.",
   donnees_invalides: "Certains champs sont invalides.",
   mot_de_passe_incorrect: "Mot de passe incorrect.",
   elevation_requise: "Accès admin expiré : re-saisis ton mot de passe.",

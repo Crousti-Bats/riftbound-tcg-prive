@@ -12,6 +12,7 @@ import { PageConnexion } from "./pages/page-connexion";
 import { PageEchanges } from "./pages/page-echanges";
 import { PageNouvelEchange } from "./pages/page-nouvel-echange";
 import { PageInscription } from "./pages/page-inscription";
+import { PageReinitialisation } from "./pages/page-reinitialisation";
 
 export function RacineApplication() {
   const chemin = useCheminCourant();
@@ -54,9 +55,10 @@ export function RacineApplication() {
   // Redirections : visiteur → connexion ; connecté → pas de page de connexion.
   useEffect(() => {
     if (compte === undefined) return;
-    const pagesPubliques = ["/connexion", "/inscription"];
+    const pagesPubliques = ["/connexion", "/inscription", "/reinitialisation"];
     if (!compte && !pagesPubliques.includes(chemin)) naviguer("/connexion");
-    if (compte && pagesPubliques.includes(chemin)) naviguer("/");
+    // La page de nouveau mot de passe reste accessible même connecté (lien reçu de l'admin).
+    if (compte && pagesPubliques.includes(chemin) && chemin !== "/reinitialisation") naviguer("/");
     if (compte && chemin.startsWith("/admin") && compte.role !== "admin") naviguer("/");
   }, [compte, chemin]);
 
@@ -72,7 +74,7 @@ export function RacineApplication() {
         </main>
       ) : (
         <>
-          {compte && <BarreNavigation compte={compte} chemin={chemin} surDeconnexion={rafraichirCompte} />}
+          {compte && chemin !== "/reinitialisation" && <BarreNavigation compte={compte} chemin={chemin} surDeconnexion={rafraichirCompte} />}
           <Page compte={compte} chemin={chemin} rafraichirCompte={rafraichirCompte} />
         </>
       )}
@@ -90,6 +92,7 @@ function Page({
   rafraichirCompte: () => Promise<void>;
 }) {
   if (compte === undefined) return <main className="conteneur"><p>Chargement…</p></main>;
+  if (chemin === "/reinitialisation") return <PageReinitialisation />;
 
   if (!compte) {
     if (chemin === "/inscription") return <PageInscription surConnexion={rafraichirCompte} />;

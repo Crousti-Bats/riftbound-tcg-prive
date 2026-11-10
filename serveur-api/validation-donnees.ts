@@ -18,6 +18,11 @@ export const schemaInscription = z.strictObject({
   motDePasse: schemaMotDePasse,
 });
 
+export const schemaReinitialisationMotDePasse = z.strictObject({
+  code: schemaCodeInvitation,
+  motDePasse: schemaMotDePasse,
+});
+
 export const schemaConnexion = z.strictObject({
   pseudo: z.string().trim().min(1).max(20),
   motDePasse: z.string().min(1).max(128),
