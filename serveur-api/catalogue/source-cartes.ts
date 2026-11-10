@@ -19,8 +19,9 @@ export const URLS_SOURCE = [
 ] as const;
 export const URL_SOURCE = URLS_SOURCE[0];
 const DELAI_MAX_SOURCE_MS = 8_000;
-// Changer la version dès que le format de Catalogue change, sinon l'ancien format reste servi pendant 24 h.
-const CLE_CACHE = "https://cache.riftbound-tcg.interne/catalogue-v3.json";
+// Changer la version dès que le format ou la classification du Catalogue change, sinon l'ancien reste servi 24 h.
+// v4 (2026-11-10) : Radiance 177 à 183/167 classées Special (SPECIAUX_FORCES).
+const CLE_CACHE = "https://cache.riftbound-tcg.interne/catalogue-v4.json";
 export const DUREE_CACHE_MS = 24 * 60 * 60_000;
 
 export interface DependancesSource {

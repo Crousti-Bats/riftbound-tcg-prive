@@ -8,6 +8,8 @@ export const LONGUEUR_BIO = 200;
 export interface AvatarLeger {
   image: string;
   orientation: Carte["orientation"];
+  /** Photo personnelle : affichée telle quelle (pas de zoom sur l'illustration d'une carte). */
+  photo?: true;
 }
 
 export interface ProfilJoueur {
@@ -17,7 +19,11 @@ export interface ProfilJoueur {
   membreDepuis: number;
   bio: string;
   avatar: Carte | null;
+  /** Adresse de la photo personnelle ; si elle existe, elle s'affiche à la place de la carte. */
+  photo: string | null;
   vitrine: Array<{ carte: Carte; foil: boolean }>;
+  /** Cartes recherchées pas encore obtenues ; `jePossede` = exemplaires que le visiteur possède. */
+  wishlist: Array<{ carte: Carte; jePossede: number }>;
   statistiques: {
     totalCartes: number;
     cartesDistinctes: number;
@@ -25,6 +31,12 @@ export interface ProfilJoueur {
     echangesReussis: number;
     completion: Array<{ code: string; nom: string; possedees: number; total: number }>;
   };
+}
+
+/** Avatar affiché : la photo personnelle si elle existe, sinon la carte choisie. */
+export function avatarDuProfil(photo: string | null, carte: Carte | null): AvatarLeger | null {
+  if (photo) return { image: photo, orientation: "portrait", photo: true };
+  return carte;
 }
 
 export const lienProfil = (pseudo: string) => `/profil/${encodeURIComponent(pseudo)}`;

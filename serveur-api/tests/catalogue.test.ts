@@ -39,6 +39,13 @@ describe("Classification des variantes", () => {
     expect(terrain?.orientation).toBe("paysage");
   });
 
+  it("Radiance 177 à 183/167 sont des Special Alt (choix de l'utilisateur), pas des Overnumbered", () => {
+    for (let n = 177; n <= 183; n++) expect(classerVariante(`${n}-167`, "Showcase", "rad")).toBe("special");
+    expect(classerVariante("184-167", "Showcase", "rad")).toBe("overnumbered"); // les suivantes ne changent pas
+    expect(classerVariante("177-167", "Showcase", "unl")).toBe("overnumbered"); // seulement dans Radiance
+    expect(classerVariante("177-167", "Showcase")).toBe("overnumbered");
+  });
+
   it("renvoie null pour un format inconnu", () => {
     expect(classerVariante("xyz", "Common")).toBeNull();
   });

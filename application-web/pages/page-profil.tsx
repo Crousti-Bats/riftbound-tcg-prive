@@ -9,17 +9,21 @@ import { ImageCarte } from "../composants/image-carte";
 import { SelecteurCartes } from "../composants/selecteur-cartes";
 import { appelerApi } from "../outils/appels-api";
 import { cleLigne } from "../outils/echanges";
-import { type Carte, classeRarete, type SetInfo } from "../outils/libelles-cartes";
+import { type Carte, classeRarete, libelleRarete, type SetInfo } from "../outils/libelles-cartes";
+import { ecrireA } from "../outils/chat";
 import { naviguer } from "../outils/navigation";
-import { LONGUEUR_BIO, type ProfilJoueur, signalerProfilModifie, TAILLE_VITRINE } from "../outils/profils";
+import { avatarDuProfil, LONGUEUR_BIO, type ProfilJoueur, signalerProfilModifie, TAILLE_VITRINE } from "../outils/profils";
+import { ErreurPhoto, preparerPhoto } from "../outils/photo-profil";
 
 type CarteVitrine = ProfilJoueur["vitrine"][number];
+type CarteWishlist = ProfilJoueur["wishlist"][number];
 
 export function PageProfil({ pseudo }: { pseudo: string }) {
   const [profil, setProfil] = useState<ProfilJoueur | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [edition, setEdition] = useState(false);
   const [fiche, setFiche] = useState<CarteVitrine | null>(null);
+  const [ficheWishlist, setFicheWishlist] = useState<CarteWishlist | null>(null);
   const [sets, setSets] = useState<SetInfo[]>([]);
 
   const charger = useCallback(
@@ -44,6 +48,16 @@ export function PageProfil({ pseudo }: { pseudo: string }) {
   }, []);
 
   const nomSet = (code: string) => sets.find((s) => s.code === code)?.nom ?? code;
+
+  async function retirerPhotoModeration() {
+    if (!profil || !window.confirm(`Retirer la photo de profil de ${profil.pseudo} ?`)) return;
+    try {
+      await appelerApi("DELETE", `/profils/joueur/${encodeURIComponent(profil.pseudo)}/photo`);
+      await charger();
+    } catch (e) {
+      setErreur((e as Error).message);
+    }
+  }
 
   async function effacerBio() {
     if (!profil || !window.confirm(`Effacer la bio de ${profil.pseudo} ?`)) return;
@@ -76,7 +90,11 @@ export function PageProfil({ pseudo }: { pseudo: string }) {
         <EditeurProfil
           profil={profil}
           sets={sets}
-          surAnnulation={() => setEdition(false)}
+          surAnnulation={() => {
+            // La photo est déjà envoyée (ou retirée) au moment du choix : on relit le profil même en annulant.
+            void charger();
+            setEdition(false);
+          }}
           surEnregistrement={async () => {
             signalerProfilModifie();
             await charger();
@@ -93,12 +111,12 @@ export function PageProfil({ pseudo }: { pseudo: string }) {
   return (
     <main className="conteneur pile page-profil">
       <section className="carte profil-entete">
-        <AvatarJoueur pseudo={profil.pseudo} avatar={profil.avatar} taille="grand" />
+        <AvatarJoueur pseudo={profil.pseudo} avatar={avatarDuProfil(profil.photo, profil.avatar)} taille="grand" />
         <div className="profil-identite">
           <h1>{profil.pseudo}</h1>
           <p className="aide">
             Membre depuis {membreDepuis}
-            {profil.avatar && ` · avatar : ${profil.avatar.nom}`}
+            {!profil.photo && profil.avatar && ` · avatar : ${profil.avatar.nom}`}
           </p>
           {profil.bio ? (
             <p className="profil-bio">{profil.bio}</p>
@@ -111,10 +129,15 @@ export function PageProfil({ pseudo }: { pseudo: string }) {
             ) : (
               <>
                 <button onClick={() => naviguer(`/echanges/nouveau?avec=${encodeURIComponent(profil.pseudo)}`)}>Proposer un échange</button>
-                <button className="secondaire" onClick={() => naviguer(`/marche/prive/${encodeURIComponent(profil.pseudo)}`)}>
+                <button className="secondaire" onClick={() => ecrireA(profil.pseudo)}>
                   Écrire
                 </button>
               </>
+            )}
+            {profil.peutModerer && profil.photo && (
+              <button className="secondaire" onClick={() => void retirerPhotoModeration()}>
+                Retirer la photo (modération)
+              </button>
             )}
             {profil.peutModerer && profil.bio && (
               <button className="secondaire" onClick={() => void effacerBio()}>
@@ -148,6 +171,43 @@ export function PageProfil({ pseudo }: { pseudo: string }) {
               </button>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="carte">
+        <h2>
+          <span className="titre-wishlist" aria-hidden="true">
+            ♥
+          </span>{" "}
+          {profil.estMoi ? "Ma wishlist" : "Wishlist"}
+          {profil.wishlist.length > 0 && <span className="aide"> · {profil.wishlist.length}</span>}
+        </h2>
+        {profil.wishlist.length === 0 ? (
+          <p className="aide">
+            {profil.estMoi
+              ? "Ta wishlist est vide. Ajoute des cartes avec le bouton ♡ sur leur fiche : elles apparaîtront aussi dans « Qui a ? » au marché."
+              : `${profil.pseudo} ne recherche aucune carte pour l'instant.`}
+          </p>
+        ) : (
+          <>
+            {!profil.estMoi && profil.wishlist.some((w) => w.jePossede > 0) && (
+              <p className="aide">
+                Tu as {profil.wishlist.filter((w) => w.jePossede > 0).length} de ces cartes : propose-lui un échange !
+              </p>
+            )}
+            <div className="grille-cartes grille-compacte">
+              {profil.wishlist.map((w) => (
+                <button key={w.carte.code} className={`vignette-carte ${classeRarete(w.carte)}`} onClick={() => setFicheWishlist(w)} title={w.carte.nom}>
+                  <CadreCarte carte={w.carte} foil={false} />
+                  {!profil.estMoi && w.jePossede > 0 && <span className="pastille-info pastille-tu-las">Tu l'as ×{w.jePossede}</span>}
+                  <span className="legende-carte">
+                    {w.carte.nom}
+                    <small>{libelleRarete(w.carte)}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </section>
 
@@ -186,6 +246,16 @@ export function PageProfil({ pseudo }: { pseudo: string }) {
         </div>
       </section>
 
+      {ficheWishlist && (
+        <FicheCarte
+          carte={ficheWishlist.carte}
+          nomSet={nomSet(ficheWishlist.carte.set)}
+          surFermeture={() => {
+            setFicheWishlist(null);
+            void charger(); // la carte a pu être retirée de ma wishlist depuis sa fiche
+          }}
+        />
+      )}
       {fiche && <FicheCarte carte={fiche.carte} nomSet={nomSet(fiche.carte.set)} foil={fiche.foil} surFermeture={() => setFiche(null)} />}
     </main>
   );
@@ -214,6 +284,8 @@ function EditeurProfil({
 }) {
   const [bio, setBio] = useState(profil.bio);
   const [avatar, setAvatar] = useState<Carte | null>(profil.avatar);
+  const [photo, setPhoto] = useState<string | null>(profil.photo);
+  const [envoiPhoto, setEnvoiPhoto] = useState(false);
   const [vitrine, setVitrine] = useState<CarteVitrine[]>(profil.vitrine);
   const [choix, setChoix] = useState<"avatar" | "vitrine" | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -230,6 +302,34 @@ function EditeurProfil({
       [copie[index], copie[cible]] = [copie[cible] as CarteVitrine, copie[index] as CarteVitrine];
       return copie;
     });
+  }
+
+  // La photo est envoyée tout de suite (sans attendre « Enregistrer ») : c'est une image, pas un champ du formulaire.
+  async function choisirPhoto(fichier: File | undefined) {
+    if (!fichier) return;
+    setErreur(null);
+    setEnvoiPhoto(true);
+    try {
+      const image = await preparerPhoto(fichier);
+      const r = await appelerApi<{ photo: string }>("POST", "/profils/photo", { image });
+      setPhoto(r.photo);
+      signalerProfilModifie();
+    } catch (e) {
+      setErreur(e instanceof ErreurPhoto ? e.message : (e as Error).message);
+    } finally {
+      setEnvoiPhoto(false);
+    }
+  }
+
+  async function retirerPhoto() {
+    setErreur(null);
+    try {
+      await appelerApi("DELETE", "/profils/photo");
+      setPhoto(null);
+      signalerProfilModifie();
+    } catch (e) {
+      setErreur((e as Error).message);
+    }
   }
 
   async function enregistrer() {
@@ -264,24 +364,45 @@ function EditeurProfil({
       {erreur && <p className="message-erreur">{erreur}</p>}
 
       <section className="carte profil-entete">
-        <AvatarJoueur pseudo={profil.pseudo} avatar={avatar} taille="grand" />
+        <AvatarJoueur pseudo={profil.pseudo} avatar={avatarDuProfil(photo, avatar)} taille="grand" />
         <div className="profil-identite">
           <h2>Photo de profil</h2>
           <p className="aide">
-            {avatar
-              ? `Illustration de « ${avatar.nom} ».`
-              : "Choisis l'illustration d'une carte de ta collection. Elle reste même si tu échanges la carte ensuite."}
+            {photo
+              ? "Ta photo est en ligne. Elle s'affiche partout à la place de la carte."
+              : avatar
+                ? `Illustration de « ${avatar.nom} ». Tu peux aussi mettre ta propre photo.`
+                : "Mets ta propre photo, ou l'illustration d'une carte de ta collection."}
           </p>
           <div className="profil-actions">
-            <button className="petit" onClick={() => setChoix("avatar")}>
-              {avatar ? "Changer" : "Choisir une carte"}
+            <label className={`bouton petit ${envoiPhoto ? "desactive" : ""}`}>
+              {envoiPhoto ? "Envoi…" : photo ? "Changer de photo" : "Envoyer une photo"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                className="champ-fichier-cache"
+                disabled={envoiPhoto}
+                onChange={(e) => {
+                  void choisirPhoto(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {photo && (
+              <button className="petit secondaire" onClick={() => void retirerPhoto()}>
+                Retirer la photo
+              </button>
+            )}
+            <button className="petit secondaire" onClick={() => setChoix("avatar")}>
+              {avatar ? "Changer de carte" : "Choisir une carte"}
             </button>
             {avatar && (
               <button className="petit secondaire" onClick={() => setAvatar(null)}>
-                Retirer
+                Retirer la carte
               </button>
             )}
           </div>
+          <p className="aide">La photo est recadrée en carré et réduite avant l'envoi. Évite les photos d'autres personnes sans leur accord.</p>
         </div>
       </section>
 

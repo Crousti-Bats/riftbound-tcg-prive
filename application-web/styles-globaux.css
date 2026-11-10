@@ -721,3 +721,67 @@ button.bandeau-annonce-fermer:hover:not(:disabled) { color: var(--texte); border
   color: #d8ffe8; background: rgba(46, 125, 82, 0.92); border: 1px solid rgba(127, 220, 166, 0.6);
 }
 @media (hover: none) { .indice-ajout { display: none; } }
+
+/* ♥ N sur les boosters : cartes de la wishlist que ce booster peut donner */
+.coeur-wishlist {
+  display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 800; color: #ffd0dc; background: rgba(255, 79, 123, 0.22); border: 1px solid rgba(255, 79, 123, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.coeur-wishlist span { color: #ff7a9c; }
+.hero-paquet, .ob-carrousel-booster { position: relative; }
+.coeur-wishlist-grand {
+  position: absolute; top: 8px; right: 8px; margin: 0; padding: 4px 10px; font-size: 0.95rem;
+  background: rgba(20, 6, 12, 0.85); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.titre-wishlist { color: #ff7a9c; }
+.pastille-tu-las { align-self: flex-start; margin: -2px 0 0; }
+
+/* ---------- Bulle de discussion (en bas à droite) ---------- */
+.chat-bulle {
+  position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 8;
+  display: grid; place-items: center; width: 58px; height: 58px; min-height: 0; padding: 0; border-radius: 50%;
+  color: var(--accent-texte); background: linear-gradient(135deg, var(--accent-vif), var(--accent)); border: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+.chat-bulle svg { width: 26px; height: 26px; }
+.chat-bulle:hover:not(:disabled) { filter: brightness(1.08); }
+.chat-bulle-ouverte { background: var(--fond-eleve); color: var(--texte); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), inset 0 0 0 1px var(--bordure-or); }
+.chat-pastille { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; margin: 0; font-size: 0.75rem; box-shadow: 0 0 0 2px var(--fond); }
+.chat-panneau {
+  position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 70px); z-index: 8;
+  width: min(400px, calc(100vw - 36px)); height: min(620px, calc(100dvh - 180px)); display: flex; flex-direction: column; overflow: hidden;
+  background: var(--fond-carte); border: 1px solid var(--bordure-or); border-radius: var(--rayon); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.chat-entete { display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid var(--bordure); }
+.chat-entete .onglets { flex: 1; margin: 0; }
+.chat-entete .onglet { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; }
+.chat-entete .pastille { margin: 0; }
+.chat-corps { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.chat-liste { display: flex; flex-direction: column; gap: 12px; padding: 12px; overflow-y: auto; }
+.chat-corps .prive-entete h2 { font-size: 1rem; }
+@media (max-width: 760px) {
+  /* Au-dessus de la barre d'onglets du bas. */
+  .chat-bulle { bottom: calc(78px + env(safe-area-inset-bottom)); right: max(14px, env(safe-area-inset-right)); width: 52px; height: 52px; }
+  .chat-panneau {
+    inset: 0; width: auto; height: auto; border-radius: 0; border: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .chat-panneau + .chat-bulle { bottom: auto; top: calc(10px + env(safe-area-inset-top)); right: 64px; width: 40px; height: 40px; opacity: 0; pointer-events: none; }
+}
+
+/* Photo de profil personnelle */
+.avatar-image img.avatar-photo { transform: none; object-position: 50% 50%; }
+.champ-fichier-cache { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* Le bouton « Envoyer une photo » est un <label> (il ouvre le choix de fichier) : même apparence qu'un bouton. */
+label.bouton {
+  position: relative; cursor: pointer; display: inline-flex; flex-direction: row; align-items: center; justify-content: center;
+  font-weight: 650; border: 1px solid transparent; border-radius: var(--rayon-petit); color: var(--accent-texte);
+  background: linear-gradient(180deg, var(--accent-vif), var(--accent) 55%, var(--accent-sombre));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 14px rgba(212, 173, 98, 0.18);
+}
+label.bouton.petit { padding: 6px 12px; min-height: 36px; font-size: 0.85rem; }
+label.bouton:hover { filter: brightness(1.07); }
+label.bouton:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+label.bouton.desactive { opacity: 0.6; cursor: progress; }

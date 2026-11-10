@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { BandeauAnnonce } from "./composants/bandeau-annonce";
 import { BandeauHorsLigne } from "./composants/bandeau-hors-ligne";
 import { BarreNavigation } from "./composants/barre-navigation";
+import { ChatFlottant } from "./composants/chat-flottant";
+import { ouvrirChat } from "./outils/chat";
 import { type CompteCourant, chargerCompteCourant } from "./outils/appels-api";
 import { naviguer, useCheminCourant } from "./outils/navigation";
 import { PageAccueil } from "./pages/page-accueil";
@@ -63,6 +65,12 @@ export function RacineApplication() {
     // La page de nouveau mot de passe reste accessible même connecté (lien reçu de l'admin).
     if (compte && pagesPubliques.includes(chemin) && chemin !== "/reinitialisation") naviguer("/");
     if (compte && chemin.startsWith("/admin") && compte.role !== "admin") naviguer("/");
+    // Le salon et les messages privés sont dans la bulle de discussion : les anciennes adresses l'ouvrent.
+    if (compte && (chemin.startsWith("/marche/salon") || chemin.startsWith("/marche/prive"))) {
+      const avec = chemin.startsWith("/marche/prive/") ? decodeURIComponent(chemin.slice("/marche/prive/".length)) : null;
+      ouvrirChat(chemin.startsWith("/marche/salon") ? { vue: "salon" } : { vue: "prive", avec });
+      naviguer("/marche", { remplacer: true });
+    }
   }, [compte, chemin]);
 
   return (
@@ -80,6 +88,7 @@ export function RacineApplication() {
           {compte && chemin !== "/reinitialisation" && <BarreNavigation compte={compte} chemin={chemin} surDeconnexion={rafraichirCompte} />}
           {compte && chemin !== "/reinitialisation" && <BandeauAnnonce />}
           <Page compte={compte} chemin={chemin} rafraichirCompte={rafraichirCompte} />
+          {compte && chemin !== "/reinitialisation" && <ChatFlottant chemin={chemin} />}
         </>
       )}
     </>
@@ -106,7 +115,7 @@ function Page({
   if (chemin === "/collection") return <PageCollection />;
   if (chemin === "/echanges") return <PageEchanges />;
   if (chemin === "/echanges/nouveau") return <PageNouvelEchange />;
-  if (chemin === "/marche" || chemin.startsWith("/marche/")) return <PageMarche chemin={chemin} />;
+  if (chemin === "/marche" || chemin.startsWith("/marche/")) return <PageMarche />;
   if (chemin.startsWith("/profil/")) {
     const pseudo = decodeURIComponent(chemin.slice("/profil/".length));
     if (/^[A-Za-z0-9_-]{3,20}$/.test(pseudo)) return <PageProfil key={pseudo} pseudo={pseudo} />;

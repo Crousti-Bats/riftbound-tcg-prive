@@ -1,32 +1,20 @@
 /**
- * Marché : annonces « Qui a ? / Qui veut ? » (tableau), salon commun et messages privés.
- * Adresses : /marche (annonces), /marche/salon, /marche/prive, /marche/prive/<pseudo>.
+ * Marché : annonces « Qui a ? / Qui veut ? » et wishlists des joueurs (tableau).
+ * Le salon et les messages privés sont dans la bulle de discussion (composants/chat-flottant.tsx).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AvatarJoueur, LienJoueur } from "../composants/avatar-joueur";
+import { LienJoueur } from "../composants/avatar-joueur";
 import { FicheCarte } from "../composants/fiche-carte";
-import { FilDiscussion } from "../composants/fil-discussion";
 import { FormulaireAnnonce } from "../composants/formulaire-annonce";
 import { ImageCarte } from "../composants/image-carte";
 import { appelerApi } from "../outils/appels-api";
 import { type Carte, classeRarete, type SetInfo } from "../outils/libelles-cartes";
-import { type Annonce, type ConversationVue, type SouhaitMarche, heureMessage, LIBELLES_ANNONCE, lienEchangeDepuisAnnonce, type TypeAnnonce } from "../outils/marche";
+import { type Annonce, type SouhaitMarche, heureMessage, LIBELLES_ANNONCE, lienEchangeDepuisAnnonce, type TypeAnnonce } from "../outils/marche";
+import { ecrireA, ouvrirChat } from "../outils/chat";
 import { naviguer } from "../outils/navigation";
 import { basculerWishlist } from "../outils/wishlist";
 
-type Onglet = "annonces" | "salon" | "prive";
-
-function lireChemin(chemin: string): { onglet: Onglet; avec: string | null } {
-  if (chemin.startsWith("/marche/salon")) return { onglet: "salon", avec: null };
-  if (chemin.startsWith("/marche/prive")) {
-    const avec = decodeURIComponent(chemin.slice("/marche/prive/".length));
-    return { onglet: "prive", avec: /^[A-Za-z0-9_-]{3,20}$/.test(avec) ? avec : null };
-  }
-  return { onglet: "annonces", avec: null };
-}
-
-export function PageMarche({ chemin }: { chemin: string }) {
-  const { onglet, avec } = lireChemin(chemin);
+export function PageMarche() {
   const [sets, setSets] = useState<SetInfo[]>([]);
   const [fiche, setFiche] = useState<{ carte: Carte; foil: boolean } | null>(null);
 
@@ -35,43 +23,17 @@ export function PageMarche({ chemin }: { chemin: string }) {
   }, []);
 
   const ouvrirFiche = useCallback((carte: Carte, foil: boolean) => setFiche({ carte, foil }), []);
-  const ecrireA = useCallback((pseudo: string) => naviguer(`/marche/prive/${encodeURIComponent(pseudo)}`), []);
   const nomSet = (code: string) => sets.find((s) => s.code === code)?.nom ?? code.toUpperCase();
 
   return (
-    <main className={`conteneur page-marche ${onglet !== "annonces" ? "page-marche-fil" : ""}`}>
+    <main className="conteneur page-marche">
       <header className="entete">
         <h1>Marché</h1>
+        <button className="secondaire" onClick={() => ouvrirChat({ vue: "salon" })}>
+          Discussion
+        </button>
       </header>
-      <nav className="onglets" aria-label="Sections du marché">
-        {(
-          [
-            ["annonces", "Annonces", "/marche"],
-            ["salon", "Salon", "/marche/salon"],
-            ["prive", "Messages privés", "/marche/prive"],
-          ] as const
-        ).map(([cle, libelle, lien]) => (
-          <button key={cle} className={onglet === cle ? "onglet actif" : "onglet"} onClick={() => naviguer(lien)}>
-            {libelle}
-          </button>
-        ))}
-      </nav>
-
-      {onglet === "annonces" && <OngletAnnonces surCarte={ouvrirFiche} surEcrire={ecrireA} />}
-      {onglet === "salon" && (
-        <section className="carte carte-fil">
-          <FilDiscussion
-            key="salon"
-            source="/marche/salon"
-            placeholder="Écris à tout le monde…"
-            vide="Personne n'a encore écrit. Lance la discussion !"
-            surCarte={ouvrirFiche}
-            surMessagePrive={ecrireA}
-          />
-        </section>
-      )}
-      {onglet === "prive" && <OngletPrive avec={avec} surCarte={ouvrirFiche} />}
-
+      <OngletAnnonces surCarte={ouvrirFiche} surEcrire={ecrireA} />
       {fiche && <FicheCarte carte={fiche.carte} nomSet={nomSet(fiche.carte.set)} foil={fiche.foil} surFermeture={() => setFiche(null)} />}
     </main>
   );
@@ -278,98 +240,5 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
         />
       )}
     </>
-  );
-}
-
-// ---------- Messages privés ----------
-
-function OngletPrive({ avec, surCarte }: { avec: string | null; surCarte: (c: Carte, foil: boolean) => void }) {
-  const [conversations, setConversations] = useState<ConversationVue[] | null>(null);
-  const [joueurs, setJoueurs] = useState<string[]>([]);
-  const [erreur, setErreur] = useState<string | null>(null);
-
-  // La liste se relit à chaque changement de conversation (non lus remis à zéro), et toutes les 15 s.
-  useEffect(() => {
-    const charger = () =>
-      appelerApi<{ conversations: ConversationVue[] }>("GET", "/marche/conversations").then(
-        (r) => setConversations(r.conversations),
-        (e: Error) => setErreur(e.message),
-      );
-    void charger();
-    const t = window.setInterval(() => document.visibilityState === "visible" && void charger(), 15_000);
-    return () => window.clearInterval(t);
-  }, [avec]);
-
-  useEffect(() => {
-    appelerApi<{ joueurs: string[] }>("GET", "/echanges/joueurs").then((r) => setJoueurs(r.joueurs), () => undefined);
-  }, []);
-
-  const ouvrir = (pseudo: string) => naviguer(`/marche/prive/${encodeURIComponent(pseudo)}`);
-
-  return (
-    <div className={`prive ${avec ? "prive-ouverte" : ""}`}>
-      <aside className="carte prive-liste">
-        <label>
-          Nouvelle conversation
-          <select value="" onChange={(e) => e.target.value && ouvrir(e.target.value)}>
-            <option value="">— Choisir un joueur —</option>
-            {joueurs.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </label>
-        {erreur && <p className="message-erreur">{erreur}</p>}
-        {conversations?.length === 0 && <p className="aide">Aucune conversation pour l'instant.</p>}
-        <ul className="liste-conversations">
-          {conversations?.map((c) => (
-            <li key={c.avec}>
-              <button className={`conversation ${c.avec === avec ? "actif" : ""}`} onClick={() => ouvrir(c.avec)}>
-                <AvatarJoueur pseudo={c.avec} avatar={c.avecAvatar} taille="petit" />
-                <span className="conversation-texte">
-                  <strong>{c.avec}</strong>
-                  <span>
-                    {c.deMoi ? "Toi : " : ""}
-                    {c.dernierMessage}
-                  </span>
-                </span>
-                <span className="conversation-meta">
-                  <time>{heureMessage(c.creeLe)}</time>
-                  {c.nonLus > 0 && c.avec !== avec && <span className="pastille">{c.nonLus}</span>}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </aside>
-
-      <section className="carte carte-fil prive-fil">
-        {avec ? (
-          <>
-            <header className="prive-entete">
-              <button className="petit secondaire prive-retour" onClick={() => naviguer("/marche/prive")}>
-                ← Conversations
-              </button>
-              <h2>
-                <LienJoueur pseudo={avec} />
-              </h2>
-              <button className="petit secondaire" onClick={() => naviguer(`/echanges/nouveau?avec=${encodeURIComponent(avec)}`)}>
-                Proposer un échange
-              </button>
-            </header>
-            <FilDiscussion
-              key={avec}
-              source={`/marche/prive/${encodeURIComponent(avec)}`}
-              placeholder={`Écris à ${avec}…`}
-              vide={`Aucun message avec ${avec} pour l'instant.`}
-              surCarte={surCarte}
-            />
-          </>
-        ) : (
-          <p className="aide fil-vide">Choisis une conversation ou un joueur à gauche.</p>
-        )}
-      </section>
-    </div>
   );
 }

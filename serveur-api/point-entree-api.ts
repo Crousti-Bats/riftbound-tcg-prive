@@ -1,5 +1,5 @@
 /** Point d'entrée de l'API : assemble les middlewares de sécurité et les routes. */
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { routesAdministration } from "./administration/routes-administration";
 import { routesAuthentification } from "./authentification/routes-authentification";
@@ -23,7 +23,11 @@ import type { ContexteApi } from "./types-application";
 export const app = new Hono<ContexteApi>();
 
 app.use("*", securityHeaders);
-app.use("/api/*", bodyLimit({ maxSize: 16 * 1024, onError: (c) => c.json({ erreur: "requete_trop_grande" }, 413) }));
+const trop = (c: Context) => c.json({ erreur: "requete_trop_grande" }, 413);
+const limiteNormale = bodyLimit({ maxSize: 16 * 1024, onError: trop });
+// Photo de profil : 150 Ko d'image, soit environ 205 Ko en base64 dans le JSON.
+const limitePhoto = bodyLimit({ maxSize: 220 * 1024, onError: trop });
+app.use("/api/*", (c, next) => (c.req.path === "/api/profils/photo" ? limitePhoto(c, next) : limiteNormale(c, next)));
 app.use("/api/*", protectionCsrf);
 app.use("/api/*", chargerSession);
 
