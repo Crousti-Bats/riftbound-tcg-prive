@@ -41,6 +41,12 @@ const ICONES = {
       <rect x="14" y="14" width="7" height="7" rx="1.2" />
     </svg>
   ),
+  marche: (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...trait}>
+      <path d="M4 5h16v11H9l-5 4z" />
+      <path d="M8 9.5h8M8 12.5h5" />
+    </svg>
+  ),
   admin: (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...trait}>
       <path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z" />
@@ -57,6 +63,7 @@ const LIENS: Lien[] = [
   { chemin: "/", libelle: "Boosters", icone: ICONES.accueil, actif: (c) => c === "/" },
   { chemin: "/collection", libelle: "Collection", icone: ICONES.collection, actif: (c) => c === "/collection" },
   { chemin: "/echanges", libelle: "Échanges", icone: ICONES.echanges, actif: (c) => c.startsWith("/echanges") },
+  { chemin: "/marche", libelle: "Marché", icone: ICONES.marche, actif: (c) => c.startsWith("/marche") },
   { chemin: "/catalogue", libelle: "Catalogue", icone: ICONES.catalogue, actif: (c) => c === "/catalogue" },
 ];
 const LIEN_ADMIN: Lien = { chemin: "/admin", libelle: "Admin", icone: ICONES.admin, actif: (c) => c.startsWith("/admin") };
@@ -71,6 +78,7 @@ export function BarreNavigation({
   surDeconnexion: () => Promise<void>;
 }) {
   const [recuesEnAttente, setRecuesEnAttente] = useState(0);
+  const [messagesNonLus, setMessagesNonLus] = useState(0);
   const liens = compte.role === "admin" ? [...LIENS, LIEN_ADMIN] : LIENS;
 
   // Pastille des propositions reçues : relue à chaque changement de page (bonus, aucune erreur affichée).
@@ -80,6 +88,23 @@ export function BarreNavigation({
       () => undefined,
     );
   }, [chemin]);
+
+  // Messages non lus (salon + privés) : relus à chaque page et toutes les 30 s tant que l'onglet est visible.
+  useEffect(() => {
+    const lire = () =>
+      appelerApi<{ salon: number; prive: number }>("GET", "/marche/non-lus").then(
+        (r) => setMessagesNonLus(r.salon + r.prive),
+        () => undefined,
+      );
+    void lire();
+    const t = window.setInterval(() => document.visibilityState === "visible" && void lire(), 30_000);
+    return () => window.clearInterval(t);
+  }, [chemin]);
+
+  const pastilles: Record<string, { nombre: number; libelle: string }> = {
+    "/echanges": { nombre: recuesEnAttente, libelle: "proposition(s) reçue(s)" },
+    "/marche": { nombre: messagesNonLus, libelle: "message(s) non lu(s)" },
+  };
 
   async function seDeconnecter() {
     await appelerApi("POST", "/auth/deconnexion", {}).catch(() => undefined);
@@ -91,9 +116,9 @@ export function BarreNavigation({
     <>
       <span className="nav-icone">
         {l.icone}
-        {l.chemin === "/echanges" && recuesEnAttente > 0 && (
-          <span className="pastille pastille-nav" aria-label={`${recuesEnAttente} proposition(s) reçue(s)`}>
-            {recuesEnAttente}
+        {(pastilles[l.chemin]?.nombre ?? 0) > 0 && (
+          <span className="pastille pastille-nav" aria-label={`${pastilles[l.chemin]?.nombre} ${pastilles[l.chemin]?.libelle}`}>
+            {Math.min(99, pastilles[l.chemin]?.nombre ?? 0)}
           </span>
         )}
       </span>

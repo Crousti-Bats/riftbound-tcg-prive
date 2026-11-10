@@ -12,6 +12,7 @@ import { PageConnexion } from "./pages/page-connexion";
 import { PageEchanges } from "./pages/page-echanges";
 import { PageNouvelEchange } from "./pages/page-nouvel-echange";
 import { PageInscription } from "./pages/page-inscription";
+import { PageMarche } from "./pages/page-marche";
 import { PageReinitialisation } from "./pages/page-reinitialisation";
 
 export function RacineApplication() {
@@ -102,6 +103,7 @@ function Page({
   if (chemin === "/collection") return <PageCollection />;
   if (chemin === "/echanges") return <PageEchanges />;
   if (chemin === "/echanges/nouveau") return <PageNouvelEchange />;
+  if (chemin === "/marche" || chemin.startsWith("/marche/")) return <PageMarche chemin={chemin} />;
   if (chemin.startsWith("/admin") && compte.role === "admin") {
     return <PageAdmin compte={compte} surChangementCompte={rafraichirCompte} />;
   }

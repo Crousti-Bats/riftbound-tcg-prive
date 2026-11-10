@@ -27,6 +27,8 @@ const schemaRecherche = z.object({
   variante: z.enum(VARIANTES).optional(),
   type: z.string().regex(/^[A-Za-z]{2,20}$/).optional(),
   recherche: z.string().trim().max(50).optional(),
+  /** Une carte précise (pré-remplissage d'un échange depuis une annonce du marché). */
+  code: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 
@@ -72,7 +74,7 @@ routesCollection.get("/joueur/:pseudo", async (c) => {
 async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number) {
   const filtres = schemaRecherche.safeParse(c.req.query());
   if (!filtres.success) return c.json({ erreur: "donnees_invalides" }, 400);
-  const { set, rarete, variante, type, recherche, page } = filtres.data;
+  const { set, rarete, variante, type, recherche, code, page } = filtres.data;
   const seulementFoil = c.req.query("foil") === "1";
   const seulementDoublons = c.req.query("doublons") === "1";
 
@@ -85,6 +87,7 @@ async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number) 
   for (const carte of catalogue.cartes) {
     const possede = possession.get(carte.code);
     if (!possede) continue;
+    if (code && carte.code !== code) continue;
     if (set && carte.set !== set) continue;
     if (rarete && carte.rarete !== rarete) continue;
     if (variante && carte.variante !== variante) continue;

@@ -9,6 +9,7 @@ import { routesCatalogue } from "./catalogue/routes-catalogue";
 import { routesCollection } from "./collection/routes-collection";
 import { routesEchanges } from "./echanges/routes-echanges";
 import { securityHeaders } from "./entetes-securite";
+import { routesMarche } from "./marche/routes-marche";
 import { enregistrerErreurServeur } from "./erreurs-serveur";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
@@ -37,6 +38,7 @@ app.route("/api/catalogue", routesCatalogue);
 app.route("/api/boosters", routesBoosters);
 app.route("/api/collection", routesCollection);
 app.route("/api/echanges", routesEchanges);
+app.route("/api/marche", routesMarche);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
