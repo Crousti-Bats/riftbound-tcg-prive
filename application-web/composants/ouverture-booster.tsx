@@ -1,6 +1,7 @@
 /** Ouverture d'un booster en plein écran : le booster officiel à déchirer, les cartes révélées une par une avec une
  *  mise en scène par rareté (moteur dans outils/ouverture-scene.ts), puis le récapitulatif des 14 cartes. */
 import "./ouverture-booster.css";
+import { type ChoixBooster, CarrouselBoosters } from "./carrousel-boosters";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { FicheCarte } from "./fiche-carte";
 import { ImageCarte } from "./image-carte";
@@ -22,10 +23,14 @@ interface Props {
   ouvrir: () => Promise<CarteOuverte[]>;
   /** Boosters encore en stock (affiché sur le bouton « Ouvrir un autre »). */
   restants: number;
+  /** Boosters proposés par « Changer de set ». */
+  boosters: ChoixBooster[];
+  /** Un autre set a été choisi dans le carrousel : le parent relance l'ouverture sur ce set. */
+  surChangerSet: (code: string) => void;
   surFermer: () => void;
 }
 
-export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, surFermer }: Props) {
+export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, boosters, surChangerSet, surFermer }: Props) {
   const racine = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene | null>(null);
   const appelOuvrir = useRef(ouvrir);
@@ -36,6 +41,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
   const [selection, setSelection] = useState<CarteOuverte | null>(null);
   // Booster encore scellé : « Retour » ramène à l'accueil sans rien consommer (le serveur n'est appelé qu'à la déchirure).
   const [scelle, setScelle] = useState(true);
+  const [carrousel, setCarrousel] = useState(false);
 
   useEffect(() => {
     appelOuvrir.current = ouvrir;
@@ -80,11 +86,19 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
   }, []);
   useEffect(() => {
     const echap = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !selection) surFermer();
+      if (e.key !== "Escape" || selection) return;
+      if (carrousel) setCarrousel(false);
+      else surFermer();
     };
     window.addEventListener("keydown", echap);
     return () => window.removeEventListener("keydown", echap);
-  }, [selection, surFermer]);
+  }, [selection, carrousel, surFermer]);
+
+  function choisirBooster(code: string) {
+    setCarrousel(false);
+    if (code === set) ouvrirUnAutre();
+    else surChangerSet(code);
+  }
 
   function basculerSon() {
     definirSon(!son);
@@ -180,7 +194,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
               </span>
             </button>
             <div className="ob-actions-secondaires">
-              <button type="button" className="ob-bouton-pilule" onClick={surFermer}>
+              <button type="button" className="ob-bouton-pilule" onClick={() => setCarrousel(true)}>
                 Changer de set
               </button>
               <button type="button" className="ob-bouton-pilule" onClick={() => naviguer("/collection")}>
@@ -189,6 +203,10 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
             </div>
           </div>
         </section>
+      )}
+
+      {carrousel && (
+        <CarrouselBoosters boosters={boosters} actuel={set} restants={restants} surChoix={choisirBooster} surFermer={() => setCarrousel(false)} />
       )}
 
       {selection && (
