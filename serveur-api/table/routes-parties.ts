@@ -6,7 +6,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
+import { estToken } from "../decks/regles-deck";
 import { chargerDeckJouable } from "../decks/routes-decks";
+import { obtenirCatalogue } from "../catalogue/source-cartes";
 import { lireCorps } from "../lecture-requete";
 import { compterTentative, REGLES } from "../securite/limitation-tentatives";
 import type { ContexteApi } from "../types-application";
@@ -160,6 +162,8 @@ routesParties.post("/:code/rejoindre", async (c) => {
         { id: partie.createur_id, pseudo: partie.createur, deck: deckCreateur.deck },
         { id: compte.id, pseudo: compte.pseudo, deck: deckInvite.deck },
       ],
+      // Tokens du jeu que l'on pourra créer sur la table (Recruit, Sprite, Gold…).
+      tokens: (await obtenirCatalogue()).cartes.filter(estToken).map((carte) => carte.code),
     }),
   });
   if (!reponse.ok) {
