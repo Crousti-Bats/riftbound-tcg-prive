@@ -1,6 +1,7 @@
 /** Hub d'ouverture (bandeau principal de l'accueil) : stock de boosters, minuteur du prochain, choix du set, bouton Ouvrir, puis l'overlay de révélation. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ApercuBooster } from "./apercu-booster";
 import { OuvertureBooster } from "./ouverture-booster";
 import { appelerApi } from "../outils/appels-api";
 import { type CarteOuverte, formaterDuree } from "../outils/libelles-cartes";
@@ -36,7 +37,12 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const [enOuverture, setEnOuverture] = useState(false);
   // Illustration affichée pour chaque set : elle change à chaque fois qu'on revient sur le set.
   const [illustrations, setIllustrations] = useState<Record<string, number>>({});
-  const fermer = useCallback(() => setEnOuverture(false), []);
+  // Relue par l'aperçu à chaque fermeture de l'ouverture (de nouvelles cartes ont pu être obtenues).
+  const [versionCollection, setVersionCollection] = useState(0);
+  const fermer = useCallback(() => {
+    setEnOuverture(false);
+    setVersionCollection((v) => v + 1);
+  }, []);
   const rechargement = useRef(false);
 
   const appliquerEtat = useCallback((e: EtatBoosters) => {
@@ -87,7 +93,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
 
   const stock = etat?.stock;
   const actuel = stock?.actuel ?? 0;
-  const max = stock?.max ?? 15;
+  const max = stock?.max ?? 10;
   const visuel = set in ILLUSTRATIONS_PAR_SET ? set : "ogn";
   const illustration = illustrations[visuel] ?? 1;
 
@@ -114,101 +120,104 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const peutOuvrir = Boolean(set) && actuel >= 1;
 
   return (
-    <section className="hero-booster" aria-labelledby="titre-boosters">
-      <div className="hero-fond" style={{ backgroundImage: `url(/ouverture/fond-${visuel}.jpg)` }} aria-hidden="true" />
-      <div className="hero-contenu">
-        <div className="hero-infos">
-          <p className="surtitre">Bonjour {pseudo}</p>
-          <h1 id="titre-boosters">Ouvre tes boosters</h1>
+    <>
+      <section className="hero-booster" aria-labelledby="titre-boosters">
+        <div className="hero-fond" style={{ backgroundImage: `url(/ouverture/fond-${visuel}.jpg)` }} aria-hidden="true" />
+        <div className="hero-contenu">
+          <div className="hero-infos">
+            <p className="surtitre">Bonjour {pseudo}</p>
+            <h1 id="titre-boosters">Ouvre tes boosters</h1>
 
-          {!etat && !erreur && <p className="aide">Chargement…</p>}
-          {etat && (
-            <>
-              <div className="stock">
-                <p className="stock-boosters">
-                  <span className="stock-nombre">{actuel}</span>
-                  <span className="stock-max">/ {max}</span>
-                  <span className="stock-libelle">
-                    booster{actuel > 1 ? "s" : ""} disponible{actuel > 1 ? "s" : ""}
-                  </span>
-                </p>
-                <div className="jauge-stock" role="img" aria-label={`${actuel} boosters sur ${max}`}>
-                  {Array.from({ length: max }, (_, i) => (
-                    <span key={i} className={i < actuel ? "plein" : undefined} />
+            {!etat && !erreur && <p className="aide">Chargement…</p>}
+            {etat && (
+              <>
+                <div className="stock">
+                  <p className="stock-boosters">
+                    <span className="stock-nombre">{actuel}</span>
+                    <span className="stock-max">/ {max}</span>
+                    <span className="stock-libelle">
+                      booster{actuel > 1 ? "s" : ""} disponible{actuel > 1 ? "s" : ""}
+                    </span>
+                  </p>
+                  <div className="jauge-stock" role="img" aria-label={`${actuel} boosters sur ${max}`}>
+                    {Array.from({ length: max }, (_, i) => (
+                      <span key={i} className={i < actuel ? "plein" : undefined} />
+                    ))}
+                  </div>
+                  <p className="minuteur">
+                    {actuel >= max ? (
+                      "Stock plein : ouvre-en un pour relancer le minuteur."
+                    ) : (
+                      <>
+                        Prochain booster dans <strong>{formaterDuree(restantMs)}</strong>
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <div className="choix-sets" role="radiogroup" aria-label="Set du booster">
+                  {etat.sets.map((s) => (
+                    <button
+                      key={s.code}
+                      type="button"
+                      role="radio"
+                      aria-checked={s.code === set}
+                      className={s.code === set ? "puce-set actif" : "puce-set"}
+                      onClick={() => choisirSet(s.code)}
+                    >
+                      {s.nom}
+                    </button>
                   ))}
                 </div>
-                <p className="minuteur">
-                  {actuel >= max ? (
-                    "Stock plein : ouvre-en un pour relancer le minuteur."
-                  ) : (
-                    <>
-                      Prochain booster dans <strong>{formaterDuree(restantMs)}</strong>
-                    </>
-                  )}
-                </p>
-              </div>
 
-              <div className="choix-sets" role="radiogroup" aria-label="Set du booster">
-                {etat.sets.map((s) => (
-                  <button
-                    key={s.code}
-                    type="button"
-                    role="radio"
-                    aria-checked={s.code === set}
-                    className={s.code === set ? "puce-set actif" : "puce-set"}
-                    onClick={() => choisirSet(s.code)}
-                  >
-                    {s.nom}
-                  </button>
-                ))}
-              </div>
+                <button className="bouton-principal" onClick={() => setEnOuverture(true)} disabled={!peutOuvrir}>
+                  {actuel < 1 ? "Plus de booster pour l'instant" : `Ouvrir un booster ${nomSet}`}
+                </button>
+              </>
+            )}
+            {erreur && <p className="message-erreur">{erreur}</p>}
+          </div>
 
-              <button className="bouton-principal" onClick={() => setEnOuverture(true)} disabled={!peutOuvrir}>
-                {actuel < 1 ? "Plus de booster pour l'instant" : `Ouvrir un booster ${nomSet}`}
-              </button>
-            </>
+          {etat && (
+            <button
+              type="button"
+              className="hero-paquet"
+              onClick={() => setEnOuverture(true)}
+              disabled={!peutOuvrir}
+              aria-label={`Ouvrir un booster ${nomSet}`}
+            >
+              <img
+                key={`${visuel}-${illustration}`}
+                src={`/ouverture/booster-${visuel}-${illustration}.webp`}
+                alt=""
+                width="621"
+                height="1100"
+              />
+            </button>
           )}
-          {erreur && <p className="message-erreur">{erreur}</p>}
         </div>
 
-        {etat && (
-          <button
-            type="button"
-            className="hero-paquet"
-            onClick={() => setEnOuverture(true)}
-            disabled={!peutOuvrir}
-            aria-label={`Ouvrir un booster ${nomSet}`}
-          >
-            <img
-              key={`${visuel}-${illustration}`}
-              src={`/ouverture/booster-${visuel}-${illustration}.webp`}
-              alt=""
-              width="621"
-              height="1100"
-            />
-          </button>
-        )}
-      </div>
-
-      {/* Rendu à la racine du document : le bandeau crée son propre empilement (isolation), qui laisserait
-          la barre de navigation passer par-dessus l'ouverture et cacher ses boutons. */}
-      {enOuverture &&
-        set &&
-        createPortal(
-          <OuvertureBooster
-            key={set}
-            set={set}
-            nomSet={nomSet}
-            illustration={illustration}
-            ouvrir={ouvrirSetChoisi}
-            restants={actuel}
-            boosters={choixBoosters}
-            surChangerSet={setSet}
-            surOuvrirCarrousel={changerToutesLesIllustrations}
-            surFermer={fermer}
-          />,
-          document.body,
-        )}
-    </section>
+        {/* Rendu à la racine du document : le bandeau crée son propre empilement (isolation), qui laisserait
+            la barre de navigation passer par-dessus l'ouverture et cacher ses boutons. */}
+        {enOuverture &&
+          set &&
+          createPortal(
+            <OuvertureBooster
+              key={set}
+              set={set}
+              nomSet={nomSet}
+              illustration={illustration}
+              ouvrir={ouvrirSetChoisi}
+              restants={actuel}
+              boosters={choixBoosters}
+              surChangerSet={setSet}
+              surOuvrirCarrousel={changerToutesLesIllustrations}
+              surFermer={fermer}
+            />,
+            document.body,
+          )}
+      </section>
+      {etat && set && <ApercuBooster set={set} nomSet={nomSet} version={versionCollection} />}
+    </>
   );
 }

@@ -1,7 +1,7 @@
 /**
  * Stock de boosters : calcul PARESSEUX, sans tâche planifiée (aucun coût).
  * On stocke en base (stockSauve, tick). Le stock réel se recalcule à la lecture :
- *   stock = min(15, stockSauve + floor((maintenant - tick) / 10 min)).
+ *   stock = min(STOCK_MAX, stockSauve + floor((maintenant - tick) / INTERVALLE_REGEN_MS)), soit 10 et 20 min.
  */
 import { INTERVALLE_REGEN_MS, STOCK_MAX } from "./configuration-taux";
 

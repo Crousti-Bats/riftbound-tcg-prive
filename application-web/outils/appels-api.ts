@@ -40,7 +40,8 @@ const MESSAGES: Record<string, string> = {
   aucun_abonnement: "Aucun appareil abonné : active d'abord les notifications.",
   aucune_annonce: "Aucune annonce en cours.",
   carte_introuvable: "Cette carte n'existe pas dans le catalogue.",
-  trop_de_modifications: "Tu as modifié ton profil trop souvent. Réessaie dans une heure.",
+  wishlist_pleine: "Ta wishlist est pleine (100 cartes). Retires-en une avant d'en ajouter.",
+  trop_de_modifications: "Trop de modifications d'affilée. Réessaie dans une heure.",
   hors_ligne: "Pas de connexion Internet. Réessaie quand tu seras de nouveau en ligne.",
   serveur_injoignable: "Le serveur ne répond pas. Réessaie dans un instant.",
 };

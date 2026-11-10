@@ -1,11 +1,11 @@
 /**
  * Tâche planifiée (toutes les 5 minutes, voir « triggers » dans cloudflare-wrangler.jsonc) :
- * prévient par notification push les joueurs dont le stock vient d'atteindre 15/15.
+ * prévient par notification push les joueurs dont le stock vient d'atteindre le maximum (STOCK_MAX).
  *
  * Le stock est calculé « paresseusement » (aucune écriture quand il remonte) : on calcule donc l'instant
- * où il atteint 15 = boosters_tick + (15 − stock_boosters) × 10 min. Cet instant est mémorisé dans
+ * où il atteint le maximum = boosters_tick + (STOCK_MAX − stock_boosters) × INTERVALLE_REGEN_MS. Cet instant est mémorisé dans
  * boosters_plein_notifie : une seule notification par remplissage. Ouvrir un booster change l'instant,
- * donc le remplissage suivant sera notifié à son tour. Un compte resté à 15 sans rien ouvrir n'est pas notifié.
+ * donc le remplissage suivant sera notifié à son tour. Un compte resté au maximum sans rien ouvrir n'est pas notifié.
  */
 import { INTERVALLE_REGEN_MS, STOCK_MAX } from "../boosters/configuration-taux";
 import type { ClesVapid } from "./web-push";

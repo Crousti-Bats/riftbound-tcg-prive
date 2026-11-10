@@ -672,3 +672,31 @@ button.bandeau-annonce-fermer:hover:not(:disabled) { color: var(--texte); border
   .vitrine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .avatar-grand { width: 92px; height: 92px; }
 }
+
+/* ---------- Wishlist ---------- */
+.actions-fiche { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.bouton-wishlist span { color: #ff7a9c; }
+.bouton-wishlist.actif { background: rgba(255, 79, 123, 0.14); color: #ffc2d1; border: 1px solid rgba(255, 79, 123, 0.55); box-shadow: none; }
+.bouton-wishlist.actif:hover:not(:disabled) { background: rgba(255, 79, 123, 0.22); filter: none; }
+.badge-wishlist {
+  position: absolute; top: 6px; left: 6px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  font-size: 0.85rem; color: #ff7a9c; background: rgba(5, 8, 15, 0.82); border: 1px solid rgba(255, 79, 123, 0.5);
+}
+.etiquettes-annonce { display: flex; flex-wrap: wrap; gap: 6px; }
+.etiquette-wishlist { color: #ffb3c6; background: rgba(255, 79, 123, 0.12); }
+
+/* ---------- Aperçu d'un booster (avant ouverture) ---------- */
+.apercu-booster { display: flex; flex-direction: column; gap: 14px; }
+.apercu-entete { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.apercu-entete h2 { margin: 0; }
+.apercu-groupes { display: flex; flex-direction: column; gap: 16px; }
+.apercu-groupe { display: flex; flex-direction: column; gap: 8px; padding-left: 12px; border-left: 3px solid var(--c); }
+.apercu-groupe-titre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0; }
+.apercu-groupe-titre strong { color: var(--c); font-size: 1.05rem; }
+.apercu-groupe-titre span:not(.aide) { font-variant-numeric: tabular-nums; color: var(--texte); font-weight: 600; }
+.apercu-rangee { display: grid; grid-auto-flow: column; grid-auto-columns: 96px; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: thin; }
+.apercu-non-obtenue .cadre-carte img { filter: grayscale(0.85) brightness(0.55); }
+.apercu-non-obtenue:hover .cadre-carte img, .apercu-non-obtenue:focus-visible .cadre-carte img { filter: none; }
+.apercu-progression { max-width: 420px; }
+.apercu-plus { align-self: center; }
+@media (max-width: 600px) { .apercu-rangee { grid-auto-columns: 84px; } }

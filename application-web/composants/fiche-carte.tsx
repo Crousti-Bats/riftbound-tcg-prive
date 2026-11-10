@@ -1,6 +1,7 @@
 /** Fiche détaillée d'une carte, en fenêtre modale. Partagée par le catalogue, la collection et l'ouverture. */
 import { ImageCarte } from "./image-carte";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { basculerWishlist, useWishlist } from "../outils/wishlist";
 import { type Carte, classeRarete, LIBELLES_RARETE, LIBELLES_VARIANTE } from "../outils/libelles-cartes";
 
 interface Props {
@@ -14,6 +15,10 @@ interface Props {
 }
 
 export function FicheCarte({ carte, nomSet, surFermeture, possession, foil }: Props) {
+  const wishlist = useWishlist();
+  const enWishlist = wishlist.has(carte.code);
+  const [erreurWishlist, setErreurWishlist] = useState<string | null>(null);
+
   useEffect(() => {
     const echap = (e: KeyboardEvent) => e.key === "Escape" && surFermeture();
     window.addEventListener("keydown", echap);
@@ -89,7 +94,21 @@ export function FicheCarte({ carte, nomSet, surFermeture, possession, foil }: Pr
             )}
           </dl>
           {carte.texte && <p className="texte-carte">{carte.texte}</p>}
-          <button onClick={surFermeture}>Fermer</button>
+          <div className="actions-fiche">
+            <button
+              className={enWishlist ? "bouton-wishlist actif" : "bouton-wishlist secondaire"}
+              aria-pressed={enWishlist}
+              onClick={() => {
+                setErreurWishlist(null);
+                basculerWishlist(carte.code).catch((e: Error) => setErreurWishlist(e.message));
+              }}
+              title={enWishlist ? "Retirer de ma wishlist" : "Ajouter à ma wishlist : elle apparaîtra dans « Qui a ? » au marché"}
+            >
+              <span aria-hidden="true">{enWishlist ? "♥" : "♡"}</span> {enWishlist ? "Dans ma wishlist" : "Ajouter à ma wishlist"}
+            </button>
+            <button onClick={surFermeture}>Fermer</button>
+          </div>
+          {erreurWishlist && <p className="message-erreur">{erreurWishlist}</p>}
         </div>
       </div>
     </div>

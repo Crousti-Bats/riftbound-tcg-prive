@@ -219,7 +219,7 @@ function OngletAnnonce({ surExpiration }: { surExpiration: () => Promise<void> }
             maxLength={LONGUEUR_MAX_ANNONCE}
             rows={3}
             required
-            placeholder="Ex. : Tous les boosters sont remis à 15/15, bonnes ouvertures !"
+            placeholder="Ex. : Tous les boosters sont remis à 10/10, bonnes ouvertures !"
           />
         </label>
         <button type="submit" disabled={!texte.trim()}>

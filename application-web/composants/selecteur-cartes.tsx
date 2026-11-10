@@ -6,7 +6,7 @@ import { ImageCarte } from "./image-carte";
 import { useEffect, useState } from "react";
 import { appelerApi } from "../outils/appels-api";
 import { cleLigne } from "../outils/echanges";
-import { type CartePossedee, classeRarete, type SetInfo } from "../outils/libelles-cartes";
+import { type CartePossedee, classeRarete, libelleRarete, type SetInfo } from "../outils/libelles-cartes";
 import { FiltresCartes } from "./filtres-cartes";
 import { Pagination } from "./pagination";
 
@@ -35,6 +35,7 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
   const [filtreSet, setFiltreSet] = useState("");
   const [rarete, setRarete] = useState("");
   const [variante, setVariante] = useState("");
+  const [tri, setTri] = useState("");
   const [typeCarte, setTypeCarte] = useState("");
   const [recherche, setRecherche] = useState("");
   const [rechercheAppliquee, setRechercheAppliquee] = useState("");
@@ -55,6 +56,7 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
     if (filtreSet) parametres.set("set", filtreSet);
     if (rarete) parametres.set("rarete", rarete);
     if (variante) parametres.set("variante", variante);
+    if (tri) parametres.set("tri", tri);
     if (typeCarte) parametres.set("type", typeCarte);
     if (rechercheAppliquee) parametres.set("recherche", rechercheAppliquee);
     appelerApi<ReponseCollection>("GET", `${source}?${parametres.toString()}`).then(
@@ -64,7 +66,7 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
       },
       (e: Error) => setErreur(e.message),
     );
-  }, [source, filtreSet, rarete, variante, typeCarte, rechercheAppliquee, page]);
+  }, [source, filtreSet, rarete, variante, tri, typeCarte, rechercheAppliquee, page]);
 
   const nbPages = resultat ? Math.max(1, Math.ceil(resultat.total / resultat.parPage)) : 1;
   const changerFiltre = (maj: () => void) => {
@@ -86,6 +88,8 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
         surRarete={(v) => changerFiltre(() => setRarete(v))}
         variante={variante}
         surVariante={(v) => changerFiltre(() => setVariante(v))}
+        tri={tri}
+        surTri={(v) => changerFiltre(() => setTri(v))}
       />
       {erreur && <p className="message-erreur">{erreur}</p>}
       {!resultat && !erreur && <p className="aide">Chargement…</p>}
@@ -108,7 +112,10 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
                 />
                 <span className="badge-quantite">×{carte.quantite + carte.quantiteFoil}</span>
               </span>
-              <span className="legende-carte">{carte.nom}</span>
+              <span className="legende-carte">
+                {carte.nom}
+                <small>{libelleRarete(carte)}</small>
+              </span>
               {mode === "echange" ? (
               <span className="boutons-ajout">
                 {carte.quantite > 0 && (

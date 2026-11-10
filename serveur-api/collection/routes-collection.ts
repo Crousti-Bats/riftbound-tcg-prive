@@ -4,7 +4,7 @@ import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { schemaPseudo } from "../validation-donnees";
 import { exigerConnexion } from "../authentification/sessions";
-import { correspondAuType } from "../catalogue/classification-cartes";
+import { correspondAuType, TRIS, trierParRarete } from "../catalogue/classification-cartes";
 import { sansAccents } from "../catalogue/recherche-texte";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
 import { RARETES, VARIANTES } from "../catalogue/types-catalogue";
@@ -29,6 +29,7 @@ const schemaRecherche = z.object({
   recherche: z.string().trim().max(50).optional(),
   /** Une carte précise (pré-remplissage d'un échange depuis une annonce du marché). */
   code: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
+  tri: z.enum(TRIS).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 
@@ -74,7 +75,7 @@ routesCollection.get("/joueur/:pseudo", async (c) => {
 async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number) {
   const filtres = schemaRecherche.safeParse(c.req.query());
   if (!filtres.success) return c.json({ erreur: "donnees_invalides" }, 400);
-  const { set, rarete, variante, type, recherche, code, page } = filtres.data;
+  const { set, rarete, variante, type, recherche, code, tri, page } = filtres.data;
   const seulementFoil = c.req.query("foil") === "1";
   const seulementDoublons = c.req.query("doublons") === "1";
 
@@ -83,7 +84,7 @@ async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number) 
   const mots = recherche ? sansAccents(recherche).split(/\s+/).filter(Boolean) : [];
 
   // On parcourt le catalogue (déjà trié) pour garder le même ordre d'affichage.
-  const cartes = [];
+  const trouvees = [];
   for (const carte of catalogue.cartes) {
     const possede = possession.get(carte.code);
     if (!possede) continue;
@@ -98,8 +99,9 @@ async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number) 
       const texte = sansAccents(`${carte.nom} ${carte.sousTitre ?? ""} ${carte.type} ${carte.domaines.join(" ")} ${carte.numero}`);
       if (!mots.every((m) => texte.includes(m))) continue;
     }
-    cartes.push({ ...carte, quantite: possede.normale, quantiteFoil: possede.foil });
+    trouvees.push({ ...carte, quantite: possede.normale, quantiteFoil: possede.foil });
   }
+  const cartes = trierParRarete(trouvees, tri);
 
   const debut = (page - 1) * CARTES_PAR_PAGE;
   return c.json({ cartes: cartes.slice(debut, debut + CARTES_PAR_PAGE), total: cartes.length, page, parPage: CARTES_PAR_PAGE });

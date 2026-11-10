@@ -5,7 +5,7 @@ import { FicheCarte } from "../composants/fiche-carte";
 import { FiltresCartes } from "../composants/filtres-cartes";
 import { Pagination } from "../composants/pagination";
 import { appelerApi } from "../outils/appels-api";
-import { type CartePossedee, classeRarete, type SetInfo } from "../outils/libelles-cartes";
+import { type CartePossedee, classeRarete, libelleRarete, type SetInfo } from "../outils/libelles-cartes";
 import { naviguer } from "../outils/navigation";
 
 interface ReponseCollection {
@@ -25,6 +25,7 @@ export function PageCollection() {
   const [filtreSet, setFiltreSet] = useState("");
   const [rarete, setRarete] = useState("");
   const [variante, setVariante] = useState("");
+  const [tri, setTri] = useState("");
   const [typeCarte, setTypeCarte] = useState("");
   const [recherche, setRecherche] = useState("");
   const [rechercheAppliquee, setRechercheAppliquee] = useState("");
@@ -52,6 +53,7 @@ export function PageCollection() {
     if (filtreSet) parametres.set("set", filtreSet);
     if (rarete) parametres.set("rarete", rarete);
     if (variante) parametres.set("variante", variante);
+    if (tri) parametres.set("tri", tri);
     if (typeCarte) parametres.set("type", typeCarte);
     if (rechercheAppliquee) parametres.set("recherche", rechercheAppliquee);
     if (foil) parametres.set("foil", "1");
@@ -63,7 +65,7 @@ export function PageCollection() {
       },
       (e: Error) => setErreur(e.message),
     );
-  }, [filtreSet, rarete, variante, typeCarte, rechercheAppliquee, foil, doublons, page]);
+  }, [filtreSet, rarete, variante, tri, typeCarte, rechercheAppliquee, foil, doublons, page]);
 
   const sets = useMemo<SetInfo[]>(
     () => (resume?.parSet ?? []).map((s) => ({ code: s.code, nom: s.nom, ouvrable: true, nbCartes: s.total })),
@@ -122,6 +124,8 @@ export function PageCollection() {
         surRarete={(v) => changerFiltre(() => setRarete(v))}
         variante={variante}
         surVariante={(v) => changerFiltre(() => setVariante(v))}
+        tri={tri}
+        surTri={(v) => changerFiltre(() => setTri(v))}
       >
         <label className="bascule">
           <input type="checkbox" checked={foil} onChange={(e) => changerFiltre(() => setFoil(e.target.checked))} /> Foil
@@ -171,7 +175,10 @@ export function PageCollection() {
               <span className="badge-quantite">×{carte.quantite + carte.quantiteFoil}</span>
               {carte.quantiteFoil > 0 && <span className="badge-foil">✨</span>}
             </span>
-            <span className="legende-carte">{carte.nom}</span>
+            <span className="legende-carte">
+              {carte.nom}
+              <small>{libelleRarete(carte)}</small>
+            </span>
           </button>
         ))}
       </section>

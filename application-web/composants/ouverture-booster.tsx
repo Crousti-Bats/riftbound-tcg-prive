@@ -11,6 +11,24 @@ import { REVELATION, categorieRevelation } from "../outils/ouverture-revelation"
 import { type Scene, monterScene } from "../outils/ouverture-scene";
 import { definirSon, sonActif } from "../outils/ouverture-sons";
 
+const CLE_SANS_ANIMATION = "riftbound-ouverture-sans-animation";
+
+/** Préférence « Animations coupées », retenue dans ce navigateur (stockage indisponible : animations actives). */
+function lireSansAnimation(): boolean {
+  try {
+    return localStorage.getItem(CLE_SANS_ANIMATION) === "1";
+  } catch {
+    return false;
+  }
+}
+function ecrireSansAnimation(valeur: boolean): void {
+  try {
+    localStorage.setItem(CLE_SANS_ANIMATION, valeur ? "1" : "0");
+  } catch {
+    /* préférence non retenue */
+  }
+}
+
 /** Sets qui ont une ambiance dédiée (mêmes clés que dans outils/ouverture-scene.ts). */
 const SETS_VISUELS = ["ogn", "sfd", "unl", "ven", "rad"];
 
@@ -44,6 +62,8 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
   // Booster encore scellé : « Retour » ramène à l'accueil sans rien consommer (le serveur n'est appelé qu'à la déchirure).
   const [scelle, setScelle] = useState(true);
   const [carrousel, setCarrousel] = useState(false);
+  const [sansAnimation, setSansAnimation] = useState(lireSansAnimation);
+  const sansAnimationRef = useRef(sansAnimation);
 
   useEffect(() => {
     appelOuvrir.current = ouvrir;
@@ -68,6 +88,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
       surTerminee: setRecap,
       surErreur: setErreur,
       surAvis: setAvis,
+      sansAnimation: () => sansAnimationRef.current,
     });
     scene.current = s;
     return () => {
@@ -106,6 +127,15 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
     else surChangerSet(code);
   }
 
+  function basculerAnimation() {
+    const valeur = !sansAnimation;
+    sansAnimationRef.current = valeur;
+    ecrireSansAnimation(valeur);
+    setSansAnimation(valeur);
+    // Couper les animations pendant une révélation l'annule tout de suite.
+    if (valeur && !scelle && !recap) scene.current?.passer();
+  }
+
   function basculerSon() {
     definirSon(!son);
     setSon(!son);
@@ -134,6 +164,20 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
           <small>Ouverture de booster</small>
         </h2>
         <div className="ob-reglages">
+          {!scelle && !recap && (
+            <button type="button" className="ob-bouton-discret ob-bouton-passer" onClick={() => scene.current?.passer()}>
+              Passer l'animation <span aria-hidden="true">⏭</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="ob-bouton-discret"
+            aria-pressed={!sansAnimation}
+            onClick={basculerAnimation}
+            title="Sans animation : le récapitulatif s'affiche dès que le booster est déchiré"
+          >
+            {sansAnimation ? "Animations coupées" : "Animations"}
+          </button>
           <button type="button" className="ob-bouton-discret" aria-pressed={son} onClick={basculerSon}>
             {son ? "Son activé" : "Son coupé"}
           </button>

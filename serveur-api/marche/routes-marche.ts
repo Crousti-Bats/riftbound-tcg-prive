@@ -117,20 +117,50 @@ routesMarche.get("/annonces", async (c) => {
     .all<{ card_code: string; n: number }>();
   const possede = new Map(miennes.map((r) => [r.card_code, r.n]));
 
+  // Wishlists : chaque carte recherchée et pas encore possédée apparaît dans « Qui a ? » (sans doublon avec
+  // une annonce « Qui a ? » du même joueur pour la même carte).
+  const { results: souhaits } = await base
+    .prepare(
+      `SELECT w.compte_id, c.pseudo AS auteur, c.avatar_card_code AS auteur_avatar, w.card_code, w.ajoutee_le
+       FROM wishlist w JOIN comptes c ON c.id = w.compte_id
+       WHERE c.actif = 1
+         AND NOT EXISTS (SELECT 1 FROM collection x WHERE x.compte_id = w.compte_id AND x.card_code = w.card_code AND x.quantite > 0)
+         AND NOT EXISTS (SELECT 1 FROM annonces a WHERE a.compte_id = w.compte_id AND a.card_code = w.card_code
+                           AND a.type = 'cherche' AND a.retiree_le IS NULL AND a.expire_le > ?)
+       ORDER BY w.ajoutee_le DESC LIMIT 500`,
+    )
+    .bind(Date.now())
+    .all<{ compte_id: number; auteur: string; auteur_avatar: string | null; card_code: string; ajoutee_le: number }>();
+
   const parCode = await cartesParCode();
   const { set, recherche } = filtres.data;
   const mots = recherche ? sansAccents(recherche).split(/\s+/).filter(Boolean) : [];
+  const garder = (carte: CarteCatalogue | null): carte is CarteCatalogue => {
+    if (!carte) return false;
+    if (set && carte.set !== set) return false;
+    if (mots.length) {
+      const texte = sansAccents(`${carte.nom} ${carte.sousTitre ?? ""} ${carte.type} ${carte.numero}`);
+      if (!mots.every((m) => texte.includes(m))) return false;
+    }
+    return true;
+  };
+  const wishlists = souhaits.flatMap((w) => {
+    const carte = parCode.get(w.card_code) ?? null;
+    if (!garder(carte)) return [];
+    return [
+      {
+        auteur: w.auteur,
+        auteurAvatar: imageAvatar(parCode, w.auteur_avatar),
+        estMoi: w.compte_id === compte.id,
+        creeLe: w.ajoutee_le,
+        carte,
+        jePossede: possede.get(w.card_code) ?? 0,
+      },
+    ];
+  });
   const annonces = results
     .map((a) => ({ ligne: a, carte: parCode.get(a.card_code) ?? null }))
-    .filter(({ carte }) => {
-      if (!carte) return false;
-      if (set && carte.set !== set) return false;
-      if (mots.length) {
-        const texte = sansAccents(`${carte.nom} ${carte.sousTitre ?? ""} ${carte.type} ${carte.numero}`);
-        if (!mots.every((m) => texte.includes(m))) return false;
-      }
-      return true;
-    })
+    .filter(({ carte }) => garder(carte))
     .map(({ ligne: a, carte }) => ({
       id: a.id,
       type: a.type,
@@ -143,7 +173,7 @@ routesMarche.get("/annonces", async (c) => {
       carte,
       jePossede: possede.get(a.card_code) ?? 0,
     }));
-  return c.json({ annonces, peutModerer: estModerateur(compte) });
+  return c.json({ annonces, wishlists, peutModerer: estModerateur(compte) });
 });
 
 routesMarche.post("/annonces", async (c) => {
