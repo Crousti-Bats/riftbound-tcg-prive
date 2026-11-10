@@ -3,7 +3,7 @@
  * rejoint), en cours (le plateau, en direct), terminée. Table libre : on déplace soi-même ses cartes.
  * Un clic sur une carte ouvre ses actions (jouer, déplacer, incliner, marqueurs…) ; un clic sur une pile agit dessus.
  */
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { ImageCarte } from "../composants/image-carte";
 import { appelerApi } from "../outils/appels-api";
 import type { Carte } from "../outils/libelles-cartes";
@@ -184,16 +184,6 @@ const NOM_CARTE = (c: Carte | undefined) => (c ? (c.sousTitre ? `${c.nom}, ${c.s
 
 function Plateau({ code }: { code: string }) {
   const { vue, etat, erreur, effacerErreur, envoyer } = useSalle(code, true);
-  const cartes = useCartesTable(vue);
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [pile, setPile] = useState<{ zone: string; titre: string } | null>(null);
-  const [mulligan, setMulligan] = useState<string[] | null>(null);
-  const [message, setMessage] = useState("");
-  const [journalOuvert, setJournalOuvert] = useState(false);
-  const [choixToken, setChoixToken] = useState(false);
-
-  // La carte sélectionnée a pu bouger (ou disparaître) : on suit sa nouvelle position.
-  const selectionActuelle = vue && selection ? retrouverCarte(vue, selection.carte.id) : null;
 
   if (etat === "terminee") {
     return (
@@ -210,7 +200,63 @@ function Plateau({ code }: { code: string }) {
     return <main className="conteneur"><p className="aide">{etat === "deconnecte" ? "Connexion perdue, reconnexion…" : "Connexion à la table…"}</p></main>;
   }
 
-  const moi = vue.moi;
+  function quitter() {
+    if (!window.confirm("Quitter la partie ? Elle sera terminée pour les deux joueurs.")) return;
+    appelerApi("DELETE", `/parties/${code}`).then(() => naviguer("/jouer"), () => naviguer("/jouer"));
+  }
+
+  return (
+    <PlateauTable
+      vue={vue}
+      moi={vue.moi}
+      envoyer={envoyer}
+      erreur={erreur}
+      effacerErreur={effacerErreur}
+      statut={<span className={`table-connexion table-connexion-${etat}`}>{etat === "connecte" ? "En direct" : "Reconnexion…"}</span>}
+      surQuitter={quitter}
+    />
+  );
+}
+
+/**
+ * Le plateau lui-même, sans connexion : partie en ligne (Plateau) ou partie solo du tutoriel (page-tutoriel.tsx).
+ * `envoyer` transmet l'action (à la salle, ou au moteur local) ; `enfants` s'affiche par-dessus (panneau du tutoriel).
+ */
+export function PlateauTable({
+  vue,
+  moi,
+  envoyer,
+  erreur,
+  effacerErreur,
+  statut,
+  surQuitter,
+  libelleQuitter = "Quitter",
+  sansMulligan,
+  enfants,
+}: {
+  vue: VueTable;
+  moi: IndexJoueur;
+  envoyer: (action: ActionTable) => void;
+  erreur: string | null;
+  effacerErreur: () => void;
+  statut: ReactNode;
+  surQuitter: () => void;
+  libelleQuitter?: string;
+  /** Masque le bouton « Mulligan » (le tutoriel s'en charge). */
+  sansMulligan?: boolean;
+  enfants?: ReactNode;
+}) {
+  const cartes = useCartesTable(vue);
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [pile, setPile] = useState<{ zone: string; titre: string } | null>(null);
+  const [mulligan, setMulligan] = useState<string[] | null>(null);
+  const [message, setMessage] = useState("");
+  const [journalOuvert, setJournalOuvert] = useState(false);
+  const [choixToken, setChoixToken] = useState(false);
+
+  // La carte sélectionnée a pu bouger (ou disparaître) : on suit sa nouvelle position.
+  const selectionActuelle = selection ? retrouverCarte(vue, selection.carte.id) : null;
+
   const lui = (1 - moi) as IndexJoueur;
   const jouer = (action: ActionTable) => {
     envoyer(action);
@@ -224,11 +270,6 @@ function Plateau({ code }: { code: string }) {
   };
   const propsCarte = { cartes, selection: selectionActuelle?.carte.id ?? null, mulligan, surChoix: choisir };
 
-  function quitter() {
-    if (!window.confirm("Quitter la partie ? Elle sera terminée pour les deux joueurs.")) return;
-    appelerApi("DELETE", `/parties/${code}`).then(() => naviguer("/jouer"), () => naviguer("/jouer"));
-  }
-
   return (
     <main className="table-jeu">
       <header className="table-entete">
@@ -236,13 +277,13 @@ function Plateau({ code }: { code: string }) {
           ←
         </button>
         <Score vue={vue} j={lui} />
-        <span className={`table-connexion table-connexion-${etat}`}>{etat === "connecte" ? "En direct" : "Reconnexion…"}</span>
+        {statut}
         <a className="table-regles" href="/apprendre" target="_blank" rel="noopener">
           Règles
         </a>
         <Score vue={vue} j={moi} surPoints={(delta) => jouer({ type: "points", delta })} />
-        <button className="secondaire petit" onClick={quitter}>
-          Quitter
+        <button className="secondaire petit" onClick={surQuitter}>
+          {libelleQuitter}
         </button>
       </header>
 
@@ -293,7 +334,7 @@ function Plateau({ code }: { code: string }) {
               ) : (
                 <>
                   <span className="aide">Ma main ({nombreZone(vue, `${moi}.main`)})</span>
-                  {!vue.mulliganFait[moi] && (
+                  {!vue.mulliganFait[moi] && !sansMulligan && (
                     <button className="secondaire petit" onClick={() => setMulligan([])}>
                       Mulligan
                     </button>
@@ -383,6 +424,7 @@ function Plateau({ code }: { code: string }) {
           surFermer={() => setPile(null)}
         />
       )}
+      {enfants}
     </main>
   );
 }

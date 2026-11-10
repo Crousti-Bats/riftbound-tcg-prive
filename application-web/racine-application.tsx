@@ -10,6 +10,7 @@ import { naviguer, useCheminCourant } from "./outils/navigation";
 import { PageAccueil } from "./pages/page-accueil";
 import { PageAdmin } from "./pages/page-admin";
 import { PageApprendre } from "./pages/page-apprendre";
+import { PageTutoriel } from "./pages/page-tutoriel";
 import { PageCatalogue } from "./pages/page-catalogue";
 import { PageCollection } from "./pages/page-collection";
 import { PageConnexion } from "./pages/page-connexion";
@@ -119,6 +120,7 @@ function Page({
   if (chemin === "/collection") return <PageCollection />;
   if (chemin === "/jouer" || chemin === "/decks") return <PageDecks />;
   if (chemin === "/apprendre") return <PageApprendre />;
+  if (chemin === "/tutoriel") return <PageTutoriel pseudo={compte.pseudo} />;
   if (/^\/table\/[A-Z0-9]{8}$/.test(chemin)) {
     const code = chemin.slice("/table/".length);
     return <PageTable key={code} code={code} />;

@@ -48,7 +48,7 @@ export function PageApprendre() {
     <main className="conteneur apprendre">
       <header className="entete">
         <h1>Apprendre à jouer</h1>
-        <button onClick={() => naviguer("/jouer")}>Jouer une partie</button>
+        <button onClick={() => naviguer("/tutoriel")}>Tuto interactif</button>
       </header>
       <p className="aide apprendre-intro">
         Riftbound se joue à deux (ou plus) : tu fais équipe avec un champion de League of Legends et tu envoies tes unités conquérir
@@ -275,7 +275,10 @@ export function PageApprendre() {
         </table>
         <p className="aide">Clique sur n'importe quelle carte pour voir son texte en grand et ce que tu peux en faire.</p>
         <div className="actions-ligne">
-          <button onClick={() => naviguer("/jouer")}>Jouer une partie</button>
+          <button onClick={() => naviguer("/tutoriel")}>Essayer avec le tuto interactif</button>
+          <button className="secondaire" onClick={() => naviguer("/jouer")}>
+            Jouer une partie
+          </button>
         </div>
       </Section>
     </main>
