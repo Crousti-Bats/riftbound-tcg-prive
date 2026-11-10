@@ -587,3 +587,27 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
   .page-marche-fil .entete { display: none; }
   .message-corps { padding-left: 0; }
 }
+
+/* ---------- Bandeau d'annonce de l'admin ---------- */
+.bandeau-annonce {
+  max-width: var(--largeur-max); margin: 16px auto 0; padding: 18px 20px; box-sizing: border-box;
+  width: calc(100% - 40px); display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(120deg, rgba(232, 121, 42, 0.28), rgba(212, 173, 98, 0.22) 55%, rgba(212, 173, 98, 0.08)), var(--fond-eleve);
+  border: 1px solid var(--accent); border-radius: var(--rayon); box-shadow: var(--ombre), 0 0 24px rgba(212, 173, 98, 0.18);
+}
+.bandeau-annonce-icone { font-size: 1.9rem; line-height: 1; flex: none; }
+.bandeau-annonce-texte {
+  margin: 0; flex: 1; min-width: 0; font-size: 1.15rem; font-weight: 700; line-height: 1.4;
+  color: var(--accent-vif); white-space: pre-line; overflow-wrap: anywhere;
+}
+button.bandeau-annonce-fermer {
+  flex: none; align-self: flex-start; padding: 4px 10px; min-height: 0; font-size: 1rem;
+  background: transparent; color: var(--texte-doux); border: 1px solid transparent; box-shadow: none;
+}
+button.bandeau-annonce-fermer:hover:not(:disabled) { color: var(--texte); border-color: var(--bordure-forte); background: rgba(255, 255, 255, 0.05); filter: none; }
+@media (max-width: 640px) {
+  .bandeau-annonce { width: calc(100% - 24px); margin-top: 12px; padding: 14px; gap: 10px; }
+  .bandeau-annonce-icone { font-size: 1.5rem; }
+  .bandeau-annonce-texte { font-size: 1rem; }
+}
+.apercu-annonce { margin: 0; }

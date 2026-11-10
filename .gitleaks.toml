@@ -1,0 +1,9 @@
+# Configuration Gitleaks : règles par défaut + exceptions justifiées, limitées à des valeurs exactes.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Valeurs publiques par nature, signalées à tort comme des clés d'API"
+# Clé PUBLIQUE VAPID des notifications push (cloudflare-wrangler.jsonc et types générés) : elle est envoyée
+# à chaque navigateur qui s'abonne. La clé privée correspondante est un secret Worker, jamais dans le dépôt.
+regexes = ['''^BCOYw_dTUNj9BO1F5utDZPfZWHCsGMUq6MBe7gQvcn13MFPPW4l4PNFE7rdmpRqdwuYeSAHbRAFpIv1kCWyZNBo$''']

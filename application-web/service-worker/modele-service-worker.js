@@ -93,6 +93,51 @@ async function reseauDAbord(requete) {
   }
 }
 
+/*
+  Notifications push (« tes boosters sont pleins ») : le serveur envoie un message chiffré, le navigateur le
+  déchiffre et nous le passe. On l'affiche toujours (obligatoire sur iPhone). Toucher la notification ouvre le site.
+*/
+self.addEventListener("push", (evenement) => {
+  const message = lireMessage(evenement.data);
+  const titre = typeof message.titre === "string" ? message.titre : "Riftbound";
+  evenement.waitUntil(
+    self.registration.showNotification(titre, {
+      body: typeof message.texte === "string" ? message.texte : "",
+      icon: "/icones/icone-192.png",
+      badge: "/icones/favicon-32.png",
+      tag: "riftbound-boosters",
+      data: { url: cheminInterne(message.url) },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (evenement) => {
+  evenement.notification.close();
+  const url = new URL(cheminInterne(evenement.notification.data && evenement.notification.data.url), self.location.origin).href;
+  evenement.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((fenetres) => {
+      const ouverte = fenetres.find((f) => new URL(f.url).origin === self.location.origin);
+      if (ouverte) return ouverte.focus().then((f) => (f && "navigate" in f ? f.navigate(url) : f));
+      return self.clients.openWindow(url);
+    }),
+  );
+});
+
+/** Contenu JSON du message push ; objet vide s'il est absent ou illisible. */
+function lireMessage(donnees) {
+  try {
+    const message = donnees ? donnees.json() : null;
+    return message && typeof message === "object" ? message : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Seulement un chemin de notre site (jamais une adresse externe). */
+function cheminInterne(url) {
+  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
+}
+
 function horsLigne() {
   return new Response("Hors ligne", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }

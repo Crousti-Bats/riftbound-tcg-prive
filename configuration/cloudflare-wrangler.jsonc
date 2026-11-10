@@ -12,7 +12,14 @@
   },
   // Monitoring admin : l'ID du compte n'est pas un secret. Le jeton Analytics, lui, est un secret Worker :
   // `npx wrangler secret put JETON_ANALYTICS_CLOUDFLARE --config configuration/cloudflare-wrangler.jsonc`.
-  "vars": { "ID_COMPTE_CLOUDFLARE": "14bd3e99e009ec33efebde236223ab6a" },
+  // Notifications push : la clé publique VAPID n'est pas un secret (le navigateur la reçoit). La clé privée, elle,
+  // est un secret Worker : `npx wrangler secret put VAPID_CLE_PRIVEE --config configuration/cloudflare-wrangler.jsonc`.
+  "vars": {
+    "ID_COMPTE_CLOUDFLARE": "14bd3e99e009ec33efebde236223ab6a",
+    "VAPID_CLE_PUBLIQUE": "BCOYw_dTUNj9BO1F5utDZPfZWHCsGMUq6MBe7gQvcn13MFPPW4l4PNFE7rdmpRqdwuYeSAHbRAFpIv1kCWyZNBo"
+  },
+  // Tâche planifiée : notification « boosters pleins » (toutes les 5 minutes, gratuit).
+  "triggers": { "crons": ["*/5 * * * *"] },
   // Identifiant et date de la version déployée, affichés dans le monitoring.
   "version_metadata": { "binding": "VERSION_DEPLOYEE" },
   // Base SQLite Cloudflare D1 (région Europe de l'Ouest). L'identifiant n'est pas un secret.

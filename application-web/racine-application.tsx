@@ -1,5 +1,6 @@
 /** Racine du site : charge le compte connecté et affiche la bonne page. */
 import { useCallback, useEffect, useState } from "react";
+import { BandeauAnnonce } from "./composants/bandeau-annonce";
 import { BandeauHorsLigne } from "./composants/bandeau-hors-ligne";
 import { BarreNavigation } from "./composants/barre-navigation";
 import { type CompteCourant, chargerCompteCourant } from "./outils/appels-api";
@@ -76,6 +77,7 @@ export function RacineApplication() {
       ) : (
         <>
           {compte && chemin !== "/reinitialisation" && <BarreNavigation compte={compte} chemin={chemin} surDeconnexion={rafraichirCompte} />}
+          {compte && chemin !== "/reinitialisation" && <BandeauAnnonce />}
           <Page compte={compte} chemin={chemin} rafraichirCompte={rafraichirCompte} />
         </>
       )}

@@ -11,6 +11,10 @@ import { routesEchanges } from "./echanges/routes-echanges";
 import { securityHeaders } from "./entetes-securite";
 import { routesMarche } from "./marche/routes-marche";
 import { enregistrerErreurServeur } from "./erreurs-serveur";
+import { routesAnnonceSite } from "./annonce-site/routes-annonce-site";
+import { prevenirBoostersPleins } from "./notifications/boosters-pleins";
+import { clesVapid } from "./notifications/cles-vapid";
+import { routesNotifications } from "./notifications/routes-notifications";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
 
@@ -39,6 +43,8 @@ app.route("/api/boosters", routesBoosters);
 app.route("/api/collection", routesCollection);
 app.route("/api/echanges", routesEchanges);
 app.route("/api/marche", routesMarche);
+app.route("/api/annonce-site", routesAnnonceSite);
+app.route("/api/notifications", routesNotifications);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
@@ -55,4 +61,22 @@ app.onError((err, c) => {
   return c.json({ error: "internal_error" }, 500);
 });
 
-export default app;
+/**
+ * Tâche planifiée (cron toutes les 5 minutes, voir cloudflare-wrangler.jsonc) :
+ * notification « boosters pleins » aux joueurs abonnés.
+ */
+async function tachePlanifiee(_controleur: ScheduledController, env: ContexteApi["Bindings"]): Promise<void> {
+  const cles = clesVapid(env);
+  if (!cles) return; // notifications non configurées (clé privée absente)
+  try {
+    await prevenirBoostersPleins(env.BASE_DE_DONNEES, cles);
+  } catch (err) {
+    console.error("tâche planifiée : notifications boosters pleins", err);
+    await enregistrerErreurServeur(env.BASE_DE_DONNEES, "CRON", "/boosters-pleins", err).catch(() => undefined);
+  }
+}
+
+export default {
+  fetch: app.fetch,
+  scheduled: tachePlanifiee,
+} satisfies ExportedHandler<ContexteApi["Bindings"]>;
