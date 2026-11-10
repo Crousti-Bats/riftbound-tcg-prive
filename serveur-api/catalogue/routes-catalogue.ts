@@ -42,8 +42,18 @@ routesCatalogue.get("/cartes", async (c) => {
   const { set, rarete, variante, type, recherche, tri, page } = filtres.data;
 
   const catalogue = await obtenirCatalogue();
+  // `manquantes=1` (annonce « Qui a ? ») : seulement les cartes que je n'ai pas, ni en normale ni en foil.
+  let possedees: Set<string> | null = null;
+  const compte = c.get("compte");
+  if (c.req.query("manquantes") === "1" && compte) {
+    const { results } = await c.env.BASE_DE_DONNEES.prepare("SELECT DISTINCT card_code FROM collection WHERE compte_id = ? AND quantite > 0")
+      .bind(compte.id)
+      .all<{ card_code: string }>();
+    possedees = new Set(results.map((r) => r.card_code));
+  }
   const mots = recherche ? sansAccents(recherche).split(/\s+/).filter(Boolean) : [];
   const filtrees = catalogue.cartes.filter((carte) => {
+    if (possedees?.has(carte.code)) return false;
     if (set && carte.set !== set) return false;
     if (rarete && carte.rarete !== rarete) return false;
     if (variante && carte.variante !== variante) return false;

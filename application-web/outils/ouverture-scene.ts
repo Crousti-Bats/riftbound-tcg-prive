@@ -30,7 +30,7 @@ export interface OptionsScene {
   surTerminee: (cartes: CarteOuverte[]) => void;
   surErreur: (message: string) => void;
   surAvis: (texte: string) => void;
-  /** Préférence « Sans animation » : après la déchirure, on passe directement au récapitulatif. */
+  /** Préférence « Animations coupées » : ouverture et révélation carte par carte, sans effets (voir `sobre`). */
   sansAnimation?: () => boolean;
 }
 
@@ -191,7 +191,11 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   // Liste blanche : le code du set (venu d'un <select>) n'entre jamais tel quel dans une URL, seule la clé connue sert.
   const setVisuel = Object.keys(AMBIANCES).find((cle) => cle === options.set) ?? "ogn";
   const ambiance = AMBIANCES[setVisuel] ?? AMBIANCES.ogn!;
-  const reduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mouvementReduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Mode sobre : réglage système « réduire les animations », ou bouton « Animations coupées » (relu à chaque
+  // fois, pour s'appliquer tout de suite). On ouvre toujours le booster et on révèle les cartes une par une,
+  // mais sans retournement, particules, secousses ni mise en scène, avec des pauses très courtes.
+  const sobre = () => mouvementReduit || options.sansAnimation?.() === true;
 
   // ---------- Minuteurs suivis : à la destruction, tout s'arrête et les attentes restent en suspens. ----------
   let detruite = false;
@@ -213,7 +217,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
     return new Promise<void>((r) =>
       plusTard(() => {
         if (monTour === tour) r();
-      }, reduit ? Math.min(ms, 150) : ms),
+      }, sobre() ? Math.min(ms, 150) : ms),
     );
   };
   // Annulation pendant la déchirure : les pauses de l'ouverture se terminent aussitôt.
@@ -291,7 +295,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   }
 
   function explosion(x: number, y: number, couleurs: string[], n = 90, force = 7) {
-    for (let i = 0; i < (reduit ? 0 : n); i++) {
+    for (let i = 0; i < (sobre() ? 0 : n); i++) {
       const a = Math.random() * Math.PI * 2;
       const v = force * (0.3 + Math.random());
       particules.push({
@@ -311,13 +315,13 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   }
 
   function pieces(cx: number, cy: number, n: number) {
-    for (let i = 0; i < (reduit ? 0 : n); i++) {
+    for (let i = 0; i < (sobre() ? 0 : n); i++) {
       particules.push({ x: cx, y: cy, vx: (Math.random() - 0.5) * 9, vy: -8 - Math.random() * 9, vie: 1, usure: 0.008, taille: 5 + Math.random() * 5, couleur: "#ffd45e", type: "piece", phase: Math.random() * 6, angle: 0 });
     }
   }
 
   function taches(cx: number, cy: number, n: number, couleurs: string[]) {
-    for (let i = 0; i < (reduit ? 0 : n); i++) {
+    for (let i = 0; i < (sobre() ? 0 : n); i++) {
       const a = Math.random() * Math.PI * 2;
       const d = 40 + Math.random() * Math.min(innerWidth, innerHeight) * 0.45;
       particules.push({ x: cx, y: cy, vx: Math.cos(a) * d * 0.09, vy: Math.sin(a) * d * 0.09, vie: 1, usure: 0.009 + Math.random() * 0.006, taille: 2, cible: 10 + Math.random() * 34, couleur: hasard(couleurs), type: "tache", phase: 0, angle: Math.random() * 6 });
@@ -327,7 +331,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   function vitesseLumiere(cx: number, cy: number, duree: number) {
     const fin = performance.now() + duree;
     const tic = () => {
-      if (detruite || performance.now() > fin || reduit) return;
+      if (detruite || performance.now() > fin || sobre()) return;
       for (let i = 0; i < 8; i++) {
         const a = Math.random() * Math.PI * 2;
         const v = 0.6 + Math.random();
@@ -339,7 +343,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   }
 
   function neant(cx: number, cy: number, n: number) {
-    for (let i = 0; i < (reduit ? 0 : n); i++) {
+    for (let i = 0; i < (sobre() ? 0 : n); i++) {
       const a = Math.random() * Math.PI * 2;
       const d = Math.max(innerWidth, innerHeight) * (0.4 + Math.random() * 0.3);
       particules.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, vx: 0, vy: 0, cx, cy, vie: 1, usure: 0.006, taille: 50 + Math.random() * 80, couleur: hasard(["#7a1fff", "#b04dff", "#3d0066"]), type: "vide", phase: 0, angle: 0 });
@@ -360,20 +364,20 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
 
   function boucle(t: number) {
     if (detruite || !ctx) return;
-    if (!reduit && particules.length < 160) for (const e of ambiance.emetteurs) if (Math.random() < e.taux) emettre(e);
-    if (!reduit && performance.now() < confettiJusqua) {
+    if (!sobre() && particules.length < 160) for (const e of ambiance.emetteurs) if (Math.random() < e.taux) emettre(e);
+    if (!sobre() && performance.now() < confettiJusqua) {
       for (let i = 0; i < 6; i++) {
         particules.push({ x: Math.random() * innerWidth, y: -12, vx: (Math.random() - 0.5) * 2.4, vy: 1 + Math.random() * 3, vie: 1, usure: 0.0045, taille: 6 + Math.random() * 7, couleur: hasard(confettiCouleurs), type: "confetti", phase: Math.random() * 6, angle: Math.random() * 6 });
       }
     }
-    if (!reduit && ambiance.eclairs && t > prochainEclair) {
+    if (!sobre() && ambiance.eclairs && t > prochainEclair) {
       tracerEclair();
       prochainEclair = t + 3500 + Math.random() * 5000;
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, innerWidth, innerHeight);
     ecran.alpha += (ecran.cible - ecran.alpha) * 0.07;
-    if (ecran.type && ecran.alpha > 0.01) {
+    if (ecran.type && ecran.alpha > 0.01 && !sobre()) {
       const g = ctx.createRadialGradient(innerWidth / 2, innerHeight / 2, 0, innerWidth / 2, innerHeight / 2, Math.max(innerWidth, innerHeight) * 0.75);
       if (ecran.type === "cosmos") {
         g.addColorStop(0, "#2a1260");
@@ -389,6 +393,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
       ctx.fillRect(0, 0, innerWidth, innerHeight);
       ctx.globalAlpha = 1;
     }
+    if (sobre()) flash = 0;
     if (flash > 0) {
       ctx.globalAlpha = flash;
       ctx.fillStyle = couleurFlash;
@@ -529,6 +534,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
 
   // ---------- Outils d'interface ----------
   function inclinaison(el: HTMLElement, e: PointerEvent, force = 22) {
+    if (sobre()) return;
     const r = el.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width;
     const y = (e.clientY - r.top) / r.height;
@@ -548,6 +554,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
     scene.classList.add("ob-secousse");
   }
   function vibrer(motif: number[]) {
+    if (sobre()) return;
     try {
       navigator.vibrate?.(motif);
     } catch {
@@ -658,7 +665,6 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
 
   async function ouvrirPaquet(paquet: HTMLElement, dechirure: HTMLElement, consigne: HTMLElement) {
     dechire = true;
-    if (options.sansAnimation?.()) passerDemande = true;
     // Le serveur tire les cartes pendant que le booster se déchire.
     const reponse = options.ouvrir().then(
       (liste) => ({ ok: true as const, liste }),
@@ -921,7 +927,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
 
   /** Ultime : l'ombre du Baron traverse l'écran avant la révélation. */
   function ombreBaron() {
-    if (reduit) return;
+    if (sobre()) return;
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "ob-ombre-baron");
     svg.setAttribute("viewBox", "0 0 1000 420");
