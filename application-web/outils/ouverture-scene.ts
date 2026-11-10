@@ -22,6 +22,8 @@ import { arreterMusique, jouerSon, jouerTheme } from "./ouverture-sons";
 export interface OptionsScene {
   set: string;
   nomSet: string;
+  /** Numéro (1, 2, 3…) de l'illustration du premier booster affiché, pour reprendre celle de l'accueil. Ensuite : au hasard. */
+  illustration?: number;
   /** Appel au serveur, lancé au moment où le booster se déchire. */
   ouvrir: () => Promise<CarteOuverte[]>;
   /** Toutes les cartes sont révélées (ou « Tout révéler ») : le composant affiche le récapitulatif. */
@@ -539,6 +541,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   }
 
   // ---------- Booster ----------
+  let premiereIllustration = options.illustration;
   function afficherPaquet() {
     arreterMusique();
     nettoyerEffets();
@@ -546,7 +549,11 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
     table.hidden = true;
     table.replaceChildren();
     zonePaquet.hidden = false;
-    const source = `/ouverture/booster-${setVisuel}-${1 + Math.floor(Math.random() * ambiance.boosters)}.webp`;
+    const demandee = premiereIllustration;
+    premiereIllustration = undefined;
+    const numero =
+      demandee && demandee >= 1 && demandee <= ambiance.boosters ? demandee : 1 + Math.floor(Math.random() * ambiance.boosters);
+    const source = `/ouverture/booster-${setVisuel}-${numero}.webp`;
     const paquet = element("div", "ob-paquet");
     paquet.setAttribute("role", "button");
     paquet.tabIndex = 0;

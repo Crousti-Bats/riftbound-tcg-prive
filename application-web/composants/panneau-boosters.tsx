@@ -14,8 +14,15 @@ interface EtatBoosters {
   sets: Array<{ code: string; nom: string }>;
 }
 
-/** Sets qui ont un visuel de booster et un fond dans /ouverture/. */
-const VISUELS_SETS = ["ogn", "sfd", "unl", "ven", "rad"];
+/** Sets qui ont un fond et des illustrations de booster dans /ouverture/ (booster-<set>-1.webp, -2…). */
+const ILLUSTRATIONS_PAR_SET: Record<string, number> = { ogn: 3, sfd: 1, unl: 3, ven: 2, rad: 1 };
+
+/** Une autre illustration que celle affichée la dernière fois (s'il y en a plusieurs). */
+function autreIllustration(precedente: number, nombre: number): number {
+  if (nombre <= 1) return 1;
+  const tirage = 1 + Math.floor(Math.random() * (nombre - 1)); // 1 … nombre-1
+  return tirage >= precedente ? tirage + 1 : tirage;
+}
 
 const dateProchain = (stock: Stock) => (stock.prochainDansMs == null ? null : Date.now() + stock.prochainDansMs);
 
@@ -26,6 +33,8 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const [prochaineA, setProchaineA] = useState<number | null>(null);
   const [maintenant, setMaintenant] = useState(() => Date.now());
   const [enOuverture, setEnOuverture] = useState(false);
+  // Illustration affichée pour chaque set : elle change à chaque fois qu'on revient sur le set.
+  const [illustrations, setIllustrations] = useState<Record<string, number>>({});
   const fermer = useCallback(() => setEnOuverture(false), []);
   const rechargement = useRef(false);
 
@@ -78,7 +87,15 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const stock = etat?.stock;
   const actuel = stock?.actuel ?? 0;
   const max = stock?.max ?? 15;
-  const visuel = VISUELS_SETS.includes(set) ? set : "ogn";
+  const visuel = set in ILLUSTRATIONS_PAR_SET ? set : "ogn";
+  const illustration = illustrations[visuel] ?? 1;
+
+  function choisirSet(code: string) {
+    if (code === set) return;
+    setSet(code);
+    const cle = code in ILLUSTRATIONS_PAR_SET ? code : "ogn";
+    setIllustrations({ ...illustrations, [cle]: autreIllustration(illustrations[cle] ?? 1, ILLUSTRATIONS_PAR_SET[cle] ?? 1) });
+  }
   const nomSet = etat?.sets.find((s) => s.code === set)?.nom ?? set;
   const peutOuvrir = Boolean(set) && actuel >= 1;
 
@@ -123,7 +140,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                     role="radio"
                     aria-checked={s.code === set}
                     className={s.code === set ? "puce-set actif" : "puce-set"}
-                    onClick={() => setSet(s.code)}
+                    onClick={() => choisirSet(s.code)}
                   >
                     {s.nom}
                   </button>
@@ -146,7 +163,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
             disabled={!peutOuvrir}
             aria-label={`Ouvrir un booster ${nomSet}`}
           >
-            <img key={visuel} src={`/ouverture/booster-${visuel}-1.webp`} alt="" width="621" height="1100" />
+            <img key={`${visuel}-${illustration}`} src={`/ouverture/booster-${visuel}-${illustration}.webp`} alt="" width="621" height="1100" />
           </button>
         )}
       </div>
@@ -155,6 +172,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
         <OuvertureBooster
           set={set}
           nomSet={nomSet}
+          illustration={illustration}
           ouvrir={ouvrirSetChoisi}
           peutOuvrirAutre={actuel >= 1}
           surFermer={fermer}
