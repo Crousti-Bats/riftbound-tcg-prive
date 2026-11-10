@@ -680,6 +680,26 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   // ---------- Cartes ----------
   let compte: HTMLElement | null = null;
   let pile: HTMLElement | null = null;
+  let boutonRares: HTMLButtonElement | null = null;
+  // Incrémenté quand on saute des cartes : une animation en cours sur l'ancienne carte s'arrête là.
+  let tour = 0;
+
+  /** Prochaine carte rare ou mieux après la carte courante, si la carte courante n'en est pas une. */
+  function prochaineRare(): number {
+    const courante = cartes[index];
+    if (!courante || REVELATION[courante.cat].rang >= 2) return -1;
+    return cartes.findIndex((cs, i) => i > index && REVELATION[cs.cat].rang >= 2);
+  }
+
+  function passerAuxRares() {
+    const cible = prochaineRare();
+    if (cible < 0 || !pile) return;
+    tour++;
+    nettoyerEffets();
+    pile.replaceChildren();
+    index = cible;
+    carteSuivante();
+  }
 
   function afficherTable() {
     table.hidden = false;
@@ -688,8 +708,11 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
     const tout = element("button", "ob-bouton-second", "Tout révéler");
     tout.type = "button";
     tout.addEventListener("click", terminer);
+    boutonRares = element("button", "ob-bouton-second", "Passer aux rares");
+    boutonRares.type = "button";
+    boutonRares.addEventListener("click", passerAuxRares);
     const barre = element("div", "ob-compteur");
-    barre.append(compte, tout);
+    barre.append(compte, boutonRares, tout);
     table.replaceChildren(pile, barre);
     carteSuivante();
   }
@@ -723,7 +746,9 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   function carteSuivante() {
     const cs = cartes[index];
     if (!cs || !pile || !compte) return terminer();
-    compte.textContent = `${index + 1} / ${cartes.length}`;
+    compte.textContent = `Carte ${index + 1} / ${cartes.length}`;
+    if (boutonRares) boutonRares.hidden = prochaineRare() < 0;
+    const monTour = tour;
     const rang = REVELATION[cs.cat].rang;
     const { place, carte } = elementCarte(cs);
     const indication = place.querySelector<HTMLElement>(".ob-indication")!;
@@ -753,6 +778,7 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
       }
       etape = "occupee";
       await ranger(place);
+      if (monTour !== tour) return; // cartes sautées entre-temps
       index++;
       carteSuivante();
     };
@@ -1046,6 +1072,8 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
     table.replaceChildren();
     pile = null;
     compte = null;
+    boutonRares = null;
+    tour++;
     options.surTerminee(cartes.map((cs) => cs.carte));
   }
 

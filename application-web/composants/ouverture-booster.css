@@ -159,7 +159,15 @@
 .ob-bandeau-rarete.ob-visible { opacity: 1; translate: -50% 0; }
 .ob-indication { position: absolute; left: 50%; bottom: calc(100% + 12px); translate: -50% 0; white-space: nowrap; font-family: var(--ob-police-ui); text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; color: var(--ob-texte-doux); transition: opacity 0.3s; }
 .ob-compteur { position: absolute; bottom: calc(2.5% + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 4; flex-wrap: wrap; padding-inline: 16px; }
-.ob-compteur span { font-family: var(--ob-police-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ob-texte-doux); font-variant-numeric: tabular-nums; }
+.ob-compteur > span { font-family: var(--ob-police-ui); font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #eef2fb; font-variant-numeric: tabular-nums;
+  padding: 6px 12px; border-radius: 999px; background: rgba(0,0,0,0.45); }
+.ob-compteur button { white-space: nowrap; }
+/* Téléphone : le compteur sur sa propre ligne, les deux boutons côte à côte en dessous. */
+@media (max-width: 480px) {
+  .ob-compteur { gap: 8px; }
+  .ob-compteur > span { flex-basis: 100%; text-align: center; background: none; padding: 0; }
+  .ob-overlay .ob-compteur button.ob-bouton-second { flex: 1 1 0; padding: 10px 8px; font-size: 0.82rem; letter-spacing: 0.06em; }
+}
 .ob-overlay button.ob-bouton-second {
   font-family: var(--ob-police-ui); font-weight: 500; font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; color: #eef2fb;
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 11px 16px; min-height: 44px;
