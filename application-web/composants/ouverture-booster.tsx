@@ -168,11 +168,6 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
           <small>Ouverture de booster</small>
         </h2>
         <div className="ob-reglages">
-          {!scelle && !recap && (
-            <button type="button" className="ob-bouton-discret ob-bouton-passer" onClick={() => scene.current?.passer()}>
-              Passer l'animation <span aria-hidden="true">⏭</span>
-            </button>
-          )}
           <button
             type="button"
             className="ob-bouton-discret"

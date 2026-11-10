@@ -79,8 +79,6 @@
 }
 .ob-overlay button.ob-bouton-discret[aria-pressed="true"] { color: var(--ob-accent); border-color: var(--ob-accent); }
 /* Annuler l'animation : plus visible que les réglages, c'est l'action qu'on cherche pendant la révélation. */
-.ob-overlay button.ob-bouton-passer { color: #fff; background: rgba(0,0,0,0.5); border-color: var(--ob-accent); }
-.ob-overlay button.ob-bouton-passer:hover { background: rgba(0,0,0,0.7); filter: none; }
 @media (max-width: 600px) {
   .ob-reglages { flex-wrap: wrap; justify-content: flex-end; }
   .ob-overlay button.ob-bouton-discret { font-size: 0.72rem; letter-spacing: 0.03em; padding: 5px 8px; min-height: 32px; }
