@@ -39,6 +39,18 @@ describe("Tri par rareté", () => {
     expect((await env.appeler("GET", "/api/catalogue/cartes?tri=prix", { cookie: alice })).statut).toBe(400);
   });
 
+  it("catalogue : manquantes=1 ne garde que les cartes que je n'ai pas (normale ni foil)", async () => {
+    const env = creerEnvironnementDeTest();
+    const alice = await env.inscrire("Alice", "mot-de-passe-alice");
+    const id = (env.bd.prepare("SELECT id FROM comptes WHERE pseudo = 'Alice'").get() as { id: number }).id;
+    env.bd.prepare("INSERT INTO collection (compte_id, card_code, est_foil, quantite) VALUES (?, 'ven-c0', 0, 1), (?, 'ven-alt0', 1, 1)").run(id, id);
+    const lire = async (q: string) => (await env.appeler("GET", `/api/catalogue/cartes?set=ven&${q}`, { cookie: alice })).json as { total: number; cartes: Carte[] };
+    const toutes = await lire("");
+    const manquantes = await lire("manquantes=1");
+    expect(manquantes.total).toBe(toutes.total - 2);
+    expect(manquantes.cartes.some((c) => c.code === "ven-c0" || c.code === "ven-alt0")).toBe(false);
+  });
+
   it("collections (la mienne et celle d'un autre) triées de la même façon", async () => {
     const env = creerEnvironnementDeTest();
     const alice = await env.inscrire("Alice", "mot-de-passe-alice");

@@ -3,10 +3,12 @@
  * - « Qui a ? » (je cherche) : n'importe quelle carte du catalogue ;
  * - « Qui veut ? » (je propose) : une carte de ma collection (le serveur le revérifie).
  */
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import { FiltresCartes } from "./filtres-cartes";
 import { ImageCarte } from "./image-carte";
+import { Pagination } from "./pagination";
 import { appelerApi } from "../outils/appels-api";
-import { type Carte, type CartePossedee, classeRarete } from "../outils/libelles-cartes";
+import { type Carte, type CartePossedee, classeRarete, libelleRarete, type SetInfo } from "../outils/libelles-cartes";
 import { LIBELLES_ANNONCE, type TypeAnnonce } from "../outils/marche";
 
 interface Props {
@@ -21,6 +23,18 @@ export function FormulaireAnnonce({ surFermeture, surCreation }: Props) {
   const [recherche, setRecherche] = useState("");
   const [rechercheAppliquee, setRechercheAppliquee] = useState("");
   const [resultats, setResultats] = useState<CarteChoix[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [nbPages, setNbPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [sets, setSets] = useState<SetInfo[]>([]);
+  const [filtreSet, setFiltreSet] = useState("");
+  const [typeCarte, setTypeCarte] = useState("");
+  const [rarete, setRarete] = useState("");
+  const [variante, setVariante] = useState("");
+  // Par défaut, les plus rares en haut : ce sont celles qu'on cherche ou qu'on propose le plus souvent.
+  const [tri, setTri] = useState("rarete-desc");
+  const [manquantes, setManquantes] = useState(true);
+  const grille = useRef<HTMLDivElement>(null);
   const [choix, setChoix] = useState<CarteChoix | null>(null);
   const [foil, setFoil] = useState(false);
   const [note, setNote] = useState("");
@@ -29,23 +43,50 @@ export function FormulaireAnnonce({ surFermeture, surCreation }: Props) {
 
   // Recherche appliquée après une courte pause de frappe.
   useEffect(() => {
-    const t = setTimeout(() => setRechercheAppliquee(recherche.trim()), 300);
+    const t = setTimeout(() => {
+      setRechercheAppliquee(recherche.trim());
+      setPage(1);
+    }, 300);
     return () => clearTimeout(t);
   }, [recherche]);
 
   useEffect(() => {
+    appelerApi<{ sets: SetInfo[] }>("GET", "/catalogue/sets").then((r) => setSets(r.sets), () => undefined);
+  }, []);
+
+  // Toutes les cartes, page par page (60), avec les mêmes filtres et le même tri que le catalogue.
+  useEffect(() => {
     const source = type === "cherche" ? "/catalogue/cartes" : "/collection";
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ page: String(page) });
     if (rechercheAppliquee) params.set("recherche", rechercheAppliquee);
+    if (filtreSet) params.set("set", filtreSet);
+    if (typeCarte) params.set("type", typeCarte);
+    if (rarete) params.set("rarete", rarete);
+    if (variante) params.set("variante", variante);
+    if (tri) params.set("tri", tri);
+    if (type === "cherche" && manquantes) params.set("manquantes", "1");
     let annule = false;
-    appelerApi<{ cartes: CarteChoix[] }>("GET", `${source}?${params}`).then(
-      (r) => !annule && setResultats(r.cartes.slice(0, 24)),
-      (e: Error) => !annule && setErreur(e.message),
+    appelerApi<{ cartes: CarteChoix[]; total: number; parPage: number }>("GET", `${source}?${params}`).then(
+      (r) => {
+        if (annule) return;
+        setResultats(r.cartes);
+        setTotal(r.total);
+        setNbPages(Math.max(1, Math.ceil(r.total / r.parPage)));
+        grille.current?.scrollTo({ top: 0 });
+      },
+      (e: Error) => {
+        if (!annule) setErreur(e.message);
+      },
     );
     return () => {
       annule = true;
     };
-  }, [type, rechercheAppliquee]);
+  }, [type, rechercheAppliquee, filtreSet, typeCarte, rarete, variante, tri, manquantes, page]);
+
+  const filtrer = (maj: () => void) => {
+    maj();
+    setPage(1);
+  };
 
   useEffect(() => {
     const echap = (e: KeyboardEvent) => e.key === "Escape" && surFermeture();
@@ -58,6 +99,7 @@ export function FormulaireAnnonce({ surFermeture, surCreation }: Props) {
     setChoix(null);
     setFoil(false);
     setResultats(null);
+    setPage(1);
   }
 
   function choisir(carte: CarteChoix) {
@@ -103,12 +145,36 @@ export function FormulaireAnnonce({ surFermeture, surCreation }: Props) {
           ))}
         </div>
 
-        <label>
-          {type === "cherche" ? "Quelle carte cherches-tu ?" : "Quelle carte de ta collection proposes-tu ?"}
-          <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="ex. Jinx, Fury, Spell…" autoFocus />
-        </label>
+        <p className="aide choix-consigne">
+          {type === "cherche" ? "Quelle carte cherches-tu ? Fais défiler ou filtre." : "Quelle carte de ta collection proposes-tu ? Fais défiler ou filtre."}
+        </p>
+        <FiltresCartes
+          sets={sets}
+          recherche={recherche}
+          surRecherche={setRecherche}
+          set={filtreSet}
+          surSet={(v) => filtrer(() => setFiltreSet(v))}
+          type={typeCarte}
+          surType={(v) => filtrer(() => setTypeCarte(v))}
+          rarete={rarete}
+          surRarete={(v) => filtrer(() => setRarete(v))}
+          variante={variante}
+          surVariante={(v) => filtrer(() => setVariante(v))}
+          tri={tri}
+          surTri={(v) => filtrer(() => setTri(v))}
+        >
+          {type === "cherche" && (
+            <label className="bascule">
+              <input type="checkbox" checked={manquantes} onChange={(e) => filtrer(() => setManquantes(e.target.checked))} /> Seulement celles qui me manquent
+            </label>
+          )}
+        </FiltresCartes>
+        <div className="barre-resultats">
+          <p className="aide">{resultats ? `${total} carte${total > 1 ? "s" : ""}` : ""}</p>
+          {nbPages > 1 && <Pagination page={page} nbPages={nbPages} allerA={setPage} />}
+        </div>
 
-        <div className="choix-cartes" role="listbox" aria-label="Cartes">
+        <div className="choix-cartes" role="listbox" aria-label="Cartes" ref={grille}>
           {!resultats && <p className="aide">Chargement…</p>}
           {resultats?.length === 0 && (
             <p className="aide">{type === "propose" ? "Aucune carte de ta collection ne correspond." : "Aucune carte ne correspond."}</p>
@@ -127,6 +193,7 @@ export function FormulaireAnnonce({ surFermeture, surCreation }: Props) {
                 <ImageCarte image={carte.image} largeur={300} alt={carte.nom} className={carte.orientation === "paysage" ? "image-paysage" : undefined} paresseuse />
               </span>
               <small>{carte.nom}</small>
+              <small className="choix-rarete">{libelleRarete(carte)}</small>
             </button>
           ))}
         </div>

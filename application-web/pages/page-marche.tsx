@@ -8,7 +8,7 @@ import { FicheCarte } from "../composants/fiche-carte";
 import { FormulaireAnnonce } from "../composants/formulaire-annonce";
 import { ImageCarte } from "../composants/image-carte";
 import { appelerApi } from "../outils/appels-api";
-import { type Carte, classeRarete, type SetInfo } from "../outils/libelles-cartes";
+import { type Carte, classeRarete, rangRarete, type SetInfo } from "../outils/libelles-cartes";
 import { type Annonce, type SouhaitMarche, heureMessage, LIBELLES_ANNONCE, lienEchangeDepuisAnnonce, type TypeAnnonce } from "../outils/marche";
 import { ecrireA, ouvrirChat } from "../outils/chat";
 import { naviguer } from "../outils/navigation";
@@ -49,6 +49,9 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
   const [filtre, setFiltre] = useState<"tout" | TypeAnnonce | "miennes">("tout");
   const [recherche, setRecherche] = useState("");
   const [jePeuxAider, setJePeuxAider] = useState(false);
+  const [ordre, setOrdre] = useState<"recentes" | "rarete-desc" | "rarete-asc">("recentes");
+  const [filtreSet, setFiltreSet] = useState("");
+  const [sets, setSets] = useState<SetInfo[]>([]);
   const [formulaire, setFormulaire] = useState(false);
 
   const charger = useCallback(
@@ -69,11 +72,16 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
     void charger();
   }, [charger]);
 
+  useEffect(() => {
+    appelerApi<{ sets: SetInfo[] }>("GET", "/catalogue/sets").then((r) => setSets(r.sets.filter((s) => s.ouvrable)), () => undefined);
+  }, []);
+
   const visibles = useMemo(() => {
     const mots = recherche.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/\s+/).filter(Boolean);
     return (annonces ?? []).filter((a) => {
       if (filtre === "miennes" && !a.estMoi) return false;
       if ((filtre === "cherche" || filtre === "propose") && a.type !== filtre) return false;
+      if (filtreSet && a.carte.set !== filtreSet) return false;
       if (jePeuxAider && !(a.type === "cherche" && !a.estMoi && a.jePossede > 0)) return false;
       if (mots.length) {
         const texte = `${a.carte.nom} ${a.auteur} ${a.note ?? ""}`.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -81,7 +89,7 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
       }
       return true;
     });
-  }, [annonces, filtre, recherche, jePeuxAider]);
+  }, [annonces, filtre, recherche, jePeuxAider, filtreSet]);
 
   // Wishlists : des « Qui a ? » permanents, affichés avec les annonces « Qui a ? ».
   const souhaitsVisibles = useMemo(() => {
@@ -89,6 +97,7 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
     const mots = recherche.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/\s+/).filter(Boolean);
     return souhaits.filter((s) => {
       if (filtre === "miennes" && !s.estMoi) return false;
+      if (filtreSet && s.carte.set !== filtreSet) return false;
       if (jePeuxAider && !(!s.estMoi && s.jePossede > 0)) return false;
       if (mots.length) {
         const texte = `${s.carte.nom} ${s.auteur}`.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -96,7 +105,17 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
       }
       return true;
     });
-  }, [souhaits, filtre, recherche, jePeuxAider]);
+  }, [souhaits, filtre, recherche, jePeuxAider, filtreSet]);
+
+  // Annonces et wishlists mêlées puis triées : les plus récentes, ou par rareté (à rareté égale, les plus récentes).
+  const elements = useMemo(() => {
+    const liste = [
+      ...visibles.map((a) => ({ genre: "annonce" as const, cle: `a-${a.id}`, carte: a.carte, date: a.creeLe, annonce: a })),
+      ...souhaitsVisibles.map((s) => ({ genre: "souhait" as const, cle: `w-${s.auteur}-${s.carte.code}`, carte: s.carte, date: s.creeLe, souhait: s })),
+    ];
+    const sens = ordre === "rarete-asc" ? 1 : -1;
+    return liste.sort((x, y) => (ordre === "recentes" ? 0 : sens * (rangRarete(x.carte) - rangRarete(y.carte))) || y.date - x.date);
+  }, [visibles, souhaitsVisibles, ordre]);
 
   async function retirerSouhait(s: SouhaitMarche) {
     try {
@@ -141,6 +160,27 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
             <input type="checkbox" checked={jePeuxAider} onChange={(e) => setJePeuxAider(e.target.checked)} /> J'ai ce qu'ils cherchent
           </label>
         </div>
+        <div className="barre-annonces-tri">
+          <label>
+            Set
+            <select value={filtreSet} onChange={(e) => setFiltreSet(e.target.value)}>
+              <option value="">Tous les sets</option>
+              {sets.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.nom}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Trier par
+            <select value={ordre} onChange={(e) => setOrdre(e.target.value as typeof ordre)}>
+              <option value="recentes">Les plus récentes</option>
+              <option value="rarete-desc">Plus rares d'abord</option>
+              <option value="rarete-asc">Plus communes d'abord</option>
+            </select>
+          </label>
+        </div>
       </section>
 
       {erreur && <p className="message-erreur">{erreur}</p>}
@@ -152,81 +192,87 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
       )}
 
       <div className="grille-annonces">
-        {visibles.map((a) => (
-          <article key={a.id} className={`annonce ${classeRarete(a.carte)}`}>
-            <button type="button" className="annonce-image" onClick={() => surCarte(a.carte, a.foil)} title={`Voir ${a.carte.nom}`}>
-              <span className={`cadre-carte ${a.foil ? "voile-foil" : ""}`}>
-                <ImageCarte image={a.carte.image} largeur={300} alt={a.carte.nom} className={a.carte.orientation === "paysage" ? "image-paysage" : undefined} paresseuse />
-              </span>
-            </button>
-            <div className="annonce-infos">
-              <span className={`etiquette-annonce etiquette-${a.type}`}>{LIBELLES_ANNONCE[a.type].titre}</span>
-              <h3>
-                {a.carte.nom}
-                {a.foil && <span className="badge-foil-texte"> Foil</span>}
-              </h3>
-              <p className="aide">
-                {a.estMoi ? "Ton annonce" : <>par <strong><LienJoueur pseudo={a.auteur} /></strong></>} · {heureMessage(a.creeLe)}
-              </p>
-              {a.note && <p className="annonce-note">« {a.note} »</p>}
-              {!a.estMoi && a.type === "cherche" && a.jePossede > 0 && <p className="pastille-info">Tu l'as ×{a.jePossede}</p>}
-              {!a.estMoi && a.type === "propose" && a.jePossede > 0 && <p className="aide">Tu en as déjà {a.jePossede}</p>}
-              <div className="annonce-actions">
-                {!a.estMoi && (
-                  <>
-                    <button className="petit" onClick={() => naviguer(lienEchangeDepuisAnnonce(a))}>
-                      Proposer un échange
+        {elements.map((el) => {
+          if (el.genre === "annonce") {
+            const a = el.annonce;
+            return (
+              <article key={el.cle} className={`annonce ${classeRarete(a.carte)}`}>
+                <button type="button" className="annonce-image" onClick={() => surCarte(a.carte, a.foil)} title={`Voir ${a.carte.nom}`}>
+                  <span className={`cadre-carte ${a.foil ? "voile-foil" : ""}`}>
+                    <ImageCarte image={a.carte.image} largeur={300} alt={a.carte.nom} className={a.carte.orientation === "paysage" ? "image-paysage" : undefined} paresseuse />
+                  </span>
+                </button>
+                <div className="annonce-infos">
+                  <span className={`etiquette-annonce etiquette-${a.type}`}>{LIBELLES_ANNONCE[a.type].titre}</span>
+                  <h3>
+                    {a.carte.nom}
+                    {a.foil && <span className="badge-foil-texte"> Foil</span>}
+                  </h3>
+                  <p className="aide">
+                    {a.estMoi ? "Ton annonce" : <>par <strong><LienJoueur pseudo={a.auteur} /></strong></>} · {heureMessage(a.creeLe)}
+                  </p>
+                  {a.note && <p className="annonce-note">« {a.note} »</p>}
+                  {!a.estMoi && a.type === "cherche" && a.jePossede > 0 && <p className="pastille-info">Tu l'as ×{a.jePossede}</p>}
+                  {!a.estMoi && a.type === "propose" && a.jePossede > 0 && <p className="aide">Tu en as déjà {a.jePossede}</p>}
+                  <div className="annonce-actions">
+                    {!a.estMoi && (
+                      <>
+                        <button className="petit" onClick={() => naviguer(lienEchangeDepuisAnnonce(a))}>
+                          Proposer un échange
+                        </button>
+                        <button className="petit secondaire" onClick={() => surEcrire(a.auteur)}>
+                          Écrire
+                        </button>
+                      </>
+                    )}
+                    {(a.estMoi || peutModerer) && (
+                      <button className="petit secondaire" onClick={() => void retirer(a)}>
+                        Retirer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          }
+          const s = el.souhait;
+          return (
+            <article key={el.cle} className={`annonce annonce-wishlist ${classeRarete(s.carte)}`}>
+              <button type="button" className="annonce-image" onClick={() => surCarte(s.carte, false)} title={`Voir ${s.carte.nom}`}>
+                <span className="cadre-carte">
+                  <ImageCarte image={s.carte.image} largeur={300} alt={s.carte.nom} className={s.carte.orientation === "paysage" ? "image-paysage" : undefined} paresseuse />
+                </span>
+              </button>
+              <div className="annonce-infos">
+                <span className="etiquettes-annonce">
+                  <span className="etiquette-annonce etiquette-cherche">{LIBELLES_ANNONCE.cherche.titre}</span>
+                  <span className="etiquette-annonce etiquette-wishlist">♥ Wishlist</span>
+                </span>
+                <h3>{s.carte.nom}</h3>
+                <p className="aide">
+                  {s.estMoi ? "Ta wishlist" : <>wishlist de <strong><LienJoueur pseudo={s.auteur} /></strong></>}
+                </p>
+                {!s.estMoi && s.jePossede > 0 && <p className="pastille-info">Tu l'as ×{s.jePossede}</p>}
+                <div className="annonce-actions">
+                  {s.estMoi ? (
+                    <button className="petit secondaire" onClick={() => void retirerSouhait(s)}>
+                      Retirer de ma wishlist
                     </button>
-                    <button className="petit secondaire" onClick={() => surEcrire(a.auteur)}>
-                      Écrire
-                    </button>
-                  </>
-                )}
-                {(a.estMoi || peutModerer) && (
-                  <button className="petit secondaire" onClick={() => void retirer(a)}>
-                    Retirer
-                  </button>
-                )}
+                  ) : (
+                    <>
+                      <button className="petit" onClick={() => naviguer(lienEchangeDepuisAnnonce({ type: "cherche", auteur: s.auteur, foil: false, carte: s.carte }))}>
+                        Proposer un échange
+                      </button>
+                      <button className="petit secondaire" onClick={() => surEcrire(s.auteur)}>
+                        Écrire
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
-        {souhaitsVisibles.map((s) => (
-          <article key={`wishlist-${s.auteur}-${s.carte.code}`} className={`annonce annonce-wishlist ${classeRarete(s.carte)}`}>
-            <button type="button" className="annonce-image" onClick={() => surCarte(s.carte, false)} title={`Voir ${s.carte.nom}`}>
-              <span className="cadre-carte">
-                <ImageCarte image={s.carte.image} largeur={300} alt={s.carte.nom} className={s.carte.orientation === "paysage" ? "image-paysage" : undefined} paresseuse />
-              </span>
-            </button>
-            <div className="annonce-infos">
-              <span className="etiquettes-annonce">
-                <span className="etiquette-annonce etiquette-cherche">{LIBELLES_ANNONCE.cherche.titre}</span>
-                <span className="etiquette-annonce etiquette-wishlist">♥ Wishlist</span>
-              </span>
-              <h3>{s.carte.nom}</h3>
-              <p className="aide">
-                {s.estMoi ? "Ta wishlist" : <>wishlist de <strong><LienJoueur pseudo={s.auteur} /></strong></>}
-              </p>
-              {!s.estMoi && s.jePossede > 0 && <p className="pastille-info">Tu l'as ×{s.jePossede}</p>}
-              <div className="annonce-actions">
-                {s.estMoi ? (
-                  <button className="petit secondaire" onClick={() => void retirerSouhait(s)}>
-                    Retirer de ma wishlist
-                  </button>
-                ) : (
-                  <>
-                    <button className="petit" onClick={() => naviguer(lienEchangeDepuisAnnonce({ type: "cherche", auteur: s.auteur, foil: false, carte: s.carte }))}>
-                      Proposer un échange
-                    </button>
-                    <button className="petit secondaire" onClick={() => surEcrire(s.auteur)}>
-                      Écrire
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       {formulaire && (

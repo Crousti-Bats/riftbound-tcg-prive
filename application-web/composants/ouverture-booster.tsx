@@ -132,8 +132,6 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
     sansAnimationRef.current = valeur;
     ecrireSansAnimation(valeur);
     setSansAnimation(valeur);
-    // Couper les animations pendant une révélation l'annule tout de suite.
-    if (valeur && !scelle && !recap) scene.current?.passer();
   }
 
   function basculerSon() {
@@ -151,7 +149,13 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
   const rares = recap?.filter((c) => REVELATION[categorieRevelation(c)].rang >= 2).length ?? 0;
 
   return (
-    <div className="ob-overlay" data-set={SETS_VISUELS.includes(set) ? set : "ogn"} role="dialog" aria-modal="true" aria-label={`Ouverture d'un booster ${nomSet}`}>
+    <div
+      className={sansAnimation ? "ob-overlay ob-sobre" : "ob-overlay"}
+      data-set={SETS_VISUELS.includes(set) ? set : "ogn"}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Ouverture d'un booster ${nomSet}`}
+    >
       <div className="ob-racine" ref={racine} />
       <header className="ob-barre">
         {scelle && (
@@ -174,7 +178,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
             className="ob-bouton-discret"
             aria-pressed={!sansAnimation}
             onClick={basculerAnimation}
-            title="Sans animation : le récapitulatif s'affiche dès que le booster est déchiré"
+            title="Animations coupées : les cartes se révèlent une par une, sans retournement ni effets"
           >
             {sansAnimation ? "Animations coupées" : "Animations"}
           </button>

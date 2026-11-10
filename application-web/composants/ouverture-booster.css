@@ -294,6 +294,13 @@
   86% { opacity: 1; }
   100% { translate: 100vw -46%; opacity: 0; } }
 
+/* « Animations coupées » : aucune animation ni transition dans la scène (la carte apparaît retournée d'un coup). */
+.ob-overlay.ob-sobre .ob-scene *, .ob-overlay.ob-sobre .ob-scene *::before, .ob-overlay.ob-sobre .ob-scene *::after,
+.ob-overlay.ob-sobre .ob-scene, .ob-overlay.ob-sobre .ob-fond, .ob-overlay.ob-sobre .ob-projecteurs i, .ob-overlay.ob-sobre .ob-mini::before {
+  animation: none !important; transition: none !important;
+}
+.ob-overlay.ob-sobre .ob-ombre-baron, .ob-overlay.ob-sobre .ob-fissures, .ob-overlay.ob-sobre .ob-signature { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .ob-pilier, .ob-signature path, .ob-fissures path, .ob-emplacement.ob-impact, .ob-titre-drop.ob-glitch, .ob-titre-drop .ob-theme { animation: none; stroke-dashoffset: 0; }
   .ob-scene.ob-secousse, .ob-emplacement.ob-surcharge .ob-carte, .ob-titre-drop, .ob-onde { animation: none; }

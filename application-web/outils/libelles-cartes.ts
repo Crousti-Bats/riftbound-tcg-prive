@@ -90,6 +90,18 @@ export function libelleRarete(carte: Pick<Carte, "rarete" | "variante">): string
     : (LIBELLES_VARIANTE[carte.variante] ?? carte.variante);
 }
 
+const RANG_VARIANTE: Partial<Record<string, number>> = { ultime: 9, special: 8, signee: 7, overnumbered: 6, alt: 5 };
+const RANG_RARETE: Partial<Record<string, number>> = { Epic: 4, Showcase: 4, Rare: 3, Uncommon: 2, Common: 1 };
+
+/** Rang de rareté (même ordre que serveur-api/catalogue/classification-cartes.ts, rangRarete). */
+export function rangRarete(carte: Pick<Carte, "rarete" | "variante" | "type">): number {
+  const variante = RANG_VARIANTE[carte.variante];
+  if (variante !== undefined) return variante;
+  if (carte.variante === "rune_alt") return 0.5;
+  if (carte.variante === "token" || carte.variante === "rune" || carte.type.toLowerCase() === "rune") return 0;
+  return RANG_RARETE[carte.rarete] ?? 0;
+}
+
 export function classeRarete(carte: Pick<Carte, "rarete" | "variante">): string {
   if (carte.variante === "ultime") return "rarete-ultime";
   if (carte.variante === "signee") return "rarete-signee";
