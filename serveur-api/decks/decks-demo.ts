@@ -3,7 +3,8 @@
  * jouables sans posséder les cartes, non modifiables, visibles par tout le monde (aucune ligne en base).
  * Construits avec les vraies cartes autour de deux champions du produit d'initiation (Proving Grounds), avec une
  * courbe de coûts équilibrée : ce ne sont pas les listes officielles. Pour les retirer : vider DECKS_DEMO.
- * Validés contre le vrai catalogue (règles de construction) avant d'être ajoutés.
+ * Validés contre le vrai catalogue (règles de construction) avant d'être ajoutés. Aucun champ de bataille interdit en
+ * tournoi (liste du 2026-10-09 : The Arena's Greatest, Aspirant's Climb, Dreaming Tree, Obelisk of Power, Reaver's Row).
  */
 import type { ContenuDeck } from "./regles-deck";
 
@@ -41,7 +42,7 @@ export const DECKS_DEMO: readonly DeckDemo[] = [
         { code: "ogn-007-298", n: 6 }, // Fury Rune
         { code: "ogn-166-298", n: 6 }, // Chaos Rune
       ],
-      terrains: ["ogn-275-298", "ogn-282-298", "ogn-290-298"], // Altar to Unity, Monastery of Hirana, The Arena's Greatest
+      terrains: ["ogn-275-298", "ogn-282-298", "ogn-294-298"], // Altar to Unity, Monastery of Hirana, Trifarian War Camp
     },
   },
   {
@@ -70,7 +71,7 @@ export const DECKS_DEMO: readonly DeckDemo[] = [
         { code: "ogn-126-298", n: 6 }, // Body Rune
         { code: "ogn-214-298", n: 6 }, // Order Rune
       ],
-      terrains: ["ogn-278-298", "ogn-285-298", "ogn-295-298"], // Bandle Tree, Reaver's Row, Vilemaw's Lair
+      terrains: ["ogn-278-298", "ogn-279-298", "ogn-295-298"], // Bandle Tree, Fortified Position, Vilemaw's Lair
     },
   },
 ];

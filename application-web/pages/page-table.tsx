@@ -237,6 +237,9 @@ function Plateau({ code }: { code: string }) {
         </button>
         <Score vue={vue} j={lui} />
         <span className={`table-connexion table-connexion-${etat}`}>{etat === "connecte" ? "En direct" : "Reconnexion…"}</span>
+        <a className="table-regles" href="/apprendre" target="_blank" rel="noopener">
+          Règles
+        </a>
         <Score vue={vue} j={moi} surPoints={(delta) => jouer({ type: "points", delta })} />
         <button className="secondaire petit" onClick={quitter}>
           Quitter

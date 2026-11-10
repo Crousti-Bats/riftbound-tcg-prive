@@ -362,6 +362,15 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - Serveur : action `creerToken` (`moteur-table.ts`) ; on ne crée que dans ses zones en jeu ou sur un champ de bataille ; codes limités à la liste des tokens transmise par le Worker au lancement (`estToken` sur le catalogue). Les parties lancées avant n'ont que les tokens libres. Nouveaux identifiants toujours uniques.
 - **Vérifications** : 275 tests (2 nouveaux). Vérifié sur le moteur local : partie avec les decks de démo, tokens créés des deux côtés (WebSocket et Edge headless), visibles en direct.
 
+## 4novodecies. Apprendre à jouer (demandé le 2026-11-10)
+
+- **Page `/apprendre`** (`pages/page-apprendre.tsx`), reliée depuis « Jouer » (encart « Nouveau sur Riftbound ? ») et depuis la table (lien « Règles », nouvel onglet). 11 sections avec sommaire : but (8 points, conquérir / tenir), deck, mise en place, payer (énergie = incliner, puissance = recycler), déroulé d'un tour (Réveil, Début/tenir, Canaliser 2, Pioche 1, Action, Fin/guérison), unités / sorts / équipements, bouger et conquérir, combat (affrontement, répartition des dégâts, Tank, conquête ou retour à la base), point gagnant, 14 mots-clés, et un tableau « dans le jeu → sur la table ». Illustrée avec de vraies cartes du deck de démo Annie.
+- **Sources** : guide officiel « How to Play » et Core Rules du 2026-10-09 (règles 487.5 et 487.7 pour le duel), reformulés en français.
+- **Table** : en duel, chaque joueur tire maintenant au hasard 1 de ses 3 champs de bataille, posé automatiquement sur la table (règle 487.5) ; les 2 autres restent dans « Champs dispo ». Le journal rappelle que le second joueur canalise 3 runes à son premier tour.
+- **Decks de démo** : champs de bataille interdits en tournoi remplacés (The Arena's Greatest → Trifarian War Camp ; Reaver's Row → Fortified Position).
+- **À venir** (demandé : « les deux ») : tuto interactif, une partie solo guidée sur la table.
+- **Vérifications** : 275 tests. Page vérifiée dans Edge headless (1280 et 390 px, 8 illustrations, aucun défilement horizontal).
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
