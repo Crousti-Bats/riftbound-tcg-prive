@@ -32,6 +32,8 @@ export interface CarteJeu {
   token?: true;
   /** Token « libre » (absent des données, ex. Bomb) : son nom, sans carte du catalogue (code vide). */
   libelle?: string;
+  /** Champ de bataille (pas une unité) : ne compte ni pour conquérir ni pour tenir. */
+  terrain?: true;
 }
 
 export interface EntreeJournal {
@@ -64,6 +66,8 @@ export interface EtatTable {
   commenceeLe: number;
   /** Incrémenté à chaque action (le client ignore une vue plus ancienne). */
   version: number;
+  /** Nombre de « Début de mon tour » de chaque joueur (aide automatique ; absent : parties plus anciennes). */
+  tours?: [number, number];
 }
 
 export interface DeckDeTable {
@@ -123,6 +127,7 @@ export function creerPartie(
     journal: [],
     mulliganFait: [false, false],
     tokens,
+    tours: [0, 0],
     commenceeLe: maintenant,
     version: 1,
   };
@@ -141,6 +146,10 @@ export function creerPartie(
     poser("legende", [deck.legende], true);
     poser("champion", [deck.champion], true);
     poser("terrains", deck.terrains, true);
+    for (const id of etat.zones[idZone(j, "terrains")] ?? []) {
+      const terrain = etat.cartes[id];
+      if (terrain) terrain.terrain = true;
+    }
     // Duel (règle 487.5) : chaque joueur tire au hasard 1 de ses 3 champs de bataille, posé sur la table.
     // Les 2 autres restent dans « Champs dispo » (pour jouer en match, où l'on choisit soi-même).
     const dispo = etat.zones[idZone(j, "terrains")] ?? [];
@@ -181,6 +190,20 @@ function deplacerDessus(etat: EtatTable, j: IndexJoueur, de: ZoneJoueur, vers: Z
 function zoneDe(etat: EtatTable, idCarte: string): string | null {
   for (const [zone, ids] of Object.entries(etat.zones)) if (ids.includes(idCarte)) return zone;
   return null;
+}
+
+/** Unités d'un joueur sur un champ de bataille (sans la carte du champ lui-même). */
+function unitesSur(etat: EtatTable, n: number, j: IndexJoueur): string[] {
+  return (etat.zones[idChamp(n)] ?? []).filter((id) => {
+    const carte = etat.cartes[id];
+    return carte && carte.proprio === j && !carte.terrain;
+  });
+}
+
+/** Champs de bataille que je contrôle : au moins une de mes unités, aucune de l'adversaire. */
+function champsControles(etat: EtatTable, j: IndexJoueur): number[] {
+  const autre = (1 - j) as IndexJoueur;
+  return Array.from({ length: NOMBRE_CHAMPS }, (_, n) => n).filter((n) => unitesSur(etat, n, j).length > 0 && unitesSur(etat, n, autre).length === 0);
 }
 
 /** Une carte est visible de tous si elle est face visible dans une zone publique. */
@@ -249,6 +272,106 @@ export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionT
       const zone = idZone(j, action.zone);
       etat.zones[zone] = melanger(etat.zones[zone] ?? [], aleatoire);
       journaliser(etat, j, `${moi} mélange ${nomZone(zone)}.`, t);
+      break;
+    }
+    case "debutTour": {
+      // Aide automatique : Réveil (tout redresser), tenir (1 point par champ contrôlé), canaliser 2 runes (3 au premier
+      // tour du second joueur), piocher 1 carte.
+      const tours = (etat.tours ??= [0, 0]);
+      const premierTour = tours[j] === 0;
+      tours[j] += 1;
+      for (const carte of Object.values(etat.cartes)) if (carte.proprio === j) carte.inclinee = false;
+      const tenus = champsControles(etat, j);
+      const joueur = etat.joueurs[j];
+      joueur.points = Math.min(99, joueur.points + tenus.length);
+      const runes = deplacerDessus(etat, j, "runes", "reserve", premierTour && j !== etat.premier ? 3 : 2);
+      const pioche = deplacerDessus(etat, j, "deck", "main", 1);
+      const morceaux = [
+        "redresse tout",
+        ...(tenus.length ? [`tient ${tenus.map((n) => `le champ de bataille ${n + 1}`).join(" et ")} (+${tenus.length} point${tenus.length > 1 ? "s" : ""})`] : []),
+        `canalise ${runes} rune${runes > 1 ? "s" : ""}`,
+        pioche ? "pioche 1 carte" : "ne peut plus piocher",
+      ];
+      journaliser(etat, j, `${moi} commence son tour ${tours[j]} : ${morceaux.join(", ")}.`, t);
+      break;
+    }
+    case "jouer": {
+      // Aide automatique : le client a choisi les runes qui paient ; on incline, on recycle, puis on pose la carte.
+      const carte = etat.cartes[action.carte];
+      const depart = carte ? zoneDe(etat, carte.id) : null;
+      if (!carte || carte.proprio !== j || (depart !== idZone(j, "main") && depart !== idZone(j, "champion"))) {
+        return { ok: false, erreur: "carte_interdite" };
+      }
+      const arrivee = lireZone(action.vers);
+      const versOk = action.vers === idZone(j, "base") || action.vers === idZone(j, "defausse") || arrivee?.zone === "champ";
+      if (!arrivee || !versOk) return { ok: false, erreur: "zone_interdite" };
+      const reserve = etat.zones[idZone(j, "reserve")] ?? [];
+      const tous = [...action.payer.incliner, ...action.payer.recycler];
+      const valide =
+        new Set(action.payer.incliner).size === action.payer.incliner.length &&
+        new Set(action.payer.recycler).size === action.payer.recycler.length &&
+        tous.every((id) => reserve.includes(id)) &&
+        action.payer.incliner.every((id) => !etat.cartes[id]?.inclinee);
+      if (!valide) return { ok: false, erreur: "paiement_invalide" };
+      for (const id of action.payer.incliner) {
+        const rune = etat.cartes[id];
+        if (rune) rune.inclinee = true;
+      }
+      for (const id of action.payer.recycler) {
+        const rune = etat.cartes[id];
+        if (!rune) continue;
+        reserve.splice(reserve.indexOf(id), 1);
+        rune.inclinee = false;
+        rune.face = false;
+        etat.zones[idZone(j, "runes")]?.push(id);
+      }
+      const source = etat.zones[depart] ?? [];
+      source.splice(source.indexOf(carte.id), 1);
+      (etat.zones[action.vers] ??= []).push(carte.id);
+      carte.face = true;
+      carte.inclinee = Boolean(action.inclinee) && action.vers !== idZone(j, "defausse");
+      const prix = [
+        ...(action.payer.incliner.length ? [`${action.payer.incliner.length} énergie`] : []),
+        ...(action.payer.recycler.length ? [`${action.payer.recycler.length} puissance`] : []),
+      ];
+      const quoi = action.vers === idZone(j, "defausse") ? "lance {0}" : `joue {0} vers ${nomZone(action.vers)}`;
+      journaliser(etat, j, `${moi} ${quoi}${prix.length ? ` (paie ${prix.join(" + ")})` : ""}.`, t, [carte.code]);
+      break;
+    }
+    case "bouger": {
+      // Aide automatique : une unité se déplace entre sa base et un champ de bataille en s'inclinant ; arriver sur un
+      // champ vide le conquiert (+1 point), arriver sur un champ occupé par l'adversaire déclenche un combat.
+      const carte = etat.cartes[action.carte];
+      const depart = carte ? zoneDe(etat, carte.id) : null;
+      const base = idZone(j, "base");
+      if (!carte || carte.proprio !== j || carte.terrain || (depart !== base && lireZone(depart ?? "")?.zone !== "champ")) {
+        return { ok: false, erreur: "carte_interdite" };
+      }
+      if (action.vers === depart || (action.vers !== base && lireZone(action.vers)?.zone !== "champ")) return { ok: false, erreur: "zone_interdite" };
+      if (carte.inclinee) return { ok: false, erreur: "unite_inclinee" };
+      const n = action.vers === base ? -1 : Number(action.vers.slice(6));
+      const adverses = n >= 0 ? unitesSur(etat, n, (1 - j) as IndexJoueur).length : 0;
+      const amies = n >= 0 ? unitesSur(etat, n, j).length : 0;
+      const source = etat.zones[depart ?? ""] ?? [];
+      source.splice(source.indexOf(carte.id), 1);
+      (etat.zones[action.vers] ??= []).push(carte.id);
+      carte.inclinee = true;
+      const visible = carte.face ? "{0}" : "une carte cachée";
+      const cartes = carte.face ? [carte.code] : undefined;
+      if (n < 0) journaliser(etat, j, `${moi} ramène ${visible} dans sa base.`, t, cartes);
+      else if (adverses > 0) journaliser(etat, j, `${moi} envoie ${visible} au champ de bataille ${n + 1} : combat !`, t, cartes);
+      else if (amies > 0) journaliser(etat, j, `${moi} envoie ${visible} au champ de bataille ${n + 1}.`, t, cartes);
+      else {
+        // Conquête. Le 8e point ne vient jamais d'une conquête : on pioche 1 carte à la place (règle simplifiée).
+        const joueur = etat.joueurs[j];
+        if (joueur.points >= 7) {
+          deplacerDessus(etat, j, "deck", "main", 1);
+          journaliser(etat, j, `${moi} conquiert le champ de bataille ${n + 1} avec ${visible} : pas de 8e point par une conquête, il pioche 1 carte.`, t, cartes);
+        } else {
+          joueur.points += 1;
+          journaliser(etat, j, `${moi} conquiert le champ de bataille ${n + 1} avec ${visible} (+1 point).`, t, cartes);
+        }
+      }
       break;
     }
     case "deplacer": {
