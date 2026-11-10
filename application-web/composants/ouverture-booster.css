@@ -9,25 +9,29 @@
 }
 /* Les zones masquées (booster, table) ne doivent ni s'afficher ni capter les clics, même avec un display posé en CSS. */
 .ob-overlay [hidden] { display: none !important; }
-.ob-racine {
+/* Jetons du set : posés sur tout l'écran d'ouverture (la scène, mais aussi la barre du haut et le récapitulatif,
+   qui sont à côté de la scène et non dedans — sinon leurs boutons n'avaient aucune couleur). */
+.ob-overlay {
   --ob-fond-1: #060d1a; --ob-fond-2: #18306a; --ob-halo: #5aa9ff; --ob-accent: #e6b85c; --ob-texte-doux: #a9b6d3;
   --ob-arc-en-ciel: #ff3d6e, #ffb13d, #f9ff3d, #3dff8b, #3dc8ff, #8b3dff, #ff3d6e;
   --ob-largeur-carte: min(64vw, 46vh, 320px);
   --ob-police-titre: "Marcellus SC", "Trajan Pro", Georgia, "Times New Roman", serif;
   --ob-police-ui: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+}
+.ob-racine {
   position: absolute; inset: 0;
   background: radial-gradient(130% 85% at 50% 115%, var(--ob-fond-2), var(--ob-fond-1) 72%); background-color: var(--ob-fond-1);
 }
 /* Origins : la Faille, magie des runes — bleu arcane et or */
-.ob-racine[data-set="ogn"] { --ob-fond-1: #060d1a; --ob-fond-2: #18306a; --ob-halo: #5aa9ff; --ob-accent: #e6b85c; --ob-texte-doux: #a9b6d3; }
+.ob-overlay[data-set="ogn"] { --ob-fond-1: #060d1a; --ob-fond-2: #18306a; --ob-halo: #5aa9ff; --ob-accent: #e6b85c; --ob-texte-doux: #a9b6d3; }
 /* Spiritforged : acier forgé et Spirit Blossom — encre de nuit, pétales roses */
-.ob-racine[data-set="sfd"] { --ob-fond-1: #0c0a14; --ob-fond-2: #3a1630; --ob-halo: #ff8fb3; --ob-accent: #f2e6d8; --ob-texte-doux: #cdb9c4; }
+.ob-overlay[data-set="sfd"] { --ob-fond-1: #0c0a14; --ob-fond-2: #3a1630; --ob-halo: #ff8fb3; --ob-accent: #f2e6d8; --ob-texte-doux: #cdb9c4; }
 /* Unleashed : la jungle et ses monstres — violet du Baron, orage bleu, spores vertes */
-.ob-racine[data-set="unl"] { --ob-fond-1: #05060f; --ob-fond-2: #24184f; --ob-halo: #6fb6ff; --ob-accent: #b9ff6a; --ob-texte-doux: #b0b2d6; }
+.ob-overlay[data-set="unl"] { --ob-fond-1: #05060f; --ob-fond-2: #24184f; --ob-halo: #6fb6ff; --ob-accent: #b9ff6a; --ob-texte-doux: #b0b2d6; }
 /* Vendetta : Zaun, chemtech — fumées toxiques vertes, rouge sang, étincelles */
-.ob-racine[data-set="ven"] { --ob-fond-1: #0a0806; --ob-fond-2: #3d0a0a; --ob-halo: #ff3434; --ob-accent: #9dff3c; --ob-texte-doux: #d0b0a8; }
+.ob-overlay[data-set="ven"] { --ob-fond-1: #0a0806; --ob-fond-2: #3d0a0a; --ob-halo: #ff3434; --ob-accent: #9dff3c; --ob-texte-doux: #d0b0a8; }
 /* Radiance : la scène — irisé, projecteurs, paillettes */
-.ob-racine[data-set="rad"] { --ob-fond-1: #0d0620; --ob-fond-2: #401a6e; --ob-halo: #ff79e1; --ob-accent: #ffe08a; --ob-texte-doux: #d2bde8; }
+.ob-overlay[data-set="rad"] { --ob-fond-1: #0d0620; --ob-fond-2: #401a6e; --ob-halo: #ff79e1; --ob-accent: #ffe08a; --ob-texte-doux: #d2bde8; }
 
 /* ---------- Décor ---------- */
 .ob-fond { position: absolute; inset: -8%; pointer-events: none; background-size: cover; background-position: center;
@@ -40,7 +44,7 @@
     linear-gradient(180deg, rgba(0,0,0,0.55), transparent 22%, transparent 70%, rgba(0,0,0,0.6)),
     radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(0,0,0,0.85)); }
 .ob-projecteurs { position: absolute; inset: 0; pointer-events: none; overflow: hidden; display: none; }
-.ob-racine[data-set="rad"] .ob-projecteurs { display: block; }
+.ob-overlay[data-set="rad"] .ob-projecteurs { display: block; }
 .ob-projecteurs i {
   position: absolute; top: -10%; width: 70vmax; height: 140vmax; transform-origin: 50% 0; mix-blend-mode: screen; opacity: 0.22;
   background: conic-gradient(from 168deg at 50% 0, transparent 0deg, var(--c) 12deg, transparent 24deg);
@@ -194,7 +198,29 @@
 .ob-mini.ob-foil::before { background: conic-gradient(from var(--ob-angle), var(--ob-arc-en-ciel)); animation: ob-tourne-aura 3s linear infinite; opacity: 1; }
 .ob-mini em { position: absolute; bottom: 6px; right: 6px; z-index: 2; font-style: normal; font-family: var(--ob-police-ui); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.78); color: var(--c); }
 @keyframes ob-entre { from { opacity: 0; transform: translateY(10px) scale(0.95); } }
-.ob-actions-recap { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+/* Actions du récapitulatif : barre collée en bas, gros bouton pilule + deux boutons contour. */
+.ob-actions-recap {
+  position: sticky; bottom: calc(-1 * max(28px, env(safe-area-inset-bottom))); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  margin: 24px calc(-1 * max(16px, env(safe-area-inset-right))) calc(-1 * max(28px, env(safe-area-inset-bottom))) calc(-1 * max(16px, env(safe-area-inset-left)));
+  padding: 28px max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ob-fond-1) 88%, transparent) 30%, var(--ob-fond-1));
+}
+.ob-overlay button.ob-bouton-encore {
+  display: flex; align-items: center; justify-content: center; gap: 18px; width: min(100%, 560px); min-height: 68px; padding: 12px 28px;
+  border: none; border-radius: 999px; color: #0b0904; background: var(--ob-accent); filter: none;
+  box-shadow: 0 10px 34px color-mix(in srgb, var(--ob-accent) 40%, transparent), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+.ob-overlay button.ob-bouton-encore:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+.ob-overlay button.ob-bouton-encore:active:not(:disabled) { transform: translateY(1px); }
+.ob-encore-titre { font-family: var(--ob-police-titre); font-size: clamp(1.25rem, 5.4vw, 1.7rem); font-weight: 400; letter-spacing: 0.02em; line-height: 1.1; white-space: nowrap; }
+.ob-encore-separateur { align-self: stretch; width: 2px; margin: 4px 0; border-radius: 1px; background: rgba(11, 9, 4, 0.35); }
+.ob-encore-stock { font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace; font-size: clamp(0.95rem, 4vw, 1.15rem); letter-spacing: 0.04em; white-space: nowrap; }
+.ob-actions-secondaires { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: min(100%, 560px); }
+.ob-overlay button.ob-bouton-pilule {
+  min-height: 56px; padding: 10px 16px; border-radius: 999px; font-family: var(--ob-police-ui); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.02em;
+  color: #eef2fb; background: rgba(10, 10, 16, 0.72); border: 1.5px solid rgba(255, 255, 255, 0.22); box-shadow: none; filter: none;
+}
+.ob-overlay button.ob-bouton-pilule:hover:not(:disabled) { border-color: var(--ob-accent); color: #fff; }
 .ob-erreur { position: absolute; left: 50%; top: 72px; translate: -50% 0; z-index: 7; max-width: calc(100% - 32px); padding: 10px 14px; border-radius: 10px;
   background: rgba(60, 10, 14, 0.92); border: 1px solid #e0565b; color: #fff; text-align: center; }
 .ob-avis { position: absolute; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; z-index: 7; padding: 8px 14px; border-radius: 10px;

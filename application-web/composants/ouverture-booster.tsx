@@ -10,6 +10,9 @@ import { REVELATION, categorieRevelation } from "../outils/ouverture-revelation"
 import { type Scene, monterScene } from "../outils/ouverture-scene";
 import { definirSon, sonActif } from "../outils/ouverture-sons";
 
+/** Sets qui ont une ambiance dédiée (mêmes clés que dans outils/ouverture-scene.ts). */
+const SETS_VISUELS = ["ogn", "sfd", "unl", "ven", "rad"];
+
 interface Props {
   set: string;
   nomSet: string;
@@ -17,11 +20,12 @@ interface Props {
   illustration?: number;
   /** Appel au serveur (POST /boosters/ouvrir), lancé quand le booster se déchire. */
   ouvrir: () => Promise<CarteOuverte[]>;
-  peutOuvrirAutre: boolean;
+  /** Boosters encore en stock (affiché sur le bouton « Ouvrir un autre »). */
+  restants: number;
   surFermer: () => void;
 }
 
-export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrirAutre, surFermer }: Props) {
+export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, surFermer }: Props) {
   const racine = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene | null>(null);
   const appelOuvrir = useRef(ouvrir);
@@ -97,7 +101,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrir
   const rares = recap?.filter((c) => REVELATION[categorieRevelation(c)].rang >= 2).length ?? 0;
 
   return (
-    <div className="ob-overlay" role="dialog" aria-modal="true" aria-label={`Ouverture d'un booster ${nomSet}`}>
+    <div className="ob-overlay" data-set={SETS_VISUELS.includes(set) ? set : "ogn"} role="dialog" aria-modal="true" aria-label={`Ouverture d'un booster ${nomSet}`}>
       <div className="ob-racine" ref={racine} />
       <header className="ob-barre">
         {scelle && (
@@ -166,16 +170,23 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrir
               );
             })}
           </div>
+          {/* Barre collée en bas de l'écran : toujours visible, même sur téléphone avec 14 cartes au-dessus. */}
           <div className="ob-actions-recap">
-            <button type="button" className="ob-bouton-principal" onClick={ouvrirUnAutre} disabled={!peutOuvrirAutre}>
-              {peutOuvrirAutre ? `Ouvrir un autre ${nomSet}` : "Plus de booster en stock"}
+            <button type="button" className="ob-bouton-encore" onClick={ouvrirUnAutre} disabled={restants < 1}>
+              <span className="ob-encore-titre">{restants < 1 ? "Plus de booster" : "Ouvrir un autre"}</span>
+              <span className="ob-encore-separateur" aria-hidden="true" />
+              <span className="ob-encore-stock">
+                {restants < 1 ? "Reviens plus tard" : `${restants} restant${restants > 1 ? "s" : ""}`}
+              </span>
             </button>
-            <button type="button" className="ob-bouton-second" onClick={() => naviguer("/collection")}>
-              Voir ma collection
-            </button>
-            <button type="button" className="ob-bouton-second" onClick={surFermer}>
-              Fermer
-            </button>
+            <div className="ob-actions-secondaires">
+              <button type="button" className="ob-bouton-pilule" onClick={surFermer}>
+                Changer de set
+              </button>
+              <button type="button" className="ob-bouton-pilule" onClick={() => naviguer("/collection")}>
+                Ma collection
+              </button>
+            </div>
           </div>
         </section>
       )}

@@ -187,7 +187,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
             nomSet={nomSet}
             illustration={illustration}
             ouvrir={ouvrirSetChoisi}
-            peutOuvrirAutre={actuel >= 1}
+            restants={actuel}
             surFermer={fermer}
           />,
           document.body,
