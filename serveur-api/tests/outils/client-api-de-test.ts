@@ -8,6 +8,8 @@ export const ORIGINE = "http://localhost";
 export interface OptionsAppel {
   corps?: unknown;
   cookie?: string | null;
+  /** Cookie « appareil connu » (__Host-appareil), reçu à la connexion ou à l'inscription. */
+  appareil?: string | null;
   ip?: string;
   entetes?: Record<string, string>;
 }
@@ -21,7 +23,16 @@ export function creerEnvironnementDeTest() {
       Origin: ORIGINE,
       "CF-Connecting-IP": options.ip ?? "203.0.113.10",
       ...(options.corps !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...(options.cookie ? { Cookie: `__Host-session=${options.cookie}` } : {}),
+      ...(options.cookie || options.appareil
+        ? {
+            Cookie: [
+              options.cookie ? `__Host-session=${options.cookie}` : "",
+              options.appareil ? `__Host-appareil=${options.appareil}` : "",
+            ]
+              .filter(Boolean)
+              .join("; "),
+          }
+        : {}),
       ...options.entetes,
     };
     const reponse = await app.request(
@@ -35,6 +46,7 @@ export function creerEnvironnementDeTest() {
     );
     const setCookie = reponse.headers.get("Set-Cookie") ?? "";
     const cookie = /__Host-session=([^;]*)/.exec(setCookie)?.[1] ?? null;
+    const appareil = /__Host-appareil=([^;]*)/.exec(setCookie)?.[1] ?? null;
     const texte = await reponse.text();
     let json: Record<string, unknown> = {};
     try {
@@ -42,7 +54,7 @@ export function creerEnvironnementDeTest() {
     } catch {
       /* réponse non JSON */
     }
-    return { statut: reponse.status, json, texte, cookie, setCookie };
+    return { statut: reponse.status, json, texte, cookie, appareil, setCookie };
   }
 
   /** Insère directement une invitation (comme le fait la commande admin) et renvoie son code. */

@@ -17,7 +17,7 @@ import { sansAccents } from "../catalogue/recherche-texte";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
 import type { CarteCatalogue } from "../catalogue/types-catalogue";
 import { lireCorps } from "../lecture-requete";
-import { estBloque, enregistrerEchec, REGLES } from "../securite/limitation-tentatives";
+import { compterTentative, REGLES } from "../securite/limitation-tentatives";
 import type { CompteConnecte, ContexteApi } from "../types-application";
 import { schemaIdentifiant, schemaPseudo } from "../validation-donnees";
 
@@ -51,12 +51,16 @@ const estModerateur = (compte: CompteConnecte) => compte.role === "admin" && com
 /** Identifiant stable d'une conversation privée entre deux comptes. */
 const conversationPrivee = (a: number, b: number) => `p:${Math.min(a, b)}:${Math.max(a, b)}`;
 
-/** Anti-spam : 20 messages ou annonces par minute et par compte. */
+/**
+ * Anti-spam : 20 messages ou annonces par minute, et 500 par jour, par compte.
+ * Le plafond journalier protège le quota gratuit d'écritures D1. Comptage atomique (résiste aux envois simultanés).
+ */
 async function antiSpam(c: Context<ContexteApi>): Promise<Response | null> {
   const base = c.env.BASE_DE_DONNEES;
-  const cle = `messages:compte:${moi(c).id}`;
-  if (await estBloque(base, cle, REGLES.messagesParCompte)) return c.json({ erreur: "trop_de_messages" }, 429);
-  await enregistrerEchec(base, cle, REGLES.messagesParCompte);
+  const id = moi(c).id;
+  const refus = () => c.json({ erreur: "trop_de_messages" }, 429);
+  if (!(await compterTentative(base, `messages:compte:${id}`, REGLES.messagesParCompte)).autorisee) return refus();
+  if (!(await compterTentative(base, `messages-jour:compte:${id}`, REGLES.messagesParJour)).autorisee) return refus();
   return null;
 }
 

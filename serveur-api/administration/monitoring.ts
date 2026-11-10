@@ -21,6 +21,8 @@ const EVENEMENTS_SECURITE = ["connexion_echouee", "connexion_bloquee", "inscript
 function regleDeLaCle(cle: string): RegleLimitation | null {
   if (cle.startsWith("connexion:ip:")) return REGLES.connexionParIp;
   if (cle.startsWith("connexion:pseudo:")) return REGLES.connexionParPseudo;
+  if (cle.startsWith("connexion:appareil:")) return REGLES.connexionParAppareil;
+  if (cle.startsWith("messages-jour:compte:")) return REGLES.messagesParJour;
   if (cle.startsWith("inscription:ip:")) return REGLES.inscriptionParIp;
   if (cle.startsWith("reinitialisation:ip:")) return REGLES.reinitialisationParIp;
   if (cle.startsWith("elevation:compte:")) return REGLES.elevationAdmin;

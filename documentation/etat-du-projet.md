@@ -3,8 +3,8 @@
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
 **Dernière mise à jour :** 2026-11-10
-**Étape en cours :** 9 — PWA et responsive (terminée)
-**Prochaine étape :** 10 — Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod. **Pas encore commencée.** Le site est installable (PC, Android, iPhone) et s'ouvre hors ligne (§4sexies).
+**Étape en cours :** 10 — Durcissement sécurité (en cours : revue faite, 6 correctifs livrés en PR, voir §4octies)
+**Prochaine étape :** fin de l'étape 10 : merger la PR des correctifs, décider de la modération des messages privés et de Cloudflare Access sur `/admin`, puis rapport PDF de l'étape 10.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
 **Site en production :** https://riftbound-tcg.axelgirard.workers.dev
 
@@ -88,7 +88,7 @@ Une page `/admin` accessible **uniquement par l'utilisateur** (le propriétaire 
 | Accès admin | Rôle vérifié côté serveur à chaque requête, avec re-saisie du mot de passe (élévation) valable 15 minutes glissantes et un bouton « Fermer l'accès admin » |
 | Mots de passe | 6 à 128 caractères (minimum abaissé de 12 à 6 à la demande de l'utilisateur le 2026-11-08 ; risque accepté : un mot de passe court est vite cassé si la base fuit, mais la limitation des tentatives protège le site), PBKDF2-SHA256 à 100 000 itérations (maximum Workers), sel aléatoire, format versionné. **À surveiller** : le plan gratuit limite le CPU à 10 ms par requête, mais Cloudflare tolère des pics. Si les connexions échouent en production (erreur 1102), baisser les itérations (le format le permet) |
 | Sessions | Jeton de 256 bits dans un cookie `__Host-session` (HttpOnly, Secure, SameSite=Strict). Seule l'empreinte SHA-256 est en base. Durée de 7 jours glissants, 30 jours maximum. La déconnexion et la désactivation du compte suppriment les sessions |
-| Anti force brute | Connexion : 5 échecs par pseudo ou 20 par IP en 15 minutes, puis 429. Inscription : 10 échecs par IP et par heure. Élévation : 5 échecs en 15 minutes |
+| Anti force brute | Connexion : 5 échecs par pseudo ou 20 par IP en 15 minutes, puis 429. Inscription : 10 échecs par IP et par heure. Élévation : 5 échecs en 15 minutes. **Depuis l'étape 10** : comptage atomique avant traitement (résiste aux requêtes simultanées), IPv6 limitée par bloc /64, et appareils connus exemptés du blocage par pseudo (§4octies) |
 | Énumération | Même message et même temps de calcul (hash factice) pour un pseudo inconnu ou un mauvais mot de passe |
 | CSRF | SameSite=Strict, en-tête `Origin` obligatoire et identique au site pour POST, PUT, PATCH et DELETE, et JSON obligatoire |
 | Entrées | Zod en mode strict : les champs inconnus sont refusés (par exemple, on ne peut pas envoyer `role: "admin"`). Corps limité à 16 Ko |
@@ -245,6 +245,21 @@ Décisions de l'utilisateur : **salon commun + messages privés**, et des annonc
 - **Sécurité** : anti-spam 20 messages ou annonces par minute et par compte (`messages:compte:<id>` dans `limitations`), suppression d'un message ou retrait d'une annonce par son auteur, ou par un admin **dont l'accès admin est ouvert** (modération). Seul un cardCode est stocké pour une annonce.
 - **Base** : migration 0007 (`annonces`, `messages`, `lectures`). API : `serveur-api/marche/routes-marche.ts`. 12 tests (`marche.test.ts`).
 
+## 4octies. Durcissement sécurité (étape 10, 2026-11-10)
+
+Revue de sécurité de tout le code : aucune faille critique (pas d'injection SQL, de XSS, d'IDOR, de contournement admin ni de duplication de cartes). Six correctifs :
+
+1. **Blocage volontaire du propriétaire** : 5 mauvais mots de passe sur un pseudo bloquaient aussi son propriétaire, et `Crousti` est écrit dans le dépôt public. Correction : cookie `__Host-appareil` (jeton de 256 bits, HttpOnly, Secure, SameSite=Strict, 1 an), donné à chaque inscription ou connexion réussie, avec seule son empreinte en base (migration 0008 `appareils_connus`). Sur un appareil connu du compte, les échecs sont comptés à part (`connexion:appareil:<empreinte>`, 5 par 15 min). Le cookie n'ouvre aucune session : il faut toujours le mot de passe. Les appareils sont oubliés à la réinitialisation du mot de passe. Code : `serveur-api/authentification/appareils-connus.ts`.
+2. **Requêtes simultanées** : on vérifiait le compteur, puis on calculait le hash, puis on comptait l'échec. 30 tentatives envoyées en même temps passaient toutes (vérifié sur l'ancien code). Correction : `compterTentative()` incrémente et lit le compteur en une seule requête (`INSERT … ON CONFLICT … RETURNING nombre`) **avant** le traitement ; une réussite est remboursée (`rembourserTentative`). S'applique à la connexion, l'inscription, la réinitialisation, l'élévation admin et l'anti-spam.
+3. **Remplissage de la base** : chaque requête bloquée écrivait une ligne de journal, et rien n'était jamais purgé. Correction : un blocage n'est journalisé qu'une fois par fenêtre (`premierRefus`), et chaque connexion réussie purge le journal de plus de 90 jours, les sessions expirées, les compteurs de plus de 2 jours et les appareils inutilisés depuis 1 an (`serveur-api/entretien-base.ts`, sans tâche planifiée).
+4. **Quota d'écritures** : en plus de 20 messages/annonces par minute, plafond de 500 par jour et par compte (`messages-jour:compte:<id>`).
+5. **Énumération des pseudos** : `/inscription` répondait « pseudo indisponible » avant de vérifier le code d'invitation. L'invitation est maintenant vérifiée en premier.
+6. **IPv6** : les limites par IP portent sur le bloc /64 (`ipPourLimitation`), car un abonné dispose de tout ce bloc.
+
+Non changé, à décider par l'utilisateur : un admin (accès ouvert) peut supprimer un message privé d'une conversation dont il ne fait pas partie (il ne peut pas le lire). Recommandé aussi : Cloudflare Access sur `/admin` (§2bis) et un mot de passe long pour le compte admin.
+
+Tests : `serveur-api/tests/durcissement-securite.test.ts` (19 tests d'abus, dont les requêtes simultanées). Vérifié aussi dans le vrai moteur Cloudflare en local (`npm run dev`, migration 0008 appliquée) : pseudo bloqué pour un inconnu, connexion acceptée depuis l'appareil connu, parcours normal (boosters, collection, marché, échanges) inchangé.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -275,7 +290,7 @@ Décisions de l'utilisateur : **salon commun + messages privés**, et des annonc
 | 7 | Échanges entre joueurs | Terminé |
 | 8 | **Admin : monitoring en quasi temps réel** (voir §2bis et §4quinquies) | Terminé |
 | 9 | PWA (installable, hors-ligne partiel), responsive (voir §4sexies) | Terminé |
-| 10 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod | À faire |
+| 10 | Durcissement sécurité (revue, en-têtes, tests d'abus) et mise en prod (voir §4octies) | En cours |
 
 ## 7. Actions manuelles en attente (utilisateur)
 
@@ -310,6 +325,7 @@ Décisions de l'utilisateur : **salon commun + messages privés**, et des annonc
 - **2026-11-10 — Correctifs de l'ouverture.** (1) Le fond Vendetta (`fond-ven.jpg`) était une photo produit (présentoir + booster), d'où « un autre booster en fond » : remplacé par l'illustration du haut du présentoir, recadrée au-dessus du logo. (2) Le bouton « Ouvrir un autre » était presque invisible : les couleurs du set (`--ob-accent`…) étaient définies sur la scène, alors que la barre du haut et le récapitulatif sont à côté d'elle → fond transparent. Les jetons sont maintenant posés sur `.ob-overlay` (attribut `data-set`). (3) Récapitulatif refait (inspiration fournie par l'utilisateur) : barre collée en bas de l'écran avec un gros bouton pilule « Ouvrir un autre | N restants », puis « Changer de set » et « Ma collection ». Vérifié dans Edge headless sur un vrai booster Vendetta (390 px et 1440 px).
 - **2026-11-10 — Carrousel « Changer de set ».** Sur PC uniquement, les trois boutons du récapitulatif sont sur une ligne (« Ouvrir un autre » au milieu) ; sur téléphone, disposition inchangée. « Changer de set » ouvre un carrousel de tous les boosters (glisser au doigt, flèches sur PC, booster actuel au centre) : on touche un booster et l'écran d'ouverture repart directement sur ce set (`composants/carrousel-boosters.tsx`). Deux pièges évités : `scrollIntoView` faisait défiler tout l'écran d'ouverture (la page d'accueil apparaissait derrière) → défilement de la piste seule ; la colonne de grille prenait la largeur des 5 boosters → `minmax(0, 1fr)`. Testé dans Edge headless (PC et 390 px) : Vendetta → carrousel → Origins → booster Origins scellé prêt à ouvrir.
 - **2026-11-10 — Illustrations variées dans le carrousel.** À chaque ouverture du carrousel « Changer de set », chaque set qui a plusieurs illustrations en montre une autre (Origins, Unleashed : 3 ; Vendetta : 2). Le booster ouvert reprend l'illustration vue dans le carrousel, y compris pour le set actuel (`recommencer(illustration)`). L'illustration de la scène est figée au montage pour que le changement ne remonte pas la scène sous le récapitulatif. Vérifié dans Edge headless : 3 ouvertures du carrousel → illustrations différentes à chaque fois ; booster ouvert = booster montré.
+- **2026-11-10 — Étape 10 : revue de sécurité et 6 correctifs (§4octies).** Appareils connus (migration 0008), limites atomiques, journalisation d'un blocage une seule fois et purge automatique, plafond de 500 messages par jour, inscription sans énumération des pseudos, IPv6 par /64. 19 tests d'abus (179 au total). Le test de requêtes simultanées échoue sur l'ancien code (30 essais passaient au lieu de 5). Vérifié dans le vrai moteur Cloudflare en local.
 - **2026-11-09 — Étape 9.** PWA et responsive (§4sexies). Service worker écrit à la main et généré au build (aucune nouvelle dépendance), `/api/*` jamais en cache. Manifeste, icône maskable, carte « Installer l'application », bandeau hors ligne et reconnexion automatique. Marges safe-area, `dvh`, réglages petits écrans et écrans tactiles. 17 nouveaux tests (138 au total), dont l'exécution réelle du service worker dans un bac à sable. Vérifié dans Edge (installable, hors ligne, 3 tailles d'écran). Test d'échange instable corrigé (catalogue périmé après un saut de 48 h).
 - **2026-11-09 — Étape 8.** Monitoring admin en quasi temps réel (§4quinquies). Migration `0005` (tirages remarquables, erreurs serveur, index). Route `GET /api/admin/monitoring` en lecture seule, qui ne prolonge pas l'accès admin. Quotas Cloudflare via l'API GraphQL (jeton à créer par l'utilisateur, §7). Onglet « Monitoring » rafraîchi toutes les 8 s. « En ligne » précis à 2 minutes. 121 tests (8 nouveaux). Vérifié de bout en bout en local.
 - **2026-11-09 — Taux, filtres, images.** À la demande de l'utilisateur : (1) tous les taux Rare+ divisés par 2 (Epic 1/12, Alt 1/24, Over 1/144, Signée 1/480, Special et Ultime 1/2000 boosters), tests statistiques mis à jour ; (2) filtre Champion et Signature (étiquettes `cardTypeLabels`), fixture de test enrichie ; (3) image de secours quand une miniature du CDN ne se charge pas. 113 tests.
