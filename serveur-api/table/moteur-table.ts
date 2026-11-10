@@ -26,6 +26,10 @@ export interface CarteJeu {
   face: boolean;
   inclinee: boolean;
   marqueurs: number;
+  /** Token créé pendant la partie : il disparaît dès qu'il quitte le jeu. */
+  token?: true;
+  /** Token « libre » (absent des données, ex. Bomb) : son nom, sans carte du catalogue (code vide). */
+  libelle?: string;
 }
 
 export interface EntreeJournal {
@@ -53,6 +57,8 @@ export interface EtatTable {
   journal: EntreeJournal[];
   /** Le mulligan n'est possible qu'une fois, avant d'avoir joué. */
   mulliganFait: [boolean, boolean];
+  /** Codes des tokens du jeu que l'on peut créer (fournis par le Worker au lancement ; absent : parties plus anciennes). */
+  tokens?: string[];
   commenceeLe: number;
   /** Incrémenté à chaque action (le client ignore une vue plus ancienne). */
   version: number;
@@ -101,6 +107,7 @@ export function creerPartie(
   joueurs: [{ id: number; pseudo: string; deck: DeckDeTable }, { id: number; pseudo: string; deck: DeckDeTable }],
   aleatoire: Aleatoire,
   maintenant: number,
+  tokens: string[] = [],
 ): EtatTable {
   const etat: EtatTable = {
     code,
@@ -113,6 +120,7 @@ export function creerPartie(
     cartes: {},
     journal: [],
     mulliganFait: [false, false],
+    tokens,
     commenceeLe: maintenant,
     version: 1,
   };
@@ -193,6 +201,15 @@ export const schemaAction = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("points"), delta: z.number().int().min(-5).max(5) }),
   z.strictObject({ type: z.literal("reveler"), carte: schemaIdCarte }),
   z.strictObject({ type: z.literal("mulligan"), cartes: z.array(schemaIdCarte).max(2) }),
+  z.strictObject({
+    type: z.literal("creerToken"),
+    /** Un token du jeu (voir EtatTable.tokens)… */
+    code: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
+    /** … ou un token libre, par son nom (« Bomb »). */
+    libelle: z.string().trim().min(1).max(30).optional(),
+    vers: schemaIdZone,
+    n: z.number().int().min(1).max(5),
+  }),
   z.strictObject({ type: z.literal("de") }),
   z.strictObject({ type: z.literal("dire"), texte: z.string().trim().min(1).max(200) }),
 ]);
@@ -274,6 +291,13 @@ export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionT
       if (!ZONES_EN_JEU.has(arrivee.zone)) {
         carte.inclinee = false;
         carte.marqueurs = 0;
+        // Un token qui quitte le jeu cesse d'exister.
+        if (carte.token) {
+          cible.splice(cible.indexOf(carte.id), 1);
+          delete etat.cartes[carte.id];
+          journaliser(etat, j, carte.libelle ? `${moi} retire le token ${carte.libelle}.` : `${moi} retire le token {0}.`, t, carte.libelle ? undefined : [carte.code]);
+          break;
+        }
       }
       const devientPublique = estPublique(etat, carte.id, action.vers);
       const qui = carte.proprio === j ? moi : `${moi} (carte de ${etat.joueurs[carte.proprio].pseudo})`;
@@ -341,6 +365,33 @@ export function appliquerAction(etat: EtatTable, j: IndexJoueur, action: ActionT
       journaliser(etat, j, `${moi} garde sa main${action.cartes.length ? ` après avoir changé ${action.cartes.length} carte${action.cartes.length > 1 ? "s" : ""}` : ""}.`, t);
       break;
     }
+    case "creerToken": {
+      const arrivee = lireZone(action.vers);
+      if (!arrivee || !ZONES_EN_JEU.has(arrivee.zone) || (arrivee.proprio !== null && arrivee.proprio !== j)) {
+        return { ok: false, erreur: "zone_interdite" };
+      }
+      if (Boolean(action.code) === Boolean(action.libelle)) return { ok: false, erreur: "token_inconnu" };
+      if (action.code && !(etat.tokens ?? []).includes(action.code)) return { ok: false, erreur: "token_inconnu" };
+      let suivant = Math.max(0, ...Object.keys(etat.cartes).map((id) => Number(id.slice(1)) || 0));
+      if (suivant + action.n > 9999) return { ok: false, erreur: "trop_de_cartes" };
+      for (let i = 0; i < action.n; i++) {
+        const id = `c${++suivant}`;
+        etat.cartes[id] = {
+          id,
+          code: action.code ?? "",
+          proprio: j,
+          face: true,
+          inclinee: false,
+          marqueurs: 0,
+          token: true,
+          ...(action.libelle ? { libelle: action.libelle } : {}),
+        };
+        (etat.zones[action.vers] ??= []).push(id);
+      }
+      const quoi = action.libelle ? `${action.n} token${action.n > 1 ? "s" : ""} ${action.libelle}` : `${action.n} × {0}`;
+      journaliser(etat, j, `${moi} crée ${quoi} (${nomZone(action.vers)}).`, t, action.code ? [action.code] : undefined);
+      break;
+    }
     case "de": {
       journaliser(etat, j, `${moi} lance un dé : ${1 + Math.floor(aleatoire() * 6)}.`, t);
       break;
@@ -364,6 +415,8 @@ export interface CarteVue {
   face: boolean;
   inclinee: boolean;
   marqueurs: number;
+  token?: true;
+  libelle?: string;
 }
 
 export interface VueTable {
@@ -375,6 +428,8 @@ export interface VueTable {
   zones: Record<string, CarteVue[] | number>;
   journal: EntreeJournal[];
   mulliganFait: [boolean, boolean];
+  /** Tokens du jeu que l'on peut créer. */
+  tokens: string[];
   version: number;
 }
 
@@ -393,7 +448,18 @@ export function vuePour(etat: EtatTable, moi: IndexJoueur | null): VueTable {
       const c = etat.cartes[cid];
       if (!c) return [];
       const visible = c.face || c.proprio === moi;
-      return [{ id: c.id, code: visible ? c.code : null, proprio: c.proprio, face: c.face, inclinee: c.inclinee, marqueurs: c.marqueurs }];
+      return [
+        {
+          id: c.id,
+          code: visible && c.code ? c.code : null,
+          proprio: c.proprio,
+          face: c.face,
+          inclinee: c.inclinee,
+          marqueurs: c.marqueurs,
+          ...(c.token ? { token: true as const } : {}),
+          ...(c.libelle && visible ? { libelle: c.libelle } : {}),
+        },
+      ];
     });
   }
   return {
@@ -404,6 +470,7 @@ export function vuePour(etat: EtatTable, moi: IndexJoueur | null): VueTable {
     zones,
     journal: etat.journal,
     mulliganFait: etat.mulliganFait,
+    tokens: etat.tokens ?? [],
     version: etat.version,
   };
 }

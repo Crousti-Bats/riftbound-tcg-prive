@@ -28,6 +28,7 @@ const schemaInitialisation = z.strictObject({
     z.strictObject({ id: z.number().int(), pseudo: z.string().max(20), deck: schemaDeck }),
     z.strictObject({ id: z.number().int(), pseudo: z.string().max(20), deck: schemaDeck }),
   ]),
+  tokens: z.array(z.string().regex(/^[a-z0-9-]{3,40}$/)).max(100).default([]),
 });
 const schemaMessage = z.strictObject({ type: z.literal("action"), action: schemaAction });
 
@@ -59,8 +60,8 @@ export class SalleDeJeu {
     if (await this.charger()) return Response.json({ erreur: "deja_initialisee" }, { status: 409 });
     const donnees = schemaInitialisation.safeParse(await requete.json().catch(() => null));
     if (!donnees.success) return Response.json({ erreur: "donnees_invalides" }, { status: 400 });
-    const { code, joueurs } = donnees.data;
-    this.etat = creerPartie(code, joueurs as [{ id: number; pseudo: string; deck: DeckDeTable }, { id: number; pseudo: string; deck: DeckDeTable }], aleatoireCrypto, Date.now());
+    const { code, joueurs, tokens } = donnees.data;
+    this.etat = creerPartie(code, joueurs as [{ id: number; pseudo: string; deck: DeckDeTable }, { id: number; pseudo: string; deck: DeckDeTable }], aleatoireCrypto, Date.now(), tokens);
     await this.ctx.storage.put("etat", this.etat);
     return Response.json({ ok: true });
   }

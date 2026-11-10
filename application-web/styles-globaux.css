@@ -917,6 +917,11 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
 .carte-table-mini { --l: 26px; box-shadow: none; }
 .carte-table-cachee { position: absolute; left: 2px; right: 2px; bottom: 2px; font-size: 0.55rem; text-align: center; border-radius: 3px; background: rgba(0, 0, 0, 0.75); color: var(--texte-doux); }
 .carte-table-marqueurs { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 4px; display: grid; place-items: center; border-radius: 999px; font-size: 0.75rem; font-weight: 800; color: var(--accent-texte); background: var(--accent-vif); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+.token-libre { display: grid; place-items: center; width: 100%; height: 100%; padding: 4px; border-radius: 4px; text-align: center; background: linear-gradient(160deg, #3a2a10, #1a1408); box-shadow: inset 0 0 0 2px rgba(243, 207, 134, 0.6); }
+.token-libre span { font-weight: 800; font-size: calc(var(--l, 60px) * 0.2); line-height: 1.1; color: var(--accent-vif); overflow-wrap: anywhere; }
+.panneau-carte-image .token-libre { aspect-ratio: 744 / 1039; border-radius: 12px; }
+.panneau-carte-image .token-libre span { font-size: 1.6rem; }
+.carte-table-token { position: absolute; top: 2px; left: 2px; padding: 0 4px; border-radius: 3px; font-size: 0.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-texte); background: var(--accent-vif); }
 .dos-carte { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 4px; background: radial-gradient(circle at 50% 45%, #2a3f6e 0, #12203d 55%, #0a1224 100%); box-shadow: inset 0 0 0 2px rgba(212, 173, 98, 0.45), inset 0 0 0 5px #0a1224, inset 0 0 0 6px rgba(212, 173, 98, 0.25); }
 .dos-carte span { font-family: Georgia, serif; font-weight: 700; font-size: calc(var(--l, 60px) * 0.4); color: rgba(243, 207, 134, 0.75); }
 .pile-vide { display: block; width: 100%; height: 100%; border-radius: 4px; border: 1px dashed var(--bordure-forte); }

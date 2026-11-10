@@ -190,6 +190,7 @@ function Plateau({ code }: { code: string }) {
   const [mulligan, setMulligan] = useState<string[] | null>(null);
   const [message, setMessage] = useState("");
   const [journalOuvert, setJournalOuvert] = useState(false);
+  const [choixToken, setChoixToken] = useState(false);
 
   // La carte sélectionnée a pu bouger (ou disparaître) : on suit sa nouvelle position.
   const selectionActuelle = vue && selection ? retrouverCarte(vue, selection.carte.id) : null;
@@ -317,6 +318,9 @@ function Plateau({ code }: { code: string }) {
             <button className="secondaire petit" onClick={() => jouer({ type: "melanger", zone: "deck" })}>
               Mélanger mon deck
             </button>
+            <button className="secondaire petit" onClick={() => setChoixToken(true)}>
+              Créer un token
+            </button>
             <button className="secondaire petit" onClick={() => jouer({ type: "de" })}>
               Lancer un dé
             </button>
@@ -362,6 +366,7 @@ function Plateau({ code }: { code: string }) {
           surFermer={() => setSelection(null)}
         />
       )}
+      {choixToken && <ChoixToken vue={vue} moi={moi} cartes={cartes} jouer={jouer} surFermer={() => setChoixToken(false)} />}
       {pile && (
         <VoirPile
           vue={vue}
@@ -419,12 +424,110 @@ function CarteTable({ carte, zone, grande, cartes, selection, mulligan, surChoix
     selection === carte.id ? "carte-table-choisie" : "",
     mulligan?.includes(carte.id) ? "carte-table-mulligan" : "",
   ].join(" ");
+  const nom = carte.libelle ? `Token ${carte.libelle}` : NOM_CARTE(infos);
   return (
-    <button className={classes} onClick={() => surChoix(carte, zone)} title={NOM_CARTE(infos)} aria-label={NOM_CARTE(infos)}>
-      {infos ? <ImageCarte image={infos.image} largeur={300} alt="" /> : <DosCarte />}
+    <button className={classes} onClick={() => surChoix(carte, zone)} title={nom} aria-label={nom}>
+      {carte.libelle ? <TokenLibre libelle={carte.libelle} /> : infos ? <ImageCarte image={infos.image} largeur={300} alt="" /> : <DosCarte />}
+      {carte.token && <span className="carte-table-token">Token</span>}
       {!carte.face && carte.code && !zone.endsWith(".main") && <span className="carte-table-cachee">Face cachée</span>}
       {carte.marqueurs !== 0 && <span className="carte-table-marqueurs">{carte.marqueurs > 0 ? `+${carte.marqueurs}` : carte.marqueurs}</span>}
     </button>
+  );
+}
+
+/** Token libre (Bomb…) : pas d'image dans les données, on affiche son nom. */
+function TokenLibre({ libelle }: { libelle: string }) {
+  return (
+    <span className="token-libre">
+      <span>{libelle}</span>
+    </span>
+  );
+}
+
+/** Créer un ou plusieurs tokens : un token du jeu (avec son image) ou un token libre par son nom. */
+function ChoixToken({
+  vue,
+  moi,
+  cartes,
+  jouer,
+  surFermer,
+}: {
+  vue: VueTable;
+  moi: IndexJoueur;
+  cartes: Record<string, Carte>;
+  jouer: (a: ActionTable) => void;
+  surFermer: () => void;
+}) {
+  const [vers, setVers] = useState(`${moi}.base`);
+  const [n, setN] = useState(1);
+  const [libelle, setLibelle] = useState("");
+  // Un seul exemplaire par nom (Gold, Sprite, Recruit… existent dans plusieurs sets).
+  const vus = new Set<string>();
+  const tokens = vue.tokens.filter((code) => {
+    const nom = cartes[code]?.nom ?? code;
+    if (vus.has(nom)) return false;
+    vus.add(nom);
+    return true;
+  });
+  const creer = (choix: { code: string } | { libelle: string }) => {
+    jouer({ type: "creerToken", ...choix, vers, n });
+    surFermer();
+  };
+  return (
+    <div className="fond-modale" onClick={surFermer}>
+      <div className="modale pile-serree" role="dialog" aria-label="Créer un token" onClick={(e) => e.stopPropagation()}>
+        <h2>Créer un token</h2>
+        <div className="actions-ligne">
+          <label>
+            Où ?{" "}
+            <select value={vers} onChange={(e) => setVers(e.target.value)}>
+              <option value={`${moi}.base`}>Ma base</option>
+              <option value="champ.0">Champ de bataille 1</option>
+              <option value="champ.1">Champ de bataille 2</option>
+            </select>
+          </label>
+          <label>
+            Combien ?{" "}
+            <select value={n} onChange={(e) => setN(Number(e.target.value))}>
+              {[1, 2, 3, 4, 5].map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {tokens.length > 0 && <p className="aide">Clique sur un token du jeu :</p>}
+        <div className="grille-cartes grille-compacte">
+          {tokens.map((code) => {
+            const c = cartes[code];
+            return (
+              <button key={code} className="vignette-carte" onClick={() => creer({ code })} title={c ? NOM_CARTE(c) : code}>
+                <span className="cadre-carte">
+                  {c ? <ImageCarte className={c.orientation === "paysage" ? "image-paysage" : undefined} image={c.image} largeur={300} alt={c.nom} /> : <DosCarte />}
+                </span>
+                <span className="legende-carte">{c?.nom ?? code}</span>
+              </button>
+            );
+          })}
+        </div>
+        <form
+          className="creation-deck"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (libelle.trim()) creer({ libelle: libelle.trim() });
+          }}
+        >
+          <input value={libelle} onChange={(e) => setLibelle(e.target.value)} maxLength={30} placeholder="Autre token (ex. Bomb)" aria-label="Nom d'un autre token" />
+          <button type="submit" className="secondaire" disabled={!libelle.trim()}>
+            Créer
+          </button>
+        </form>
+        <button className="petit" onClick={surFermer}>
+          Fermer
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -580,15 +683,17 @@ function PanneauCarte({
   // Les cartes de l'adversaire : seulement si elles sont visibles en jeu (incliner, marqueurs, détruire…).
   const autorise = aMoi || (c.face && enJeu) || zone.endsWith(".defausse") || zone.endsWith(".bannis");
 
+  const titre = c.libelle ? `Token ${c.libelle}` : NOM_CARTE(carte);
   return (
     <div className="fond-modale" onClick={surFermer}>
-      <div className="modale panneau-carte-table" role="dialog" aria-label={NOM_CARTE(carte)} onClick={(e) => e.stopPropagation()}>
+      <div className="modale panneau-carte-table" role="dialog" aria-label={titre} onClick={(e) => e.stopPropagation()}>
         <div className="panneau-carte-image">
-          {carte ? <ImageCarte image={carte.image} largeur={744} alt={carte.nom} /> : <DosCarte />}
+          {c.libelle ? <TokenLibre libelle={c.libelle} /> : carte ? <ImageCarte image={carte.image} largeur={744} alt={carte.nom} /> : <DosCarte />}
         </div>
         <div className="panneau-carte-actions">
-          <h2>{NOM_CARTE(carte)}</h2>
+          <h2>{titre}</h2>
           {carte?.texte && <p className="aide panneau-carte-texte">{carte.texte}</p>}
+          {c.token && <p className="aide">Token : il disparaît s'il quitte le jeu (défausse, main, deck, bannissement).</p>}
           {!autorise ? (
             <p className="aide">Carte de {vue.joueurs[p].pseudo} : tu ne peux pas la manipuler ici.</p>
           ) : (

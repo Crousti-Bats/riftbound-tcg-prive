@@ -36,7 +36,7 @@ const DECK: DeckDeTable = {
 };
 
 function partie(): EtatTable {
-  return creerPartie("ABCD2345", [{ id: 1, pseudo: "Alice", deck: DECK }, { id: 2, pseudo: "Bob", deck: DECK }], aleatoireSeede(), 1000);
+  return creerPartie("ABCD2345", [{ id: 1, pseudo: "Alice", deck: DECK }, { id: 2, pseudo: "Bob", deck: DECK }], aleatoireSeede(), 1000, ["ogn-271-298", "unl-t05"]);
 }
 
 /** Comme la salle : l'action passe d'abord par le schéma (validation, nettoyage du texte). */
@@ -171,6 +171,40 @@ describe("Table de jeu : actions", () => {
     expect(etat.journal.at(-1)?.texte).toBe("Alice : bien joué");
   });
 
+  it("crée des tokens du jeu ou libres, chez moi ou sur un champ de bataille, jamais chez l'adversaire", () => {
+    const etat = partie();
+    expect(jouer(etat, 0, { type: "creerToken", code: "ogn-271-298", vers: "0.base", n: 2 })).toEqual({ ok: true });
+    const base = vueZone(etat, 1, "0.base") as CarteVue[];
+    expect(base.map((c) => [c.code, c.token])).toEqual([["ogn-271-298", true], ["ogn-271-298", true]]);
+    expect(etat.journal.at(-1)).toMatchObject({ texte: "Alice crée 2 × {0} (sa base).", cartes: ["ogn-271-298"] });
+    // Les nouveaux identifiants ne réutilisent jamais ceux des cartes existantes.
+    expect(new Set(Object.keys(etat.cartes)).size).toBe(Object.keys(etat.cartes).length);
+
+    expect(jouer(etat, 1, { type: "creerToken", libelle: "Bomb", vers: "champ.1", n: 1 })).toEqual({ ok: true });
+    expect((vueZone(etat, 0, "champ.1") as CarteVue[])[0]).toMatchObject({ code: null, libelle: "Bomb", token: true, proprio: 1 });
+
+    expect(jouer(etat, 0, { type: "creerToken", code: "zzz-999", vers: "0.base", n: 1 })).toEqual({ ok: false, erreur: "token_inconnu" });
+    expect(jouer(etat, 0, { type: "creerToken", vers: "0.base", n: 1 })).toEqual({ ok: false, erreur: "token_inconnu" });
+    expect(jouer(etat, 0, { type: "creerToken", libelle: "Bomb", vers: "1.base", n: 1 })).toEqual({ ok: false, erreur: "zone_interdite" });
+    expect(jouer(etat, 0, { type: "creerToken", libelle: "Bomb", vers: "0.main", n: 1 })).toEqual({ ok: false, erreur: "zone_interdite" });
+  });
+
+  it("un token qui quitte le jeu disparaît, même détruit par l'adversaire", () => {
+    const etat = partie();
+    jouer(etat, 0, { type: "creerToken", libelle: "Bomb", vers: "champ.0", n: 1 });
+    const id = cartesDe(etat, "champ.0")[0] as string;
+    jouer(etat, 0, { type: "incliner", carte: id });
+    expect(jouer(etat, 1, { type: "deplacer", carte: id, vers: "0.defausse" })).toEqual({ ok: true });
+    expect(etat.cartes[id]).toBeUndefined();
+    expect(cartesDe(etat, "0.defausse")).toEqual([]);
+    expect(etat.journal.at(-1)?.texte).toBe("Bob retire le token Bomb.");
+    // Rester en jeu (base → champ de bataille) ne le fait pas disparaître.
+    jouer(etat, 0, { type: "creerToken", code: "unl-t05", vers: "0.base", n: 1 });
+    const gold = cartesDe(etat, "0.base")[0] as string;
+    jouer(etat, 0, { type: "deplacer", carte: gold, vers: "champ.1" });
+    expect(cartesDe(etat, "champ.1")).toEqual([gold]);
+  });
+
   it("refuse les actions mal formées", () => {
     expect(schemaAction.safeParse({ type: "piocher", n: 50 }).success).toBe(false);
     expect(schemaAction.safeParse({ type: "deplacer", carte: "c1", vers: "2.main" }).success).toBe(false);
@@ -244,6 +278,8 @@ describe("API /api/parties (salon)", () => {
     expect(init.corps.joueurs.map((j) => j.pseudo)).toEqual(["Alice", "Bob"]);
     expect(init.corps.joueurs[1]?.deck.principal).toHaveLength(39);
     expect(init.corps.joueurs[1]?.deck.runes).toHaveLength(12);
+    // La salle reçoit la liste des tokens du jeu (ici le token de test « tok »).
+    expect((init.corps as unknown as { tokens: string[] }).tokens).toEqual(["tok"]);
 
     const liste = await env.appeler("GET", "/api/parties", { cookie: alice.cookie });
     expect(liste.json.parties).toEqual([expect.objectContaining({ code, statut: "en_cours", createur: "Alice", invite: "Bob", moi: 0 })]);

@@ -12,6 +12,10 @@ export interface CarteVue {
   face: boolean;
   inclinee: boolean;
   marqueurs: number;
+  /** Token créé pendant la partie (disparaît en quittant le jeu). */
+  token?: true;
+  /** Token libre (absent des données) : son nom. */
+  libelle?: string;
 }
 
 export interface EntreeJournal {
@@ -29,6 +33,8 @@ export interface VueTable {
   zones: Record<string, CarteVue[] | number>;
   journal: EntreeJournal[];
   mulliganFait: [boolean, boolean];
+  /** Tokens du jeu que l'on peut créer. */
+  tokens: string[];
   version: number;
 }
 
@@ -44,6 +50,7 @@ export type ActionTable =
   | { type: "points"; delta: number }
   | { type: "reveler"; carte: string }
   | { type: "mulligan"; cartes: string[] }
+  | { type: "creerToken"; code?: string; libelle?: string; vers: string; n: number }
   | { type: "de" }
   | { type: "dire"; texte: string };
 
@@ -65,6 +72,8 @@ export const MESSAGES_TABLE: Record<string, string> = {
   mulligan_deja_fait: "Tu as déjà fait ton mulligan.",
   trop_rapide: "Doucement ! Trop d'actions d'affilée.",
   action_invalide: "Action refusée.",
+  token_inconnu: "Ce token n'existe pas.",
+  trop_de_cartes: "Trop de cartes sur la table.",
 };
 
 /** Cartes d'une zone (tableau vide pour une zone cachée, dont on ne connaît que le nombre). */
@@ -160,6 +169,7 @@ export function useCartesTable(vue: VueTable | null): Record<string, Carte> {
     const codes = new Set<string>();
     for (const z of Object.values(vue.zones)) if (Array.isArray(z)) for (const c of z) if (c.code) codes.add(c.code);
     for (const e of vue.journal) for (const code of e.cartes ?? []) codes.add(code);
+    for (const code of vue.tokens ?? []) codes.add(code);
     const manquants = [...codes].filter((code) => !demandees.current.has(code));
     if (manquants.length === 0) return;
     manquants.forEach((code) => demandees.current.add(code));

@@ -354,6 +354,14 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Boosters : +1 toutes les 15 minutes** (au lieu de 20, demandé le 2026-11-10) : `INTERVALLE_REGEN_MS`. Pas de migration : le calcul paresseux recompte le temps écoulé avec le nouvel intervalle (les joueurs gagnent un peu à la mise en ligne, jamais l'inverse). Notifications « boosters pleins » ajustées d'elles-mêmes.
 - **Étapes suivantes possibles** : glisser-déposer, regarder le dessus du deck, annuler sa dernière action, spectateurs, invitation depuis le profil ou le chat, sons et animations.
 
+## 4octodecies. Tokens sur la table de jeu (demandé le 2026-11-10)
+
+- Retour des joueurs : « il manque les tokens ». Dans Riftbound, les tokens ne vont pas dans le deck (le constructeur de decks les refuse, à raison) : ce sont des cartes créées par d'autres cartes pendant la partie. Il manquait donc la **création de tokens sur la table**.
+- Bouton **« Créer un token »** : où (ma base, champ de bataille 1 ou 2) et combien (1 à 5), puis un **token du jeu** avec son image (les 14 des données : Recruit, Sprite, Bird, Gold, Buff, Reflection, XP Tracker, Baron Pit, Brush… un seul par nom) ou un **token libre** par son nom pour ceux absents des données (ex. **Bomb** de Radiance), affiché comme une carte dorée avec son nom.
+- Comme dans le jeu, un token qui **quitte le jeu** (défausse, main, deck, bannissement) **disparaît**, y compris détruit par l'adversaire (« Bob retire le token Bomb »). Étiquette « Token » sur la carte.
+- Serveur : action `creerToken` (`moteur-table.ts`) ; on ne crée que dans ses zones en jeu ou sur un champ de bataille ; codes limités à la liste des tokens transmise par le Worker au lancement (`estToken` sur le catalogue). Les parties lancées avant n'ont que les tokens libres. Nouveaux identifiants toujours uniques.
+- **Vérifications** : 275 tests (2 nouveaux). Vérifié sur le moteur local : partie avec les decks de démo, tokens créés des deux côtés (WebSocket et Edge headless), visibles en direct.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
