@@ -12,6 +12,7 @@ export const REGLES = {
   connexionParIp: { maximum: 20, fenetreMs: 15 * 60_000 },
   connexionParPseudo: { maximum: 5, fenetreMs: 15 * 60_000 },
   inscriptionParIp: { maximum: 10, fenetreMs: 60 * 60_000 },
+  reinitialisationParIp: { maximum: 10, fenetreMs: 60 * 60_000 },
   elevationAdmin: { maximum: 5, fenetreMs: 15 * 60_000 },
 } satisfies Record<string, RegleLimitation>;
 

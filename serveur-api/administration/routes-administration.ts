@@ -186,6 +186,42 @@ routesAdministration.post("/comptes/:id/desactiver", (c) => actionSurCompte(c, "
 routesAdministration.post("/comptes/:id/reactiver", (c) => actionSurCompte(c, "reactiver"));
 routesAdministration.post("/comptes/:id/deconnecter", (c) => actionSurCompte(c, "deconnecter"));
 
+// ---------- Mot de passe oublié ----------
+// Le site n'a pas d'e-mail : l'admin crée un lien à usage unique (24 h) et le transmet lui-même au joueur.
+// Le code n'est renvoyé qu'une fois et seule son empreinte est stockée.
+
+const DUREE_LIEN_REINITIALISATION_MS = 24 * 60 * 60_000;
+
+routesAdministration.post("/comptes/:id/reinitialisation-mdp", async (c) => {
+  const admin = c.get("compte");
+  const id = schemaIdentifiant.safeParse(c.req.param("id"));
+  if (!id.success || !admin) return c.json({ erreur: "identifiant_invalide" }, 400);
+
+  const base = c.env.BASE_DE_DONNEES;
+  const cible = await base.prepare("SELECT pseudo FROM comptes WHERE id = ?").bind(id.data).first<{ pseudo: string }>();
+  if (!cible) return c.json({ erreur: "introuvable" }, 404);
+
+  const code = jetonAleatoire();
+  const maintenant = Date.now();
+  const expireLe = maintenant + DUREE_LIEN_REINITIALISATION_MS;
+  await base.batch([
+    // Un seul lien valide à la fois par compte : les précédents sont invalidés.
+    base.prepare("UPDATE reinitialisations_mdp SET expire_le = ? WHERE compte_id = ? AND utilisee_le IS NULL").bind(maintenant, id.data),
+    base
+      .prepare("INSERT INTO reinitialisations_mdp (compte_id, code_hash, cree_par, cree_le, expire_le) VALUES (?, ?, ?, ?, ?)")
+      .bind(id.data, await empreinteSha256(code), admin.id, maintenant, expireLe),
+    requeteJournal(base, {
+      categorie: "admin",
+      type: "reinitialisation_creee",
+      compteId: admin.id,
+      pseudo: admin.pseudo,
+      ip: ipClient(c),
+      details: { cibleId: id.data, ciblePseudo: cible.pseudo },
+    }),
+  ]);
+  return c.json({ code, expireLe, pseudo: cible.pseudo }, 201);
+});
+
 // ---------- Remise à zéro des collections ----------
 // Vide la collection (toutes les cartes, foil compris) et annule les échanges en attente concernés :
 // ils porteraient sur des cartes qui n'existent plus. Le stock de boosters et l'historique d'ouvertures sont conservés.

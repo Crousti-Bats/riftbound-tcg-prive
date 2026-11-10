@@ -14,13 +14,15 @@ const HEURE = 60 * MINUTE;
 const JOUR = 24 * HEURE;
 export const SEUIL_EN_LIGNE_MS = 5 * MINUTE;
 
-const EVENEMENTS_SECURITE = ["connexion_echouee", "connexion_bloquee", "inscription_refusee", "elevation_echouee"];
+// Attention : la requête /* 7 */ contient un « ? » par type de cette liste (à garder synchronisés).
+const EVENEMENTS_SECURITE = ["connexion_echouee", "connexion_bloquee", "inscription_refusee", "reinitialisation_refusee", "elevation_echouee"];
 
 /** Règle de limitation correspondant à une clé de la table `limitations`. */
 function regleDeLaCle(cle: string): RegleLimitation | null {
   if (cle.startsWith("connexion:ip:")) return REGLES.connexionParIp;
   if (cle.startsWith("connexion:pseudo:")) return REGLES.connexionParPseudo;
   if (cle.startsWith("inscription:ip:")) return REGLES.inscriptionParIp;
+  if (cle.startsWith("reinitialisation:ip:")) return REGLES.reinitialisationParIp;
   if (cle.startsWith("elevation:compte:")) return REGLES.elevationAdmin;
   return null;
 }
@@ -93,7 +95,7 @@ export async function collecterMonitoring(c: Context<ContexteApi>) {
         /* 7 */ base
           .prepare(
             `SELECT type, COUNT(*) AS n24h, COALESCE(SUM(CASE WHEN horodatage >= ? THEN 1 ELSE 0 END), 0) AS n1h
-             FROM journal WHERE horodatage >= ? AND type IN (?, ?, ?, ?) GROUP BY type`,
+             FROM journal WHERE horodatage >= ? AND type IN (?, ?, ?, ?, ?) GROUP BY type`,
           )
           .bind(ilYa1h, ilYa24h, ...EVENEMENTS_SECURITE),
         /* 8 */ base

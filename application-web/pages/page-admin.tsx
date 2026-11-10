@@ -257,6 +257,25 @@ function OngletInvitations({ surExpiration }: { surExpiration: () => Promise<voi
 function OngletComptes({ moi, surExpiration }: { moi: string; surExpiration: () => Promise<void> }) {
   const { donnees, erreur, recharger, setErreur } = useDonneesAdmin<{ comptes: Compte[] }>("/admin/comptes", surExpiration);
   const [info, setInfo] = useState<string | null>(null);
+  const [lienMdp, setLienMdp] = useState<{ pseudo: string; lien: string } | null>(null);
+  const [copie, setCopie] = useState(false);
+
+  async function creerLienMdp(c: Compte) {
+    if (!window.confirm(`Créer un lien pour que ${c.pseudo} choisisse un nouveau mot de passe ? (valable 24 h, une seule fois)`)) return;
+    try {
+      const r = await appelerApi<{ code: string; pseudo: string }>("POST", `/admin/comptes/${c.id}/reinitialisation-mdp`, {});
+      setLienMdp({ pseudo: r.pseudo, lien: `${window.location.origin}/reinitialisation#code=${r.code}` });
+      setCopie(false);
+    } catch (err) {
+      setErreur((err as Error).message);
+    }
+  }
+
+  async function copierLienMdp() {
+    if (!lienMdp) return;
+    await navigator.clipboard.writeText(lienMdp.lien);
+    setCopie(true);
+  }
 
   async function agir(c: Compte, action: "desactiver" | "reactiver" | "deconnecter") {
     const textes = { desactiver: "Désactiver", reactiver: "Réactiver", deconnecter: "Déconnecter" };
@@ -297,6 +316,19 @@ function OngletComptes({ moi, surExpiration }: { moi: string; surExpiration: () 
       </div>
       {erreur && <p className="message-erreur">{erreur}</p>}
       {info && <p className="message-succes">{info}</p>}
+      {lienMdp && (
+        <div className="encart-lien">
+          <p>
+            Lien de nouveau mot de passe pour <strong>{lienMdp.pseudo}</strong> (24 h, une seule fois).{" "}
+            <strong>Il ne sera plus affiché ensuite.</strong>
+          </p>
+          <code className="lien">{lienMdp.lien}</code>
+          <div className="barre-actions">
+            <button type="button" onClick={() => void copierLienMdp()}>{copie ? "Copié ✓" : "Copier le lien"}</button>
+            <button type="button" className="secondaire" onClick={() => setLienMdp(null)}>Fermer</button>
+          </div>
+        </div>
+      )}
       <div className="tableau-defilant">
         <table>
           <thead>
@@ -312,6 +344,7 @@ function OngletComptes({ moi, surExpiration }: { moi: string; surExpiration: () 
                 <td>{formaterDate(c.derniereActivite)}</td>
                 <td>{c.sessionsActives}</td>
                 <td className="actions-ligne">
+                  <button className="petit secondaire" onClick={() => void creerLienMdp(c)}>Nouveau mot de passe</button>
                   <button className="petit secondaire" onClick={() => void viderCollection(c)}>Vider la collection</button>
                   {c.pseudo !== moi && (
                     <>
@@ -342,6 +375,9 @@ const LIBELLES_EVENEMENTS: Record<string, string> = {
   deconnexion: "Déconnexion",
   elevation: "Ouverture admin",
   elevation_echouee: "Ouverture admin refusée",
+  reinitialisation_creee: "Lien de nouveau mot de passe créé",
+  mot_de_passe_reinitialise: "Mot de passe réinitialisé",
+  reinitialisation_refusee: "Réinitialisation refusée",
   invitation_creee: "Invitation créée",
   invitation_revoquee: "Invitation révoquée",
   compte_desactiver: "Compte désactivé",

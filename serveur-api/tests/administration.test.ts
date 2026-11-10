@@ -156,3 +156,50 @@ describe("Gestion des comptes", () => {
     expect(types).toEqual(expect.arrayContaining(["inscription", "elevation", "invitation_creee"]));
   });
 });
+
+describe("Mot de passe oublié", () => {
+  async function preparer() {
+    const t = creerEnvironnementDeTest();
+    const admin = await adminEleve(t);
+    const bob = await t.inscrire("Bob", "ancien-mot-de-passe");
+    const { id } = t.bd.prepare("SELECT id FROM comptes WHERE pseudo = 'Bob'").get() as { id: number };
+    return { t, admin, bob, id };
+  }
+
+  it("le lien change le mot de passe, déconnecte partout et ne sert qu'une fois", async () => {
+    const { t, admin, bob, id } = await preparer();
+    const creation = await t.appeler("POST", `/api/admin/comptes/${id}/reinitialisation-mdp`, { cookie: admin, corps: {} });
+    expect(creation.statut).toBe(201);
+    const code = creation.json.code as string;
+
+    const r = await t.appeler("POST", "/api/auth/reinitialisation", { corps: { code, motDePasse: "nouveau-mdp" } });
+    expect(r.statut).toBe(200);
+    expect(r.json.pseudo).toBe("Bob");
+    expect((await t.appeler("GET", "/api/auth/moi", { cookie: bob })).statut).toBe(401);
+    expect((await t.appeler("POST", "/api/auth/connexion", { corps: { pseudo: "Bob", motDePasse: "ancien-mot-de-passe" } })).statut).toBe(401);
+    expect((await t.appeler("POST", "/api/auth/connexion", { corps: { pseudo: "Bob", motDePasse: "nouveau-mdp" } })).statut).toBe(200);
+
+    const deuxieme = await t.appeler("POST", "/api/auth/reinitialisation", { corps: { code, motDePasse: "encore-un-autre" } });
+    expect(deuxieme.statut).toBe(400);
+    expect(deuxieme.json.erreur).toBe("lien_invalide");
+  });
+
+  it("un nouveau lien invalide le précédent, et un lien expire après 24 h", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { t, admin, id } = await preparer();
+    const premier = (await t.appeler("POST", `/api/admin/comptes/${id}/reinitialisation-mdp`, { cookie: admin, corps: {} })).json.code as string;
+    const second = (await t.appeler("POST", `/api/admin/comptes/${id}/reinitialisation-mdp`, { cookie: admin, corps: {} })).json.code as string;
+    expect((await t.appeler("POST", "/api/auth/reinitialisation", { corps: { code: premier, motDePasse: "nouveau-mdp" } })).statut).toBe(400);
+
+    vi.setSystemTime(Date.now() + 24 * 60 * 60_000 + 1);
+    expect((await t.appeler("POST", "/api/auth/reinitialisation", { corps: { code: second, motDePasse: "nouveau-mdp" } })).statut).toBe(400);
+  });
+
+  it("seul un admin peut créer un lien, et un code inventé est refusé", async () => {
+    const { t, bob, id } = await preparer();
+    expect((await t.appeler("POST", `/api/admin/comptes/${id}/reinitialisation-mdp`, { cookie: bob, corps: {} })).statut).toBe(403);
+    const faux = await t.appeler("POST", "/api/auth/reinitialisation", { corps: { code: "a".repeat(43), motDePasse: "nouveau-mdp" } });
+    expect(faux.statut).toBe(400);
+    expect(faux.json.erreur).toBe("lien_invalide");
+  });
+});
