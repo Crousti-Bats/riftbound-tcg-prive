@@ -30,6 +30,13 @@ const ICONES = {
       <path d="M8 4.5 9 4h9.5A1.5 1.5 0 0 1 20 5.5V17l-.5 1" />
     </svg>
   ),
+  decks: (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...trait}>
+      <rect x="7" y="3" width="11" height="15" rx="1.5" transform="rotate(8 12.5 10.5)" />
+      <rect x="4" y="5" width="11" height="15" rx="1.5" />
+      <path d="M8 10.5h3M9.5 9v3" />
+    </svg>
+  ),
   echanges: (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...trait}>
       <path d="M4 8h14l-3-3M20 16H6l3 3" />
@@ -64,6 +71,7 @@ const ICONES = {
 const LIENS: Lien[] = [
   { chemin: "/", libelle: "Boosters", icone: ICONES.accueil, actif: (c) => c === "/" },
   { chemin: "/collection", libelle: "Collection", icone: ICONES.collection, actif: (c) => c === "/collection" },
+  { chemin: "/decks", libelle: "Decks", icone: ICONES.decks, actif: (c) => c.startsWith("/decks") },
   { chemin: "/echanges", libelle: "Échanges", icone: ICONES.echanges, actif: (c) => c.startsWith("/echanges") },
   { chemin: "/marche", libelle: "Marché", icone: ICONES.marche, actif: (c) => c.startsWith("/marche") },
   { chemin: "/catalogue", libelle: "Catalogue", icone: ICONES.catalogue, actif: (c) => c === "/catalogue" },

@@ -30,6 +30,8 @@ const schemaRecherche = z.object({
   /** Une carte précise (pré-remplissage d'un échange depuis une annonce du marché). */
   code: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
   tri: z.enum(TRIS).optional(),
+  /** Éditeur de deck : seulement les cartes jouables avec ces domaines (« Fury,Mind ») ; sans domaine = toujours. */
+  domaines: z.string().regex(/^[A-Za-z]{2,15}(,[A-Za-z]{2,15}){0,5}$/).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 
@@ -94,6 +96,7 @@ async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number, 
   const filtres = schemaRecherche.safeParse(c.req.query());
   if (!filtres.success) return c.json({ erreur: "donnees_invalides" }, 400);
   const { set, rarete, variante, type, recherche, code, tri, page } = filtres.data;
+  const domainesPermis = filtres.data.domaines ? new Set(filtres.data.domaines.split(",")) : null;
   const seulementFoil = c.req.query("foil") === "1";
   const seulementDoublons = c.req.query("doublons") === "1";
 
@@ -113,6 +116,7 @@ async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number, 
     if (rarete && carte.rarete !== rarete) continue;
     if (variante && carte.variante !== variante) continue;
     if (type && !correspondAuType(carte, type)) continue;
+    if (domainesPermis && !carte.domaines.every((d) => d === "Colorless" || domainesPermis.has(d))) continue;
     if (seulementFoil && possede.foil === 0) continue;
     if (seulementDoublons && possede.normale + possede.foil < 2) continue;
     const autre = chezAutre?.get(carte.code);

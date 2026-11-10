@@ -11,6 +11,8 @@ export interface Carte {
   type: string;
   /** Champion, Signature, Token, Basic. */
   etiquettes: string[];
+  /** Tags de la source (nom du champion pour les Légendes, Champions et Signatures) : sert à l'éditeur de deck. */
+  tags?: string[];
   domaines: string[];
   image: string;
   orientation: "portrait" | "paysage";

@@ -29,6 +29,8 @@ export const REGLES = {
   profilParCompte: { maximum: 30, fenetreMs: 60 * 60_000 },
   /** Ajouts à la wishlist : protège le quota d'écritures D1. */
   wishlistParCompte: { maximum: 120, fenetreMs: 60 * 60_000 },
+  /** Enregistrements de decks (sauvegarde automatique pendant l'édition) : protège le quota d'écritures D1. */
+  decksParCompte: { maximum: 400, fenetreMs: 60 * 60_000 },
 } satisfies Record<string, RegleLimitation>;
 
 export interface ResultatTentative {
