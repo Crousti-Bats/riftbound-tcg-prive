@@ -324,6 +324,11 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Bouton « Passer l'animation » retiré** (à la demande de l'utilisateur, 2026-11-10). Restent « Passer aux rares » et « Tout révéler » pendant la révélation, et le réglage « Animations coupées ». La méthode `passer()` du moteur (`outils/ouverture-scene.ts`) est gardée mais n'est plus appelée.
 - **Correctif téléphone (récapitulatif d'ouverture)** : le bouton « Ouvrir un autre / N restants » gardait ses deux textes sur une ligne et débordait (surtout avec une police système agrandie sur Android), ce qui faisait défiler tout le récapitulatif de côté. Sur téléphone, le nombre restant passe sous le titre et le texte peut revenir à la ligne ; côte à côte seulement au-dessus de 760 px. `.ob-recap` n'a plus de défilement horizontal. Vérifié dans Edge headless à 320 et 360 px avec une police de 20 px.
 
+## 4quindecies. Récapitulatif : les rares en premier (demandé le 2026-11-10)
+
+- Après l'ouverture, le récapitulatif des 14 cartes affiche **les plus rares en premier** (Ultime, Special, Signée, Overnumbered, Alt Art, Epic, Rare, puis peu communes, runes, communes). À rareté égale, la foil passe devant. La révélation, elle, garde toujours la meilleure carte pour la fin.
+- Code : `ordreRecapitulatif` dans `application-web/outils/ouverture-revelation.ts` (fonction pure, testée), appliquée dans `composants/ouverture-booster.tsx`. 231 tests.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.

@@ -105,6 +105,16 @@ export function ordreRevelation<T extends Pick<CarteOuverte, "slot" | "rarete" |
     .map((x) => x.carte);
 }
 
+/** Ordre du récapitulatif (demandé le 2026-11-10) : l'inverse de la révélation, les plus rares d'abord.
+ *  À rareté égale, la foil passe devant ; sinon l'ordre de révélation est gardé (tri stable). */
+export function ordreRecapitulatif<T extends Pick<CarteOuverte, "rarete" | "variante" | "foil">>(cartes: T[]): T[] {
+  const rang = (c: T) => REVELATION[categorieRevelation(c)].rang;
+  return cartes
+    .map((carte, index) => ({ carte, index }))
+    .sort((a, b) => rang(b.carte) - rang(a.carte) || Number(b.carte.foil) - Number(a.carte.foil) || a.index - b.index)
+    .map((x) => x.carte);
+}
+
 /** « unl-238-219 » → numéro 238 sur 219 (pour le compteur qui dépasse le total des Overnumbered). */
 export function numerosCarte(code: string): { numero: number; total: number } | null {
   const m = /(\d+)\D+(\d+)$/.exec(code);
