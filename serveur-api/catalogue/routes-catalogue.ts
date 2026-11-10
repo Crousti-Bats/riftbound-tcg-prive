@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
 import type { ContexteApi } from "../types-application";
-import { correspondAuType } from "./classification-cartes";
+import { correspondAuType, TRIS, trierParRarete } from "./classification-cartes";
 import { sansAccents } from "./recherche-texte";
 import { obtenirCatalogue } from "./source-cartes";
 import { RARETES, VARIANTES } from "./types-catalogue";
@@ -27,6 +27,7 @@ const schemaRecherche = z.object({
   /** Type de carte tel que dans la source : Unit, Spell, Gear, Legend, Battlefield, Rune, Token. */
   type: z.string().regex(/^[A-Za-z]{2,20}$/).optional(),
   recherche: z.string().trim().max(50).optional(),
+  tri: z.enum(TRIS).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 
@@ -38,11 +39,11 @@ routesCatalogue.get("/sets", async (c) => {
 routesCatalogue.get("/cartes", async (c) => {
   const filtres = schemaRecherche.safeParse(c.req.query());
   if (!filtres.success) return c.json({ erreur: "donnees_invalides" }, 400);
-  const { set, rarete, variante, type, recherche, page } = filtres.data;
+  const { set, rarete, variante, type, recherche, tri, page } = filtres.data;
 
   const catalogue = await obtenirCatalogue();
   const mots = recherche ? sansAccents(recherche).split(/\s+/).filter(Boolean) : [];
-  const resultat = catalogue.cartes.filter((carte) => {
+  const filtrees = catalogue.cartes.filter((carte) => {
     if (set && carte.set !== set) return false;
     if (rarete && carte.rarete !== rarete) return false;
     if (variante && carte.variante !== variante) return false;
@@ -53,6 +54,7 @@ routesCatalogue.get("/cartes", async (c) => {
     }
     return true;
   });
+  const resultat = trierParRarete(filtrees, tri);
 
   const debut = (page - 1) * CARTES_PAR_PAGE;
   return c.json({

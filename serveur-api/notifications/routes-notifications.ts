@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
+import { STOCK_MAX } from "../boosters/configuration-taux";
 import { lireCorps } from "../lecture-requete";
 import { compterTentative } from "../securite/limitation-tentatives";
 import type { ContexteApi } from "../types-application";
@@ -89,7 +90,7 @@ routesNotifications.post("/test", async (c) => {
   for (const abonnement of results) {
     const resultat = await envoyerNotification(
       abonnement,
-      { titre: "Notifications activées", texte: "Tu seras prévenu ici quand tes boosters seront à 15/15.", url: "/" },
+      { titre: "Notifications activées", texte: `Tu seras prévenu ici quand tes boosters seront à ${STOCK_MAX}/${STOCK_MAX}.`, url: "/" },
       cles,
     );
     if (resultat === "envoye") envoyes++;

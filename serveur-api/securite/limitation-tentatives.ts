@@ -27,6 +27,8 @@ export const REGLES = {
   elevationAdmin: { maximum: 5, fenetreMs: 15 * 60_000 },
   /** Enregistrements du profil (bio, avatar, vitrine) : protège le quota d'écritures D1. */
   profilParCompte: { maximum: 30, fenetreMs: 60 * 60_000 },
+  /** Ajouts à la wishlist : protège le quota d'écritures D1. */
+  wishlistParCompte: { maximum: 120, fenetreMs: 60 * 60_000 },
 } satisfies Record<string, RegleLimitation>;
 
 export interface ResultatTentative {

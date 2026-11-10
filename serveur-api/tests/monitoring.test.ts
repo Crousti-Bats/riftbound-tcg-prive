@@ -102,7 +102,7 @@ describe("Monitoring : contenu", () => {
     const admin = await adminEleve(t);
     const infos = new Map<string, CarteCatalogue>(catalogueDeTest().cartes.map((c) => [c.code, c]));
     let attendues = 0;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 10; i++) {
       const r = await t.appeler("POST", "/api/boosters/ouvrir", { cookie: admin, corps: { set: "unl" } });
       const cartes = r.json.cartes as Array<{ code: string }>;
       attendues += cartes.filter((c) => {
@@ -113,7 +113,7 @@ describe("Monitoring : contenu", () => {
     const enBase = t.bd.prepare("SELECT COUNT(*) AS n FROM tirages_remarquables").get() as { n: number };
     expect(Number(enBase.n)).toBe(attendues);
     const m = await monitoring(t, admin);
-    expect(m.activite.tiragesRemarquables).toHaveLength(Math.min(15, attendues));
+    expect(m.activite.tiragesRemarquables).toHaveLength(Math.min(15, attendues)); // 10 boosters (stock maximum), 15 lignes au plus
     for (const tir of m.activite.tiragesRemarquables) expect(tir.pseudo).toBe("Crousti");
   });
 

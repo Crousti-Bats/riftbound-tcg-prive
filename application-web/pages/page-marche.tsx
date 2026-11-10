@@ -10,8 +10,9 @@ import { FormulaireAnnonce } from "../composants/formulaire-annonce";
 import { ImageCarte } from "../composants/image-carte";
 import { appelerApi } from "../outils/appels-api";
 import { type Carte, classeRarete, type SetInfo } from "../outils/libelles-cartes";
-import { type Annonce, type ConversationVue, heureMessage, LIBELLES_ANNONCE, lienEchangeDepuisAnnonce, type TypeAnnonce } from "../outils/marche";
+import { type Annonce, type ConversationVue, type SouhaitMarche, heureMessage, LIBELLES_ANNONCE, lienEchangeDepuisAnnonce, type TypeAnnonce } from "../outils/marche";
 import { naviguer } from "../outils/navigation";
+import { basculerWishlist } from "../outils/wishlist";
 
 type Onglet = "annonces" | "salon" | "prive";
 
@@ -80,6 +81,7 @@ export function PageMarche({ chemin }: { chemin: string }) {
 
 function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: boolean) => void; surEcrire: (p: string) => void }) {
   const [annonces, setAnnonces] = useState<Annonce[] | null>(null);
+  const [souhaits, setSouhaits] = useState<SouhaitMarche[]>([]);
   const [peutModerer, setPeutModerer] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [filtre, setFiltre] = useState<"tout" | TypeAnnonce | "miennes">("tout");
@@ -89,9 +91,10 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
 
   const charger = useCallback(
     () =>
-      appelerApi<{ annonces: Annonce[]; peutModerer: boolean }>("GET", "/marche/annonces").then(
+      appelerApi<{ annonces: Annonce[]; wishlists: SouhaitMarche[]; peutModerer: boolean }>("GET", "/marche/annonces").then(
         (r) => {
           setAnnonces(r.annonces);
+          setSouhaits(r.wishlists);
           setPeutModerer(r.peutModerer);
           setErreur(null);
         },
@@ -117,6 +120,30 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
       return true;
     });
   }, [annonces, filtre, recherche, jePeuxAider]);
+
+  // Wishlists : des « Qui a ? » permanents, affichés avec les annonces « Qui a ? ».
+  const souhaitsVisibles = useMemo(() => {
+    if (filtre === "propose") return [];
+    const mots = recherche.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/\s+/).filter(Boolean);
+    return souhaits.filter((s) => {
+      if (filtre === "miennes" && !s.estMoi) return false;
+      if (jePeuxAider && !(!s.estMoi && s.jePossede > 0)) return false;
+      if (mots.length) {
+        const texte = `${s.carte.nom} ${s.auteur}`.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+        if (!mots.every((m) => texte.includes(m))) return false;
+      }
+      return true;
+    });
+  }, [souhaits, filtre, recherche, jePeuxAider]);
+
+  async function retirerSouhait(s: SouhaitMarche) {
+    try {
+      await basculerWishlist(s.carte.code);
+      await charger();
+    } catch (e) {
+      setErreur((e as Error).message);
+    }
+  }
 
   async function retirer(a: Annonce) {
     if (!window.confirm(`Retirer l'annonce « ${LIBELLES_ANNONCE[a.type].titre} ${a.carte.nom} » ?`)) return;
@@ -156,9 +183,9 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
 
       {erreur && <p className="message-erreur">{erreur}</p>}
       {!annonces && !erreur && <p className="aide">Chargement…</p>}
-      {annonces && visibles.length === 0 && (
+      {annonces && visibles.length === 0 && souhaitsVisibles.length === 0 && (
         <p className="aide">
-          {annonces.length === 0 ? "Aucune annonce pour l'instant. Publie la première !" : "Aucune annonce ne correspond à ces filtres."}
+          {annonces.length === 0 && souhaits.length === 0 ? "Aucune annonce pour l'instant. Publie la première !" : "Aucune annonce ne correspond à ces filtres."}
         </p>
       )}
 
@@ -197,6 +224,42 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
                   <button className="petit secondaire" onClick={() => void retirer(a)}>
                     Retirer
                   </button>
+                )}
+              </div>
+            </div>
+          </article>
+        ))}
+        {souhaitsVisibles.map((s) => (
+          <article key={`wishlist-${s.auteur}-${s.carte.code}`} className={`annonce annonce-wishlist ${classeRarete(s.carte)}`}>
+            <button type="button" className="annonce-image" onClick={() => surCarte(s.carte, false)} title={`Voir ${s.carte.nom}`}>
+              <span className="cadre-carte">
+                <ImageCarte image={s.carte.image} largeur={300} alt={s.carte.nom} className={s.carte.orientation === "paysage" ? "image-paysage" : undefined} paresseuse />
+              </span>
+            </button>
+            <div className="annonce-infos">
+              <span className="etiquettes-annonce">
+                <span className="etiquette-annonce etiquette-cherche">{LIBELLES_ANNONCE.cherche.titre}</span>
+                <span className="etiquette-annonce etiquette-wishlist">♥ Wishlist</span>
+              </span>
+              <h3>{s.carte.nom}</h3>
+              <p className="aide">
+                {s.estMoi ? "Ta wishlist" : <>wishlist de <strong><LienJoueur pseudo={s.auteur} /></strong></>}
+              </p>
+              {!s.estMoi && s.jePossede > 0 && <p className="pastille-info">Tu l'as ×{s.jePossede}</p>}
+              <div className="annonce-actions">
+                {s.estMoi ? (
+                  <button className="petit secondaire" onClick={() => void retirerSouhait(s)}>
+                    Retirer de ma wishlist
+                  </button>
+                ) : (
+                  <>
+                    <button className="petit" onClick={() => naviguer(lienEchangeDepuisAnnonce({ type: "cherche", auteur: s.auteur, foil: false, carte: s.carte }))}>
+                      Proposer un échange
+                    </button>
+                    <button className="petit secondaire" onClick={() => surEcrire(s.auteur)}>
+                      Écrire
+                    </button>
+                  </>
                 )}
               </div>
             </div>

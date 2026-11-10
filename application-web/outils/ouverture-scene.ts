@@ -30,12 +30,16 @@ export interface OptionsScene {
   surTerminee: (cartes: CarteOuverte[]) => void;
   surErreur: (message: string) => void;
   surAvis: (texte: string) => void;
+  /** Préférence « Sans animation » : après la déchirure, on passe directement au récapitulatif. */
+  sansAnimation?: () => boolean;
 }
 
 export interface Scene {
   /** Nouveau booster du même set (après le récapitulatif ou une erreur). */
   /** Nouveau booster ; `illustration` : celle à afficher (sinon au hasard). */
   recommencer: (illustration?: number) => void;
+  /** Annule l'animation en cours (déchirure ou révélation) et affiche tout de suite le récapitulatif. */
+  passer: () => void;
   detruire: () => void;
 }
 
@@ -201,7 +205,25 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
     minuteurs.add(id);
     return id;
   };
-  const pause = (ms: number) => new Promise<void>((r) => plusTard(r, reduit ? Math.min(ms, 150) : ms));
+  // Incrémenté quand on saute des cartes ou qu'on annule l'animation : les attentes lancées avant restent en
+  // suspens, donc la mise en scène de l'ancienne carte s'arrête net (pas d'effet qui surgit sur le récapitulatif).
+  let tour = 0;
+  const pause = (ms: number) => {
+    const monTour = tour;
+    return new Promise<void>((r) =>
+      plusTard(() => {
+        if (monTour === tour) r();
+      }, reduit ? Math.min(ms, 150) : ms),
+    );
+  };
+  // Annulation pendant la déchirure : les pauses de l'ouverture se terminent aussitôt.
+  let passerDemande = false;
+  let dechire = false; // booster déchiré : il y a quelque chose à annuler
+  let reveilPasser: (() => void) | null = null;
+  const pauseOuverture = (ms: number) =>
+    passerDemande
+      ? Promise.resolve()
+      : Promise.race([pause(ms), new Promise<void>((r) => (reveilPasser = r))]);
 
   // ---------- Décor ----------
   racine.dataset.set = setVisuel;
@@ -544,6 +566,9 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   // ---------- Booster ----------
   let premiereIllustration = options.illustration;
   function afficherPaquet() {
+    passerDemande = false;
+    reveilPasser = null;
+    dechire = false;
     arreterMusique();
     nettoyerEffets();
     actionCourante = null;
@@ -632,6 +657,8 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
   }
 
   async function ouvrirPaquet(paquet: HTMLElement, dechirure: HTMLElement, consigne: HTMLElement) {
+    dechire = true;
+    if (options.sansAnimation?.()) passerDemande = true;
     // Le serveur tire les cartes pendant que le booster se déchire.
     const reponse = options.ouvrir().then(
       (liste) => ({ ok: true as const, liste }),
@@ -649,11 +676,11 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
     explosion(cx, cy, [style.getPropertyValue("--ob-accent").trim() || "#fff", style.getPropertyValue("--ob-halo").trim() || "#fff", "#ffffff"], 130, 8);
     couleurFlash = "#ffffff";
     flash = 0.25;
-    await pause(650);
+    await pauseOuverture(650);
     paquet.classList.remove("ob-tremble");
     paquet.classList.add("ob-part");
     consigne.style.opacity = "0";
-    await pause(450);
+    await pauseOuverture(450);
     // Réseau lent : on le dit plutôt que de laisser un écran vide.
     const attente = plusTard(() => {
       consigne.textContent = "Ouverture du booster…";
@@ -675,15 +702,14 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
       img.src = urlImage(carte.image, 744);
     });
     zonePaquet.hidden = true;
-    afficherTable();
+    if (passerDemande) terminer();
+    else afficherTable();
   }
 
   // ---------- Cartes ----------
   let compte: HTMLElement | null = null;
   let pile: HTMLElement | null = null;
   let boutonRares: HTMLButtonElement | null = null;
-  // Incrémenté quand on saute des cartes : une animation en cours sur l'ancienne carte s'arrête là.
-  let tour = 0;
 
   /** Prochaine carte rare ou mieux après la carte courante, si la carte courante n'en est pas une. */
   function prochaineRare(): number {
@@ -1096,6 +1122,17 @@ export function monterScene(racine: HTMLElement, options: OptionsScene): Scene {
       premiereIllustration = illustration;
       cartes = [];
       afficherPaquet();
+    },
+    passer: () => {
+      if (cartes.length > 0) {
+        arreterMusique();
+        terminer();
+        return;
+      }
+      if (!dechire) return; // booster encore scellé : rien à annuler
+      // Booster déchiré, cartes pas encore reçues : on ira au récapitulatif dès la réponse du serveur.
+      passerDemande = true;
+      reveilPasser?.();
     },
     detruire: () => {
       detruite = true;

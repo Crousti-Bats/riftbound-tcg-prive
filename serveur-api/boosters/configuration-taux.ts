@@ -3,10 +3,11 @@
  * Tout changement de taux se fait ici, nulle part ailleurs.
  */
 
-/** Stock de boosters : 15 au maximum, +1 toutes les 10 minutes, 15 à l'inscription. */
-export const STOCK_MAX = 15;
-export const INTERVALLE_REGEN_MS = 10 * 60_000;
-export const BOOSTERS_INITIAUX = 15;
+/** Stock de boosters : 10 au maximum, +1 toutes les 20 minutes, 10 à l'inscription (décision du 2026-11-10 ;
+ *  avant : 15 au maximum, +1 toutes les 10 minutes). */
+export const STOCK_MAX = 10;
+export const INTERVALLE_REGEN_MS = 20 * 60_000;
+export const BOOSTERS_INITIAUX = 10;
 
 /** Un booster contient 14 cartes réparties dans 5 types de slots. */
 export const COMPOSITION = {

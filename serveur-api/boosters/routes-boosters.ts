@@ -10,6 +10,7 @@ import type { CarteCatalogue } from "../catalogue/types-catalogue";
 import { lireCorps } from "../lecture-requete";
 import type { ContexteApi } from "../types-application";
 import { aleatoireCrypto } from "./aleatoire";
+import { carteApercu, cartesManquantes, plusRares } from "./apercu-booster";
 import { STOCK_MAX } from "./configuration-taux";
 import { construirePools } from "./pools";
 import { prochainDansMs, regenerer } from "./stock";
@@ -57,6 +58,64 @@ routesBoosters.get("/etat", async (c) => {
   return c.json({
     stock: { actuel: etat.stock, max: STOCK_MAX, prochainDansMs: prochainDansMs(etat, maintenant) },
     sets,
+  });
+});
+
+const MANQUANTES_PAR_PAGE = 60;
+const schemaApercu = z.object({
+  set: z.string().regex(/^[a-z]{2,5}$/),
+  page: z.coerce.number().int().min(1).max(100).default(1),
+});
+
+/**
+ * Aperçu d'un booster avant de l'ouvrir : les cartes les plus rares qu'il peut contenir (avec leur chance)
+ * et les cartes de ce booster qui me manquent, les plus rares d'abord. Lecture seule.
+ */
+routesBoosters.get("/apercu", async (c) => {
+  const compte = c.get("compte");
+  if (!compte) return c.json({ erreur: "non_connecte" }, 401);
+  const filtres = schemaApercu.safeParse(c.req.query());
+  if (!filtres.success) return c.json({ erreur: "donnees_invalides" }, 400);
+  const { set, page } = filtres.data;
+
+  const catalogue = await obtenirCatalogue();
+  const infoSet = catalogue.sets.find((s) => s.code === set);
+  const pools = construirePools(catalogue).parSet[set];
+  if (!infoSet || !infoSet.ouvrable || !pools) return c.json({ erreur: "set_non_ouvrable" }, 400);
+
+  const base = c.env.BASE_DE_DONNEES;
+  const [collection, souhaits] = await base.batch([
+    base.prepare("SELECT card_code, est_foil, quantite FROM collection WHERE compte_id = ? AND quantite > 0").bind(compte.id),
+    base.prepare("SELECT card_code FROM wishlist WHERE compte_id = ?").bind(compte.id),
+  ]);
+  const possession = new Map<string, { normale: number; foil: number }>();
+  for (const l of collection?.results as Array<{ card_code: string; est_foil: number; quantite: number }>) {
+    const p = possession.get(l.card_code) ?? { normale: 0, foil: 0 };
+    if (l.est_foil) p.foil += l.quantite;
+    else p.normale += l.quantite;
+    possession.set(l.card_code, p);
+  }
+  const wishlist = new Set((souhaits?.results as Array<{ card_code: string }>).map((s) => s.card_code));
+  const parCode = new Map(catalogue.cartes.map((carte) => [carte.code, carte]));
+  const enrichir = (codes: string[]) =>
+    codes.flatMap((code) => {
+      const carte = parCode.get(code);
+      return carte ? [carteApercu(carte, possession, wishlist)] : [];
+    });
+
+  const { total, manquantes } = cartesManquantes(pools, new Set(possession.keys()));
+  const debut = (page - 1) * MANQUANTES_PAR_PAGE;
+  return c.json({
+    set,
+    plusRares: plusRares(pools).map((g) => ({ categorie: g.categorie, unBoosterSur: g.unBoosterSur, cartes: enrichir(g.codes) })),
+    manquantes: {
+      total,
+      possedees: total - manquantes.length,
+      nombre: manquantes.length,
+      page,
+      parPage: MANQUANTES_PAR_PAGE,
+      cartes: enrichir(manquantes.slice(debut, debut + MANQUANTES_PAR_PAGE)),
+    },
   });
 });
 

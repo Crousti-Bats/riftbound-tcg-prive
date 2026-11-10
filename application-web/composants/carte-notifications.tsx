@@ -44,8 +44,8 @@ export function CarteNotifications() {
         {etat === "refusees" && (
           <p className="aide">Les notifications sont bloquées pour ce site. Autorise-les dans les réglages du navigateur ou du téléphone.</p>
         )}
-        {etat === "desactivees" && <p className="aide">Sois prévenu sur cet appareil quand tes boosters sont à 15/15.</p>}
-        {etat === "activees" && <p className="aide">Activées sur cet appareil : tu seras prévenu quand tes boosters seront à 15/15.</p>}
+        {etat === "desactivees" && <p className="aide">Sois prévenu sur cet appareil quand tes boosters sont pleins.</p>}
+        {etat === "activees" && <p className="aide">Activées sur cet appareil : tu seras prévenu quand tes boosters seront pleins.</p>}
         {message && <p className="aide">{message}</p>}
       </div>
       {etat === "desactivees" && (

@@ -254,11 +254,11 @@ describe("Notifications : boosters pleins (tâche planifiée)", () => {
     return { cookie, navigateur, id, stock };
   }
 
-  it("prévient une seule fois quand le stock atteint 15/15", async () => {
+  it("prévient une seule fois quand le stock atteint 10/10", async () => {
     const t = creerEnvironnementDeTest();
     const cles = await genererClesVapid();
     const alice = await joueurAbonne(t);
-    alice.stock(10, Date.now() - 50 * MINUTE); // 10 + 5 × 10 min = 15 : plein maintenant
+    alice.stock(5, Date.now() - 100 * MINUTE); // 5 + 5 × 20 min = 10 : plein maintenant
     const service = fauxServicePush();
 
     expect(await prevenirBoostersPleins(t.d1, cles, service.telecharger)).toEqual({ comptes: 1, envoyes: 1 });
@@ -266,13 +266,13 @@ describe("Notifications : boosters pleins (tâche planifiée)", () => {
     expect(await prevenirBoostersPleins(t.d1, cles, service.telecharger)).toEqual({ comptes: 0, envoyes: 0 });
   });
 
-  it("ne prévient pas avant que le stock soit plein, ni un compte resté à 15 sans rien ouvrir", async () => {
+  it("ne prévient pas avant que le stock soit plein, ni un compte resté à 10 sans rien ouvrir", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const t = creerEnvironnementDeTest();
     const cles = await genererClesVapid();
     const alice = await joueurAbonne(t, "Alice");
-    await joueurAbonne(t, "Bob"); // 15 boosters à l'inscription, jamais ouverts
-    alice.stock(10, Date.now() - 10 * MINUTE); // plein dans 40 minutes
+    await joueurAbonne(t, "Bob"); // 10 boosters à l'inscription, jamais ouverts
+    alice.stock(8, Date.now() - 0 * MINUTE); // plein dans 40 minutes
     const service = fauxServicePush();
 
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(0);
@@ -287,13 +287,13 @@ describe("Notifications : boosters pleins (tâche planifiée)", () => {
     const t = creerEnvironnementDeTest();
     const cles = await genererClesVapid();
     const alice = await joueurAbonne(t);
-    alice.stock(14, Date.now() - 10 * MINUTE);
+    alice.stock(9, Date.now() - 20 * MINUTE);
     const service = fauxServicePush();
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(1);
 
     expect((await t.appeler("POST", "/api/boosters/ouvrir", { cookie: alice.cookie, corps: { set: "ogn" } })).statut).toBe(200);
-    expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(0); // 14/15
-    vi.setSystemTime(Date.now() + 10 * MINUTE + 1);
+    expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(0); // 9/10
+    vi.setSystemTime(Date.now() + 20 * MINUTE + 1);
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(1);
   });
 

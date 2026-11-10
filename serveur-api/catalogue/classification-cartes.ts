@@ -131,3 +131,27 @@ export function construireCatalogue(brut: unknown): Catalogue {
 
   return { cartes, sets, miseAJourSource, chargeLe: Date.now(), cartesIgnorees: ignorees };
 }
+
+/** Tri par rareté proposé par le catalogue et les collections (sinon : ordre du catalogue, par set et numéro). */
+export const TRIS = ["rarete-desc", "rarete-asc"] as const;
+export type Tri = (typeof TRIS)[number];
+
+const RANG_VARIANTE: Partial<Record<string, number>> = { ultime: 9, special: 8, signee: 7, overnumbered: 6, alt: 5 };
+const RANG_RARETE: Partial<Record<string, number>> = { Epic: 4, Showcase: 4, Rare: 3, Uncommon: 2, Common: 1 };
+
+/** Rang de rareté d'une carte : la variante prime (Ultime > Special > Signée > Overnumbered > Alt Art), puis la
+ *  rareté imprimée (Epic > Rare > Uncommon > Common). Runes et tokens en dernier. */
+export function rangRarete(carte: Pick<CarteCatalogue, "rarete" | "variante" | "type">): number {
+  const variante = RANG_VARIANTE[carte.variante];
+  if (variante !== undefined) return variante;
+  if (carte.variante === "rune_alt") return 0.5;
+  if (carte.variante === "token" || carte.variante === "rune" || carte.type.toLowerCase() === "rune") return 0;
+  return RANG_RARETE[carte.rarete] ?? 0;
+}
+
+/** Trie sans perdre l'ordre du catalogue entre cartes de même rareté (tri stable). */
+export function trierParRarete<T extends Pick<CarteCatalogue, "rarete" | "variante" | "type">>(cartes: T[], tri: Tri | undefined): T[] {
+  if (!tri) return cartes;
+  const sens = tri === "rarete-desc" ? -1 : 1;
+  return [...cartes].sort((a, b) => sens * (rangRarete(a) - rangRarete(b)));
+}

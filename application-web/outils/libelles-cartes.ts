@@ -83,6 +83,13 @@ export const LIBELLES_TYPE: Record<string, string> = {
 };
 
 /** Classe CSS de couleur selon la rareté / variante (pour le liseré des cartes). */
+/** Libellé de rareté affiché sous une carte : la variante si elle est spéciale (Alt Art, Ultime…), sinon la rareté. */
+export function libelleRarete(carte: Pick<Carte, "rarete" | "variante">): string {
+  return LIBELLES_VARIANTE[carte.variante] === "Normale"
+    ? (LIBELLES_RARETE[carte.rarete] ?? carte.rarete)
+    : (LIBELLES_VARIANTE[carte.variante] ?? carte.variante);
+}
+
 export function classeRarete(carte: Pick<Carte, "rarete" | "variante">): string {
   if (carte.variante === "ultime") return "rarete-ultime";
   if (carte.variante === "signee") return "rarete-signee";

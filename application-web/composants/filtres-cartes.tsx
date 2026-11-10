@@ -14,6 +14,9 @@ interface Props {
   surRarete: (valeur: string) => void;
   variante: string;
   surVariante: (valeur: string) => void;
+  /** Ordre d'affichage : "" (par set et numéro), "rarete-desc" ou "rarete-asc". */
+  tri?: string;
+  surTri?: (valeur: string) => void;
   /** Filtres supplémentaires (ex. bascules foil/doublons de la collection). */
   children?: ReactNode;
 }
@@ -75,6 +78,16 @@ export function FiltresCartes(props: Props) {
           ))}
         </select>
       </label>
+      {props.surTri && (
+        <label>
+          Trier par
+          <select value={props.tri ?? ""} onChange={(e) => props.surTri?.(e.target.value)}>
+            <option value="">Set et numéro (défaut)</option>
+            <option value="rarete-desc">Plus rares d'abord</option>
+            <option value="rarete-asc">Plus communes d'abord</option>
+          </select>
+        </label>
+      )}
       {props.children}
     </section>
   );

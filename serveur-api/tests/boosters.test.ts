@@ -1,7 +1,7 @@
 /** Tests du moteur de boosters : stock, pools, tirage, statistiques et API. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { aleatoireSeede } from "../boosters/aleatoire";
-import { COMPOSITION, STOCK_MAX, TOTAL_CARTES_BOOSTER } from "../boosters/configuration-taux";
+import { COMPOSITION, INTERVALLE_REGEN_MS, STOCK_MAX, TOTAL_CARTES_BOOSTER } from "../boosters/configuration-taux";
 import { construirePools, viderCachePools } from "../boosters/pools";
 import { prochainDansMs, regenerer } from "../boosters/stock";
 import { tirerBooster } from "../boosters/tirage-booster";
@@ -20,25 +20,30 @@ beforeEach(() => {
 describe("Stock de boosters (régénération paresseuse)", () => {
   const T0 = 1_700_000_000_000;
 
-  it("ajoute 1 booster toutes les 10 minutes", () => {
-    expect(regenerer(5, T0, T0 + 25 * MIN).stock).toBe(7);
+  it("règle du 2026-11-10 : 10 boosters au maximum, +1 toutes les 20 minutes", () => {
+    expect(STOCK_MAX).toBe(10);
+    expect(INTERVALLE_REGEN_MS).toBe(20 * MIN);
   });
 
-  it("plafonne à 15", () => {
-    expect(regenerer(14, T0, T0 + 1000 * MIN).stock).toBe(STOCK_MAX);
+  it("ajoute 1 booster toutes les 20 minutes", () => {
+    expect(regenerer(5, T0, T0 + 50 * MIN).stock).toBe(7);
+  });
+
+  it("plafonne à 10", () => {
+    expect(regenerer(9, T0, T0 + 1000 * MIN).stock).toBe(STOCK_MAX);
   });
 
   it("au plafond, le tick revient à maintenant et il n'y a aucun gain", () => {
-    const e = regenerer(15, T0, T0 + 50 * MIN);
-    expect(e.stock).toBe(15);
+    const e = regenerer(10, T0, T0 + 50 * MIN);
+    expect(e.stock).toBe(10);
     expect(e.tick).toBe(T0 + 50 * MIN);
   });
 
   it("préserve la progression partielle (le tick n'avance que des intervalles entiers)", () => {
-    const e = regenerer(5, T0, T0 + 25 * MIN);
+    const e = regenerer(5, T0, T0 + 50 * MIN);
     expect(e.stock).toBe(7);
-    expect(e.tick).toBe(T0 + 20 * MIN);
-    expect(prochainDansMs(e, T0 + 25 * MIN)).toBe(5 * MIN);
+    expect(e.tick).toBe(T0 + 40 * MIN);
+    expect(prochainDansMs(e, T0 + 50 * MIN)).toBe(10 * MIN);
   });
 
   it("ne régresse pas si l'horloge recule", () => {
@@ -206,12 +211,12 @@ describe("API /api/boosters", () => {
     return Number(ligne.n);
   }
 
-  it("un nouveau compte démarre avec 15 boosters", async () => {
+  it("un nouveau compte démarre avec 10 boosters", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
     const r = await env.appeler("GET", "/api/boosters/etat", { cookie });
     expect(r.statut).toBe(200);
-    expect((r.json as unknown as Etat).stock.actuel).toBe(15);
+    expect((r.json as unknown as Etat).stock.actuel).toBe(10);
     expect((r.json as unknown as Etat).sets.some((s) => s.code === "ogn")).toBe(true);
   });
 
@@ -234,7 +239,7 @@ describe("API /api/boosters", () => {
         expect(champ in carte).toBe(true);
       }
     }
-    expect(ouverture.stock.actuel).toBe(14);
+    expect(ouverture.stock.actuel).toBe(9);
     expect(totalCollection(env.bd, "Alice")).toBe(14);
 
     // La carte foil est comptée séparément de la normale.
@@ -247,16 +252,16 @@ describe("API /api/boosters", () => {
 
     // Ré-ouvrir accumule les quantités.
     const r2 = await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn" } });
-    expect((r2.json as unknown as Ouverture).stock.actuel).toBe(13);
+    expect((r2.json as unknown as Ouverture).stock.actuel).toBe(8);
     expect(totalCollection(env.bd, "Alice")).toBe(28);
   });
 
-  it("régénère le stock avec le temps (+1 / 10 min, plafond 15)", async () => {
+  it("régénère le stock avec le temps (+1 / 20 min, plafond 10)", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
     env.bd
       .prepare("UPDATE comptes SET stock_boosters = 5, boosters_tick = ? WHERE pseudo = ?")
-      .run(Date.now() - 25 * MIN, "Alice");
+      .run(Date.now() - 50 * MIN, "Alice");
     const r = await env.appeler("GET", "/api/boosters/etat", { cookie });
     expect((r.json as unknown as Etat).stock.actuel).toBe(7);
   });

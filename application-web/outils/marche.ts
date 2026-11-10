@@ -18,6 +18,16 @@ export interface Annonce {
   jePossede: number;
 }
 
+/** Carte de la wishlist d'un joueur, affichée dans « Qui a ? » tant qu'il ne la possède pas. */
+export interface SouhaitMarche {
+  auteur: string;
+  auteurAvatar: AvatarLeger | null;
+  estMoi: boolean;
+  creeLe: number;
+  carte: Carte;
+  jePossede: number;
+}
+
 export interface MessageVue {
   id: number;
   auteur: string;
