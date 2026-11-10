@@ -30,6 +30,8 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrir
   const [avis, setAvis] = useState<string | null>(null);
   const [son, setSon] = useState(sonActif);
   const [selection, setSelection] = useState<CarteOuverte | null>(null);
+  // Booster encore scellé : « Retour » ramène à l'accueil sans rien consommer (le serveur n'est appelé qu'à la déchirure).
+  const [scelle, setScelle] = useState(true);
 
   useEffect(() => {
     appelOuvrir.current = ouvrir;
@@ -44,6 +46,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrir
       illustration,
       ouvrir: () => {
         setErreur(null);
+        setScelle(false);
         return appelOuvrir.current();
       },
       surTerminee: setRecap,
@@ -87,6 +90,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrir
   function ouvrirUnAutre() {
     setRecap(null);
     setErreur(null);
+    setScelle(true);
     scene.current?.recommencer();
   }
 
@@ -96,6 +100,11 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrir
     <div className="ob-overlay" role="dialog" aria-modal="true" aria-label={`Ouverture d'un booster ${nomSet}`}>
       <div className="ob-racine" ref={racine} />
       <header className="ob-barre">
+        {scelle && (
+          <button type="button" className="ob-bouton-retour" onClick={surFermer} aria-label="Retour à l'accueil sans ouvrir le booster">
+            <span aria-hidden="true">←</span> Retour
+          </button>
+        )}
         <h2 className="ob-titre-set">
           {nomSet}
           <small>Ouverture de booster</small>
@@ -104,9 +113,11 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrir
           <button type="button" className="ob-bouton-discret" aria-pressed={son} onClick={basculerSon}>
             {son ? "Son activé" : "Son coupé"}
           </button>
-          <button type="button" className="ob-bouton-discret" onClick={surFermer}>
-            Fermer
-          </button>
+          {!scelle && (
+            <button type="button" className="ob-bouton-discret" onClick={surFermer}>
+              Fermer
+            </button>
+          )}
         </div>
       </header>
 
