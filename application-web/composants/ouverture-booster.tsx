@@ -27,10 +27,12 @@ interface Props {
   boosters: ChoixBooster[];
   /** Un autre set a été choisi dans le carrousel : le parent relance l'ouverture sur ce set. */
   surChangerSet: (code: string) => void;
+  /** Le carrousel s'ouvre : le parent change les illustrations des sets qui en ont plusieurs. */
+  surOuvrirCarrousel: () => void;
   surFermer: () => void;
 }
 
-export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, boosters, surChangerSet, surFermer }: Props) {
+export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, boosters, surChangerSet, surOuvrirCarrousel, surFermer }: Props) {
   const racine = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene | null>(null);
   const appelOuvrir = useRef(ouvrir);
@@ -47,13 +49,17 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
     appelOuvrir.current = ouvrir;
   }, [ouvrir]);
 
+  // Illustration du premier booster, figée au montage : quand le carrousel change les illustrations,
+  // la scène en cours ne doit pas être remontée (elle repartirait sur un booster scellé sous le récapitulatif).
+  const illustrationInitiale = useRef(illustration);
+
   // Le moteur possède entièrement le contenu de `racine` (React n'y rend rien).
   useEffect(() => {
     if (!racine.current) return;
     const s = monterScene(racine.current, {
       set,
       nomSet,
-      illustration,
+      illustration: illustrationInitiale.current,
       ouvrir: () => {
         setErreur(null);
         setScelle(false);
@@ -68,7 +74,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
       s.detruire();
       scene.current = null;
     };
-  }, [set, nomSet, illustration]);
+  }, [set, nomSet]);
 
   useEffect(() => {
     if (!avis) return;
@@ -96,7 +102,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
 
   function choisirBooster(code: string) {
     setCarrousel(false);
-    if (code === set) ouvrirUnAutre();
+    if (code === set) ouvrirUnAutre(boosters.find((b) => b.code === code)?.illustration);
     else surChangerSet(code);
   }
 
@@ -105,11 +111,11 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
     setSon(!son);
   }
 
-  function ouvrirUnAutre() {
+  function ouvrirUnAutre(illustration?: number) {
     setRecap(null);
     setErreur(null);
     setScelle(true);
-    scene.current?.recommencer();
+    scene.current?.recommencer(illustration);
   }
 
   const rares = recap?.filter((c) => REVELATION[categorieRevelation(c)].rang >= 2).length ?? 0;
@@ -186,7 +192,7 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
           </div>
           {/* Barre collée en bas de l'écran : toujours visible, même sur téléphone avec 14 cartes au-dessus. */}
           <div className="ob-actions-recap">
-            <button type="button" className="ob-bouton-encore" onClick={ouvrirUnAutre} disabled={restants < 1}>
+            <button type="button" className="ob-bouton-encore" onClick={() => ouvrirUnAutre()} disabled={restants < 1}>
               <span className="ob-encore-titre">{restants < 1 ? "Plus de booster" : "Ouvrir un autre"}</span>
               <span className="ob-encore-separateur" aria-hidden="true" />
               <span className="ob-encore-stock">
@@ -194,7 +200,14 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
               </span>
             </button>
             <div className="ob-actions-secondaires">
-              <button type="button" className="ob-bouton-pilule" onClick={() => setCarrousel(true)}>
+              <button
+                type="button"
+                className="ob-bouton-pilule"
+                onClick={() => {
+                  surOuvrirCarrousel();
+                  setCarrousel(true);
+                }}
+              >
                 Changer de set
               </button>
               <button type="button" className="ob-bouton-pilule" onClick={() => naviguer("/collection")}>
