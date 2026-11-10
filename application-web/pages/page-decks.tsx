@@ -162,6 +162,16 @@ function PanneauParties({ decks }: { decks: ResumeDeck[] }) {
     <section className="carte pile-serree panneau-parties">
       <h2>Table de jeu</h2>
       <p className="aide">Joue en direct contre un ami avec un de tes decks prêts à jouer. Tu déplaces toi-même tes cartes, comme sur une vraie table.</p>
+      <a
+        className="encart-apprendre"
+        href="/apprendre"
+        onClick={(e) => {
+          e.preventDefault();
+          naviguer("/apprendre");
+        }}
+      >
+        <strong>Nouveau sur Riftbound ?</strong> Apprends les règles en 5 minutes →
+      </a>
       <div className="parties-actions">
         <div className="pile-serree">
           <span className="surtitre">Nouvelle partie</span>

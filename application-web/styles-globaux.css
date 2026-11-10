@@ -983,3 +983,39 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
   .panneau-carte-image { max-width: 160px; margin: 0 auto; }
   body:has(.table-jeu) .nav-bas { display: none; }
 }
+
+/* ---------- Apprendre à jouer ---------- */
+.apprendre { max-width: 900px; }
+.apprendre-intro { margin: 0 0 16px; }
+.apprendre-sommaire ol { margin: 0; padding-left: 20px; columns: 2 220px; column-gap: 24px; }
+.apprendre-sommaire li { margin: 3px 0; }
+.apprendre-section { margin-top: 16px; scroll-margin-top: 80px; }
+.apprendre-section h2 { margin: 0 0 10px; }
+.apprendre-section li { margin: 6px 0; line-height: 1.5; }
+.apprendre-galerie { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 12px; }
+.apprendre-duo { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: start; }
+.apprendre-figure { margin: 0; width: 130px; display: flex; flex-direction: column; gap: 6px; }
+.apprendre-figure img { width: 100%; aspect-ratio: 744 / 1039; object-fit: cover; border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
+.apprendre-figure-paysage { width: 182px; }
+.apprendre-figure-paysage img { aspect-ratio: 1039 / 744; }
+.apprendre-figure-vide { display: block; width: 100%; aspect-ratio: 744 / 1039; border-radius: 8px; background: var(--fond-champ); }
+.apprendre-figure figcaption { font-size: 0.8rem; text-align: center; color: var(--texte-doux); font-weight: 600; }
+.apprendre-etapes li::marker { color: var(--accent-vif); font-weight: 800; }
+.apprendre-mots-cles { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 10px; }
+.apprendre-mots-cles div { padding: 10px 12px; border-radius: var(--rayon-petit); background: var(--fond-champ); }
+.apprendre-mots-cles dt { font-weight: 800; color: var(--accent-vif); }
+.apprendre-mots-cles dd { margin: 4px 0 0; font-size: 0.88rem; line-height: 1.45; }
+.apprendre-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 8px 0; }
+.apprendre-table th, .apprendre-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--bordure); vertical-align: top; }
+.apprendre-table th { color: var(--texte-doux); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.apprendre-table td:first-child { font-weight: 600; width: 38%; }
+.encart-apprendre { display: block; padding: 10px 14px; border-radius: var(--rayon-petit); border: 1px solid var(--bordure-or); background: rgba(212, 173, 98, 0.08); color: var(--texte); text-decoration: none; }
+.encart-apprendre:hover { background: rgba(212, 173, 98, 0.14); }
+.table-regles { font-size: 0.85rem; color: var(--accent-vif); }
+@media (max-width: 560px) {
+  .apprendre-duo { grid-template-columns: minmax(0, 1fr); }
+  .apprendre-duo .apprendre-figure { width: 120px; }
+  .apprendre-figure { width: calc(50% - 7px); }
+  .apprendre-figure-paysage { width: 100%; }
+  .apprendre-table td:first-child { width: 42%; }
+}

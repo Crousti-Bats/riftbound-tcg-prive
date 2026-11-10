@@ -53,12 +53,15 @@ describe("Table de jeu : mise en place", () => {
     for (const j of [0, 1] as const) {
       expect(cartesDe(etat, idZone(j, "legende"))).toHaveLength(1);
       expect(cartesDe(etat, idZone(j, "champion"))).toHaveLength(1);
-      expect(cartesDe(etat, idZone(j, "terrains"))).toHaveLength(3);
+      // Un champ de bataille tiré au sort est posé sur la table (champ.0 pour le joueur 0, champ.1 pour le 1).
+      expect(cartesDe(etat, idZone(j, "terrains"))).toHaveLength(2);
+      expect(cartesDe(etat, `champ.${j}`)).toHaveLength(1);
+      expect(etat.cartes[cartesDe(etat, `champ.${j}`)[0] as string]?.code).toMatch(/^bf[012]$/);
       expect(cartesDe(etat, idZone(j, "main"))).toHaveLength(4);
       expect(cartesDe(etat, idZone(j, "deck"))).toHaveLength(39 - 4);
       expect(cartesDe(etat, idZone(j, "runes"))).toHaveLength(12);
     }
-    expect(etat.journal[0]?.texte).toMatch(/^Partie lancée\. (Alice|Bob) commence\./);
+    expect(etat.journal[0]?.texte).toMatch(/^Partie lancée\. (Alice|Bob) commence\. .* canalise 3 runes à son premier tour au lieu de 2\.$/);
   });
 
   it("garde secrètes la main de l'adversaire et l'ordre des decks", () => {
@@ -101,12 +104,12 @@ describe("Table de jeu : actions", () => {
     const etat = partie();
     const id = cartesDe(etat, "0.main")[0] as string;
     jouer(etat, 0, { type: "deplacer", carte: id, vers: "champ.0", cachee: true });
-    expect((vueZone(etat, 1, "champ.0") as CarteVue[])[0]?.code).toBeNull();
-    expect((vueZone(etat, 0, "champ.0") as CarteVue[])[0]?.code).toBe(etat.cartes[id]?.code);
+    expect((vueZone(etat, 1, "champ.0") as CarteVue[]).at(-1)?.code).toBeNull();
+    expect((vueZone(etat, 0, "champ.0") as CarteVue[]).at(-1)?.code).toBe(etat.cartes[id]?.code);
     expect(etat.journal.at(-1)?.cartes).toBeUndefined();
     expect(jouer(etat, 1, { type: "retourner", carte: id })).toEqual({ ok: false, erreur: "carte_interdite" });
     jouer(etat, 0, { type: "retourner", carte: id });
-    expect((vueZone(etat, 1, "champ.0") as CarteVue[])[0]?.code).toBe(etat.cartes[id]?.code);
+    expect((vueZone(etat, 1, "champ.0") as CarteVue[]).at(-1)?.code).toBe(etat.cartes[id]?.code);
   });
 
   it("l'adversaire ne touche pas à ma main, mais peut détruire ma carte en jeu vers MA défausse", () => {
@@ -181,7 +184,7 @@ describe("Table de jeu : actions", () => {
     expect(new Set(Object.keys(etat.cartes)).size).toBe(Object.keys(etat.cartes).length);
 
     expect(jouer(etat, 1, { type: "creerToken", libelle: "Bomb", vers: "champ.1", n: 1 })).toEqual({ ok: true });
-    expect((vueZone(etat, 0, "champ.1") as CarteVue[])[0]).toMatchObject({ code: null, libelle: "Bomb", token: true, proprio: 1 });
+    expect((vueZone(etat, 0, "champ.1") as CarteVue[]).at(-1)).toMatchObject({ code: null, libelle: "Bomb", token: true, proprio: 1 });
 
     expect(jouer(etat, 0, { type: "creerToken", code: "zzz-999", vers: "0.base", n: 1 })).toEqual({ ok: false, erreur: "token_inconnu" });
     expect(jouer(etat, 0, { type: "creerToken", vers: "0.base", n: 1 })).toEqual({ ok: false, erreur: "token_inconnu" });
@@ -192,7 +195,7 @@ describe("Table de jeu : actions", () => {
   it("un token qui quitte le jeu disparaît, même détruit par l'adversaire", () => {
     const etat = partie();
     jouer(etat, 0, { type: "creerToken", libelle: "Bomb", vers: "champ.0", n: 1 });
-    const id = cartesDe(etat, "champ.0")[0] as string;
+    const id = cartesDe(etat, "champ.0").at(-1) as string;
     jouer(etat, 0, { type: "incliner", carte: id });
     expect(jouer(etat, 1, { type: "deplacer", carte: id, vers: "0.defausse" })).toEqual({ ok: true });
     expect(etat.cartes[id]).toBeUndefined();
@@ -202,7 +205,7 @@ describe("Table de jeu : actions", () => {
     jouer(etat, 0, { type: "creerToken", code: "unl-t05", vers: "0.base", n: 1 });
     const gold = cartesDe(etat, "0.base")[0] as string;
     jouer(etat, 0, { type: "deplacer", carte: gold, vers: "champ.1" });
-    expect(cartesDe(etat, "champ.1")).toEqual([gold]);
+    expect(cartesDe(etat, "champ.1").at(-1)).toBe(gold);
   });
 
   it("refuse les actions mal formées", () => {

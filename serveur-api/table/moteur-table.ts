@@ -139,11 +139,22 @@ export function creerPartie(
     poser("legende", [deck.legende], true);
     poser("champion", [deck.champion], true);
     poser("terrains", deck.terrains, true);
+    // Duel (règle 487.5) : chaque joueur tire au hasard 1 de ses 3 champs de bataille, posé sur la table.
+    // Les 2 autres restent dans « Champs dispo » (pour jouer en match, où l'on choisit soi-même).
+    const dispo = etat.zones[idZone(j, "terrains")] ?? [];
+    const tire = dispo.splice(Math.floor(aleatoire() * dispo.length), 1)[0];
+    if (tire) etat.zones[idChamp(j)]?.push(tire);
     poser("deck", melanger(deck.principal, aleatoire), false);
     poser("runes", melanger(deck.runes, aleatoire), false);
     deplacerDessus(etat, j, "deck", "main", MAIN_DE_DEPART);
   });
-  journaliser(etat, null, `Partie lancée. ${etat.joueurs[etat.premier].pseudo} commence. Chacun pioche ${MAIN_DE_DEPART} cartes.`, maintenant);
+  const second = etat.joueurs[etat.premier === 0 ? 1 : 0].pseudo;
+  journaliser(
+    etat,
+    null,
+    `Partie lancée. ${etat.joueurs[etat.premier].pseudo} commence. Champs de bataille tirés au sort, ${MAIN_DE_DEPART} cartes chacun. ${second} canalise 3 runes à son premier tour au lieu de 2.`,
+    maintenant,
+  );
   return etat;
 }
 
