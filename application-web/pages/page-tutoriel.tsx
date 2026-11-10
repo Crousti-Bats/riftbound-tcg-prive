@@ -110,6 +110,7 @@ export function PageTutoriel({ pseudo }: { pseudo: string }) {
       surQuitter={() => naviguer("/jouer")}
       libelleQuitter="Quitter le tuto"
       sansMulligan
+      aideImposee
       enfants={panneau}
     />
   );

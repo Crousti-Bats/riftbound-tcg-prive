@@ -35,6 +35,8 @@ export interface VueTable {
   mulliganFait: [boolean, boolean];
   /** Tokens du jeu que l'on peut créer. */
   tokens: string[];
+  /** Combat en cours (aide automatique) : absent des vues d'avant ce déploiement. */
+  combat?: { champ: number; attaquant: IndexJoueur } | null;
   version: number;
 }
 
@@ -42,7 +44,11 @@ export type ActionTable =
   | { type: "piocher"; n: number }
   | { type: "canaliser"; n: number }
   | { type: "melanger"; zone: "deck" | "runes" }
-  | { type: "deplacer"; carte: string; vers: string; position?: "dessus" | "dessous"; cachee?: boolean }
+  | { type: "deplacer"; carte: string; vers: string; position?: "dessus" | "dessous"; cachee?: boolean; compter?: boolean }
+  | { type: "debutTour" }
+  | { type: "jouer"; carte: string; vers: string; inclinee?: boolean; payer: { incliner: string[]; recycler: string[] } }
+  | { type: "bouger"; carte: string; vers: string }
+  | { type: "finCombat" }
   | { type: "incliner"; carte: string }
   | { type: "retourner"; carte: string }
   | { type: "marqueur"; carte: string; delta: number }
@@ -74,6 +80,9 @@ export const MESSAGES_TABLE: Record<string, string> = {
   action_invalide: "Action refusée.",
   token_inconnu: "Ce token n'existe pas.",
   trop_de_cartes: "Trop de cartes sur la table.",
+  paiement_invalide: "Ces runes ne peuvent pas payer cette carte.",
+  pas_de_combat: "Aucun combat en cours.",
+  unite_inclinee: "Cette unité est inclinée : elle ne pourra bouger qu'à ton prochain tour.",
 };
 
 /** Cartes d'une zone (tableau vide pour une zone cachée, dont on ne connaît que le nombre). */

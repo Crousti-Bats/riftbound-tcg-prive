@@ -1040,3 +1040,15 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
   .apprendre-figure-paysage { width: 100%; }
   .apprendre-table td:first-child { width: 42%; }
 }
+
+/* ---------- Aide automatique de la table ---------- */
+.panneau-aide { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: var(--rayon-petit); border: 1px solid var(--bordure-or); background: rgba(212, 173, 98, 0.08); }
+.panneau-aide p { margin: 0; }
+.panneau-aide-manque { color: var(--accent-vif); }
+.panneau-carte-manuel { display: flex; flex-direction: column; gap: 8px; }
+.panneau-carte-manuel > summary { cursor: pointer; color: var(--texte-doux); font-size: 0.9rem; margin-bottom: 6px; }
+.panneau-carte-manuel[open] > summary { margin-bottom: 8px; }
+.panneau-carte-manuel > * + * { margin-top: 8px; }
+.table-aide-auto { font-size: 0.85rem; color: var(--texte-doux); }
+.table-champ-combat { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.table-combat { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 8px; margin-bottom: 4px; border-radius: var(--rayon-petit); background: rgba(212, 173, 98, 0.12); font-size: 0.85rem; }
