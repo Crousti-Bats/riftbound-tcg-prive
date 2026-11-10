@@ -3,6 +3,7 @@
  * Adresses : /marche (annonces), /marche/salon, /marche/prive, /marche/prive/<pseudo>.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AvatarJoueur, LienJoueur } from "../composants/avatar-joueur";
 import { FicheCarte } from "../composants/fiche-carte";
 import { FilDiscussion } from "../composants/fil-discussion";
 import { FormulaireAnnonce } from "../composants/formulaire-annonce";
@@ -176,7 +177,7 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
                 {a.foil && <span className="badge-foil-texte"> Foil</span>}
               </h3>
               <p className="aide">
-                {a.estMoi ? "Ton annonce" : <>par <strong>{a.auteur}</strong></>} · {heureMessage(a.creeLe)}
+                {a.estMoi ? "Ton annonce" : <>par <strong><LienJoueur pseudo={a.auteur} /></strong></>} · {heureMessage(a.creeLe)}
               </p>
               {a.note && <p className="annonce-note">« {a.note} »</p>}
               {!a.estMoi && a.type === "cherche" && a.jePossede > 0 && <p className="pastille-info">Tu l'as ×{a.jePossede}</p>}
@@ -262,9 +263,7 @@ function OngletPrive({ avec, surCarte }: { avec: string | null; surCarte: (c: Ca
           {conversations?.map((c) => (
             <li key={c.avec}>
               <button className={`conversation ${c.avec === avec ? "actif" : ""}`} onClick={() => ouvrir(c.avec)}>
-                <span className="avatar avatar-petit" aria-hidden="true">
-                  {c.avec.slice(0, 1).toUpperCase()}
-                </span>
+                <AvatarJoueur pseudo={c.avec} avatar={c.avecAvatar} taille="petit" />
                 <span className="conversation-texte">
                   <strong>{c.avec}</strong>
                   <span>
@@ -289,7 +288,9 @@ function OngletPrive({ avec, surCarte }: { avec: string | null; surCarte: (c: Ca
               <button className="petit secondaire prive-retour" onClick={() => naviguer("/marche/prive")}>
                 ← Conversations
               </button>
-              <h2>{avec}</h2>
+              <h2>
+                <LienJoueur pseudo={avec} />
+              </h2>
               <button className="petit secondaire" onClick={() => naviguer(`/echanges/nouveau?avec=${encodeURIComponent(avec)}`)}>
                 Proposer un échange
               </button>

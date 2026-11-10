@@ -15,6 +15,7 @@ import { routesAnnonceSite } from "./annonce-site/routes-annonce-site";
 import { prevenirBoostersPleins } from "./notifications/boosters-pleins";
 import { clesVapid } from "./notifications/cles-vapid";
 import { routesNotifications } from "./notifications/routes-notifications";
+import { routesProfils } from "./profils/routes-profils";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
 
@@ -45,6 +46,7 @@ app.route("/api/echanges", routesEchanges);
 app.route("/api/marche", routesMarche);
 app.route("/api/annonce-site", routesAnnonceSite);
 app.route("/api/notifications", routesNotifications);
+app.route("/api/profils", routesProfils);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 

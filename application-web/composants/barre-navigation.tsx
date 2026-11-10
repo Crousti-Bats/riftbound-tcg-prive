@@ -5,6 +5,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { appelerApi, type CompteCourant } from "../outils/appels-api";
 import { naviguer } from "../outils/navigation";
+import { type AvatarLeger, lienProfil, surProfilModifie } from "../outils/profils";
+import { AvatarJoueur } from "./avatar-joueur";
 
 interface Lien {
   chemin: string;
@@ -79,6 +81,7 @@ export function BarreNavigation({
 }) {
   const [recuesEnAttente, setRecuesEnAttente] = useState(0);
   const [messagesNonLus, setMessagesNonLus] = useState(0);
+  const [avatar, setAvatar] = useState<AvatarLeger | null>(null);
   const liens = compte.role === "admin" ? [...LIENS, LIEN_ADMIN] : LIENS;
 
   // Pastille des propositions reçues : relue à chaque changement de page (bonus, aucune erreur affichée).
@@ -100,6 +103,17 @@ export function BarreNavigation({
     const t = window.setInterval(() => document.visibilityState === "visible" && void lire(), 30_000);
     return () => window.clearInterval(t);
   }, [chemin]);
+
+  // Mon avatar : lu au chargement, puis relu quand je modifie mon profil.
+  useEffect(() => {
+    const lire = () =>
+      appelerApi<{ avatar: AvatarLeger | null }>("GET", "/profils/avatar").then(
+        (r) => setAvatar(r.avatar),
+        () => undefined,
+      );
+    void lire();
+    return surProfilModifie(() => void lire());
+  }, [compte.pseudo]);
 
   const pastilles: Record<string, { nombre: number; libelle: string }> = {
     "/echanges": { nombre: recuesEnAttente, libelle: "proposition(s) reçue(s)" },
@@ -162,10 +176,19 @@ export function BarreNavigation({
             {liens.map((l) => lien(l, "nav-lien"))}
           </nav>
           <div className="profil">
-            <span className="avatar" aria-hidden="true">
-              {compte.pseudo.slice(0, 1).toUpperCase()}
-            </span>
-            <span className="profil-pseudo">{compte.pseudo}</span>
+            <a
+              href={lienProfil(compte.pseudo)}
+              className={chemin === lienProfil(compte.pseudo) ? "lien-profil actif" : "lien-profil"}
+              title="Mon profil"
+              aria-label="Mon profil"
+              onClick={(e) => {
+                e.preventDefault();
+                naviguer(lienProfil(compte.pseudo));
+              }}
+            >
+              <AvatarJoueur pseudo={compte.pseudo} avatar={avatar} />
+              <span className="profil-pseudo">{compte.pseudo}</span>
+            </a>
             <button className="bouton-icone" onClick={() => void seDeconnecter()} title="Se déconnecter" aria-label="Se déconnecter">
               {ICONES.sortie}
             </button>

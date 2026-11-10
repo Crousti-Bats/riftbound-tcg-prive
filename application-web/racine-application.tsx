@@ -14,6 +14,7 @@ import { PageEchanges } from "./pages/page-echanges";
 import { PageNouvelEchange } from "./pages/page-nouvel-echange";
 import { PageInscription } from "./pages/page-inscription";
 import { PageMarche } from "./pages/page-marche";
+import { PageProfil } from "./pages/page-profil";
 import { PageReinitialisation } from "./pages/page-reinitialisation";
 
 export function RacineApplication() {
@@ -106,6 +107,10 @@ function Page({
   if (chemin === "/echanges") return <PageEchanges />;
   if (chemin === "/echanges/nouveau") return <PageNouvelEchange />;
   if (chemin === "/marche" || chemin.startsWith("/marche/")) return <PageMarche chemin={chemin} />;
+  if (chemin.startsWith("/profil/")) {
+    const pseudo = decodeURIComponent(chemin.slice("/profil/".length));
+    if (/^[A-Za-z0-9_-]{3,20}$/.test(pseudo)) return <PageProfil key={pseudo} pseudo={pseudo} />;
+  }
   if (chemin.startsWith("/admin") && compte.role === "admin") {
     return <PageAdmin compte={compte} surChangementCompte={rafraichirCompte} />;
   }

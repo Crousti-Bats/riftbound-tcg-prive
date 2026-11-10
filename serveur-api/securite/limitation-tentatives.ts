@@ -25,6 +25,8 @@ export const REGLES = {
   /** Plafond journalier : protège le quota gratuit d'écritures D1 (100 000 par jour). */
   messagesParJour: { maximum: 500, fenetreMs: 24 * 60 * 60_000 },
   elevationAdmin: { maximum: 5, fenetreMs: 15 * 60_000 },
+  /** Enregistrements du profil (bio, avatar, vitrine) : protège le quota d'écritures D1. */
+  profilParCompte: { maximum: 30, fenetreMs: 60 * 60_000 },
 } satisfies Record<string, RegleLimitation>;
 
 export interface ResultatTentative {

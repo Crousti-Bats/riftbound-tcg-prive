@@ -611,3 +611,64 @@ button.bandeau-annonce-fermer:hover:not(:disabled) { color: var(--texte); border
   .bandeau-annonce-texte { font-size: 1rem; }
 }
 .apercu-annonce { margin: 0; }
+
+/* ---------- Profils : avatar, bio, vitrine ---------- */
+/* Avatar = illustration d'une carte : zoom sur le haut de la carte (l'illustration), sans le cadre ni le texte. */
+.avatar-image { position: relative; overflow: hidden; padding: 0; background: var(--fond-carte); }
+.avatar-image img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%;
+  transform: scale(1.55); transform-origin: 50% 22%;
+}
+.avatar-image img.avatar-paysage { object-position: 50% 40%; transform: scale(1.25); transform-origin: 50% 40%; }
+.avatar-grand { width: 112px; height: 112px; flex: none; font-size: 2.8rem; box-shadow: 0 0 0 3px var(--bordure-or), 0 8px 24px rgba(0, 0, 0, 0.45); }
+.lien-profil {
+  display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none;
+  padding: 3px 12px 3px 3px; border-radius: 999px; border: 1px solid transparent;
+}
+.lien-profil:hover, .lien-profil.actif { background: rgba(255, 255, 255, 0.05); border-color: var(--bordure-or); }
+.lien-profil:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lien-joueur { color: inherit; text-decoration: none; }
+.lien-joueur:hover, .lien-joueur:focus-visible { color: var(--accent-vif); text-decoration: underline; }
+.message-entete .lien-joueur:has(.avatar) { display: inline-flex; }
+
+.profil-entete { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 24px; }
+.profil-identite { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.profil-identite h1, .profil-identite h2, .profil-identite p { margin: 0; }
+.profil-bio { white-space: pre-line; overflow-wrap: anywhere; font-size: 1.02rem; color: #d5dcea; max-width: 60ch; }
+.profil-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.page-profil .entete { margin-bottom: 0; }
+.page-profil .entete .profil-actions { margin-top: 0; }
+.page-profil .chiffres-collection { flex-wrap: wrap; gap: 16px 28px; }
+.page-profil .resume-collection { margin-bottom: 0; }
+
+.pile-serree { display: flex; flex-direction: column; gap: 8px; }
+.pile-serree h2 { margin: 0; }
+.profil-bio-saisie { width: 100%; resize: vertical; min-height: 96px; font: inherit; }
+.compteur-bio { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+.vitrine { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-top: 12px; }
+.vitrine .cadre-carte { box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45), 0 0 16px -4px var(--couleur-rarete, transparent); }
+.vitrine-vide {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; aspect-ratio: 744 / 1039;
+  min-height: 0; padding: 8px; border-radius: 10px; border: 2px dashed var(--bordure-forte); background: rgba(255, 255, 255, 0.02);
+  color: var(--texte-doux); box-shadow: none; font-weight: 600; font-size: 0.85rem; text-align: center;
+}
+.vitrine-vide span { font-size: 2rem; line-height: 1; }
+.vitrine-vide:hover:not(:disabled) { color: var(--accent-vif); border-color: var(--accent); background: rgba(212, 173, 98, 0.06); box-shadow: none; filter: none; }
+.vitrine-commandes { display: flex; gap: 4px; }
+.vitrine-commandes button { flex: 1 1 0; min-width: 0; padding-left: 0; padding-right: 0; }
+
+.modale.modale-choix { grid-template-columns: 1fr; max-width: 980px; align-content: start; }
+.modale-choix .entete { margin: 0; }
+.modale-choix .entete h2 { margin: 0; }
+
+@media (max-width: 760px) {
+  .vitrine { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .profil-entete { flex-direction: column; text-align: center; }
+  .profil-identite { flex-basis: auto; align-items: center; width: 100%; }
+  .profil-actions { justify-content: center; }
+}
+@media (max-width: 380px) {
+  .vitrine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .avatar-grand { width: 92px; height: 92px; }
+}
