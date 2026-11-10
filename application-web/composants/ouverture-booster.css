@@ -79,8 +79,6 @@
 }
 .ob-overlay button.ob-bouton-discret[aria-pressed="true"] { color: var(--ob-accent); border-color: var(--ob-accent); }
 /* Annuler l'animation : plus visible que les réglages, c'est l'action qu'on cherche pendant la révélation. */
-.ob-overlay button.ob-bouton-passer { color: #fff; background: rgba(0,0,0,0.5); border-color: var(--ob-accent); }
-.ob-overlay button.ob-bouton-passer:hover { background: rgba(0,0,0,0.7); filter: none; }
 @media (max-width: 600px) {
   .ob-reglages { flex-wrap: wrap; justify-content: flex-end; }
   .ob-overlay button.ob-bouton-discret { font-size: 0.72rem; letter-spacing: 0.03em; padding: 5px 8px; min-height: 32px; }
@@ -191,7 +189,7 @@
 .ob-overlay button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ---------- Récapitulatif (React) ---------- */
-.ob-recap { position: absolute; inset: 0; overflow-y: auto; z-index: 5; padding: 64px max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+.ob-recap { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; z-index: 5; padding: 64px max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .ob-recap h2 { font-family: var(--ob-police-titre); font-weight: 400; text-align: center; margin: 4px 0 2px; font-size: clamp(1.4rem, 5vw, 2rem); color: var(--ob-accent); }
 .ob-recap > p { text-align: center; margin: 0 0 16px; color: var(--ob-texte-doux); font-family: var(--ob-police-ui); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.82rem; }
 .ob-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30%, 130px), 1fr)); gap: 12px; max-width: 920px; margin: 0 auto; }
@@ -213,15 +211,16 @@
   background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ob-fond-1) 88%, transparent) 30%, var(--ob-fond-1));
 }
 .ob-overlay button.ob-bouton-encore {
-  display: flex; align-items: center; justify-content: center; gap: 18px; width: min(100%, 560px); min-height: 68px; padding: 12px 28px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: min(100%, 560px); min-width: 0; min-height: 64px; padding: 10px 20px;
   border: none; border-radius: 999px; color: #0b0904; background: var(--ob-accent); filter: none;
   box-shadow: 0 10px 34px color-mix(in srgb, var(--ob-accent) 40%, transparent), inset 0 1px 0 rgba(255,255,255,0.45);
 }
 .ob-overlay button.ob-bouton-encore:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
 .ob-overlay button.ob-bouton-encore:active:not(:disabled) { transform: translateY(1px); }
-.ob-encore-titre { font-family: var(--ob-police-titre); font-size: clamp(1.25rem, 5.4vw, 1.7rem); font-weight: 400; letter-spacing: 0.02em; line-height: 1.1; white-space: nowrap; }
-.ob-encore-separateur { align-self: stretch; width: 2px; margin: 4px 0; border-radius: 1px; background: rgba(11, 9, 4, 0.35); }
-.ob-encore-stock { font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace; font-size: clamp(0.95rem, 4vw, 1.15rem); letter-spacing: 0.04em; white-space: nowrap; }
+.ob-encore-titre { max-width: 100%; font-family: var(--ob-police-titre); font-size: clamp(1.15rem, 5vw, 1.7rem); font-weight: 400; letter-spacing: 0.02em; line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+/* Téléphone : titre au-dessus, nombre restant en sous-titre (pas de séparateur). Ordinateur : côte à côte (voir plus bas). */
+.ob-encore-separateur { display: none; align-self: stretch; width: 2px; margin: 4px 0; border-radius: 1px; background: rgba(11, 9, 4, 0.35); }
+.ob-encore-stock { max-width: 100%; font-family: var(--ob-police-ui); font-weight: 600; font-size: clamp(0.85rem, 3.6vw, 1.15rem); letter-spacing: 0.06em; text-transform: uppercase; text-align: center; opacity: 0.8; overflow-wrap: anywhere; }
 .ob-actions-secondaires { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: min(100%, 560px); }
 .ob-overlay button.ob-bouton-pilule {
   min-height: 56px; padding: 10px 16px; border-radius: 999px; font-family: var(--ob-police-ui); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.02em;
@@ -313,7 +312,9 @@
   .ob-actions-recap { flex-direction: row; justify-content: center; align-items: stretch; gap: 14px; }
   .ob-actions-secondaires { display: contents; }
   .ob-actions-secondaires > :first-child { order: 0; }
-  .ob-overlay button.ob-bouton-encore { order: 1; width: auto; min-height: 60px; padding: 10px 30px; }
+  .ob-overlay button.ob-bouton-encore { order: 1; flex-direction: row; gap: 18px; width: auto; min-height: 60px; padding: 10px 30px; }
+  .ob-encore-titre, .ob-encore-stock { white-space: nowrap; }
+  .ob-encore-separateur { display: block; }
   .ob-actions-secondaires > :last-child { order: 2; }
   .ob-overlay .ob-actions-recap button.ob-bouton-pilule { min-height: 60px; min-width: 190px; }
 }
