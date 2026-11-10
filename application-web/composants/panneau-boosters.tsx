@@ -1,5 +1,6 @@
 /** Hub d'ouverture (bandeau principal de l'accueil) : stock de boosters, minuteur du prochain, choix du set, bouton Ouvrir, puis l'overlay de révélation. */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { OuvertureBooster } from "./ouverture-booster";
 import { appelerApi } from "../outils/appels-api";
 import { type CarteOuverte, formaterDuree } from "../outils/libelles-cartes";
@@ -114,7 +115,9 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                 <p className="stock-boosters">
                   <span className="stock-nombre">{actuel}</span>
                   <span className="stock-max">/ {max}</span>
-                  <span className="stock-libelle">booster{actuel > 1 ? "s" : ""} disponible{actuel > 1 ? "s" : ""}</span>
+                  <span className="stock-libelle">
+                    booster{actuel > 1 ? "s" : ""} disponible{actuel > 1 ? "s" : ""}
+                  </span>
                 </p>
                 <div className="jauge-stock" role="img" aria-label={`${actuel} boosters sur ${max}`}>
                   {Array.from({ length: max }, (_, i) => (
@@ -163,21 +166,32 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
             disabled={!peutOuvrir}
             aria-label={`Ouvrir un booster ${nomSet}`}
           >
-            <img key={`${visuel}-${illustration}`} src={`/ouverture/booster-${visuel}-${illustration}.webp`} alt="" width="621" height="1100" />
+            <img
+              key={`${visuel}-${illustration}`}
+              src={`/ouverture/booster-${visuel}-${illustration}.webp`}
+              alt=""
+              width="621"
+              height="1100"
+            />
           </button>
         )}
       </div>
 
-      {enOuverture && set && (
-        <OuvertureBooster
-          set={set}
-          nomSet={nomSet}
-          illustration={illustration}
-          ouvrir={ouvrirSetChoisi}
-          peutOuvrirAutre={actuel >= 1}
-          surFermer={fermer}
-        />
-      )}
+      {/* Rendu à la racine du document : le bandeau crée son propre empilement (isolation), qui laisserait
+          la barre de navigation passer par-dessus l'ouverture et cacher ses boutons. */}
+      {enOuverture &&
+        set &&
+        createPortal(
+          <OuvertureBooster
+            set={set}
+            nomSet={nomSet}
+            illustration={illustration}
+            ouvrir={ouvrirSetChoisi}
+            peutOuvrirAutre={actuel >= 1}
+            surFermer={fermer}
+          />,
+          document.body,
+        )}
     </section>
   );
 }
