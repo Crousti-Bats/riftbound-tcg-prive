@@ -321,6 +321,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **API** : `stock.offerts` dans `GET /api/boosters/etat` et `POST /api/boosters/ouvrir`. **Accueil** : « 🎁 + N boosters offerts » sous la jauge ; le bouton Ouvrir et « N restants » comptent stock + offerts.
 - **Offrir à nouveau plus tard** : `npx wrangler d1 execute riftbound-tcg --remote --config configuration/cloudflare-wrangler.jsonc --command "UPDATE comptes SET boosters_bonus = boosters_bonus + 10;"`.
 - **Vérifications** : 230 tests (2 nouveaux : ordre de consommation, offerts au-delà du plafond).
+- **Correctif téléphone (récapitulatif d'ouverture)** : le bouton « Ouvrir un autre / N restants » gardait ses deux textes sur une ligne et débordait (surtout avec une police système agrandie sur Android), ce qui faisait défiler tout le récapitulatif de côté. Sur téléphone, le nombre restant passe sous le titre et le texte peut revenir à la ligne ; côte à côte seulement au-dessus de 760 px. `.ob-recap` n'a plus de défilement horizontal. Vérifié dans Edge headless à 320 et 360 px avec une police de 20 px.
 
 ## 5. Démarche DevSecOps
 
