@@ -16,6 +16,17 @@ export const schemaAction = z.discriminatedUnion("type", [
     /** Jouer face cachée (seulement vers une zone en jeu). */
     cachee: z.boolean().optional(),
   }),
+  // Aide automatique : début de tour, jouer une carte en payant avec les runes choisies, bouger une unité.
+  z.strictObject({ type: z.literal("debutTour") }),
+  z.strictObject({
+    type: z.literal("jouer"),
+    carte: schemaIdCarte,
+    vers: schemaIdZone,
+    /** L'unité arrive inclinée (un équipement arrive prêt). */
+    inclinee: z.boolean().optional(),
+    payer: z.strictObject({ incliner: z.array(schemaIdCarte).max(12), recycler: z.array(schemaIdCarte).max(12) }),
+  }),
+  z.strictObject({ type: z.literal("bouger"), carte: schemaIdCarte, vers: schemaIdZone }),
   z.strictObject({ type: z.literal("incliner"), carte: schemaIdCarte }),
   z.strictObject({ type: z.literal("retourner"), carte: schemaIdCarte }),
   z.strictObject({ type: z.literal("marqueur"), carte: schemaIdCarte, delta: z.number().int().min(-5).max(5) }),

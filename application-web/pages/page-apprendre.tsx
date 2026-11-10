@@ -254,7 +254,9 @@ export function PageApprendre() {
 
       <Section id="table" titre="11. Jouer sur la table du site">
         <p>
-          La table ne fait pas respecter les règles : comme autour d'une vraie table, c'est vous qui jouez honnêtement. Elle garde secrètes
+          La table ne fait pas respecter les règles : comme autour d'une vraie table, c'est vous qui jouez honnêtement. Avec l'
+          <strong>aide automatique</strong> (activée par défaut), elle fait les gestes pour toi : payer, incliner, compter les points.
+          Tu peux la couper pour tout faire à la main (incliner les runes, « Sous le deck de runes » pour recycler, « + » à côté du score…). Elle garde secrètes
           ta main et l'ordre de tes decks, et montre tout le reste en direct.
         </p>
         <table className="apprendre-table">
@@ -306,16 +308,11 @@ const MOTS_CLES: Array<[string, string]> = [
 ];
 
 const GESTES: Array<[string, string]> = [
-  ["Réveil : tout redresser", "Bouton « Tout redresser »"],
-  ["Tenir un champ de bataille", "Bouton « + » à côté de ton score"],
-  ["Canaliser 2 runes", "Clic sur ton deck de runes (ou bouton « Canaliser une rune »), deux fois"],
-  ["Piocher", "Clic sur ton deck (ou bouton « Piocher »)"],
+  ["Début du tour : réveil, tenir, canaliser 2, piocher 1", "Bouton « Début de mon tour » (aide automatique) : tout est fait, points des champs tenus compris"],
   ["Mulligan", "Bouton « Mulligan » au-dessus de ta main, puis choisis jusqu'à 2 cartes"],
-  ["Payer l'énergie", "Clic sur une rune de ta réserve → « Incliner »"],
-  ["Payer la puissance (recycler)", "Clic sur une rune → « Sous le deck de runes »"],
-  ["Jouer une unité", "Clic sur la carte dans ta main → « Base » ou « Champ de bataille 1/2 », puis « Incliner »"],
-  ["Jouer un sort", "Clic sur la carte → « Défausse » (après avoir résolu son effet)"],
-  ["Déplacer une unité", "Clic sur l'unité → « Incliner », puis la destination"],
+  ["Jouer une unité ou un équipement", "Clic sur la carte → « Jouer dans ma base » : les runes sont inclinées et recyclées pour toi, l'unité arrive inclinée"],
+  ["Jouer un sort", "Clic sur la carte → « Lancer le sort » (paiement automatique), puis applique son effet"],
+  ["Déplacer une unité, conquérir", "Clic sur l'unité → « Conquérir… (+1) », « Attaquer… » ou « Revenir à ma base » : elle s'incline, la conquête est comptée"],
   ["Infliger des dégâts", "Clic sur l'unité → « + marqueur » (un marqueur = 1 dégât)"],
   ["Une unité meurt", "Clic sur l'unité → « Défausse » (même celle de l'adversaire : elle va dans SA défausse)"],
   ["Créer un token (Recruit, Bomb…)", "Bouton « Créer un token »"],

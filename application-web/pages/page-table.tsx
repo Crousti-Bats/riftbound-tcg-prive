@@ -8,6 +8,7 @@ import { ImageCarte } from "../composants/image-carte";
 import { appelerApi } from "../outils/appels-api";
 import type { Carte } from "../outils/libelles-cartes";
 import { naviguer } from "../outils/navigation";
+import { calculerPaiement, libelleCout } from "../outils/paiement";
 import {
   type ActionTable,
   type CarteVue,
@@ -180,6 +181,23 @@ function retrouverCarte(vue: VueTable, id: string): Selection | null {
   return null;
 }
 
+/** Aide automatique : activée par défaut, le choix est gardé dans ce navigateur. */
+const CLE_AIDE_AUTO = "table-aide-auto";
+function lireAideAuto(): boolean {
+  try {
+    return localStorage.getItem(CLE_AIDE_AUTO) !== "non";
+  } catch {
+    return true;
+  }
+}
+function ecrireAideAuto(oui: boolean) {
+  try {
+    localStorage.setItem(CLE_AIDE_AUTO, oui ? "oui" : "non");
+  } catch {
+    // Stockage indisponible (navigation privée) : le choix vaut pour cette page seulement.
+  }
+}
+
 const NOM_CARTE = (c: Carte | undefined) => (c ? (c.sousTitre ? `${c.nom}, ${c.sousTitre}` : c.nom) : "Carte cachée");
 
 function Plateau({ code }: { code: string }) {
@@ -232,6 +250,7 @@ export function PlateauTable({
   surQuitter,
   libelleQuitter = "Quitter",
   sansMulligan,
+  aideImposee,
   enfants,
 }: {
   vue: VueTable;
@@ -244,9 +263,13 @@ export function PlateauTable({
   libelleQuitter?: string;
   /** Masque le bouton « Mulligan » (le tutoriel s'en charge). */
   sansMulligan?: boolean;
+  /** Aide automatique toujours active, sans la case pour la couper (tutoriel). */
+  aideImposee?: boolean;
   enfants?: ReactNode;
 }) {
   const cartes = useCartesTable(vue);
+  const [aideChoisie, setAideChoisie] = useState(lireAideAuto);
+  const aide = aideImposee || aideChoisie;
   const [selection, setSelection] = useState<Selection | null>(null);
   const [pile, setPile] = useState<{ zone: string; titre: string } | null>(null);
   const [mulligan, setMulligan] = useState<string[] | null>(null);
@@ -350,6 +373,11 @@ export function PlateauTable({
           </section>
 
           <div className="table-commandes">
+            {aide && (
+              <button className="petit" onClick={() => jouer({ type: "debutTour" })} title="Redresse tout, marque tes champs tenus, canalise 2 runes et pioche 1 carte">
+                Début de mon tour
+              </button>
+            )}
             <button className="secondaire petit" onClick={() => jouer({ type: "piocher", n: 1 })}>
               Piocher
             </button>
@@ -368,6 +396,19 @@ export function PlateauTable({
             <button className="secondaire petit" onClick={() => jouer({ type: "de" })}>
               Lancer un dé
             </button>
+            {!aideImposee && (
+              <label className="bascule table-aide-auto" title="Paiement des cartes, inclinaison, conquête et début de tour faits pour toi">
+                <input
+                  type="checkbox"
+                  checked={aideChoisie}
+                  onChange={(e) => {
+                    setAideChoisie(e.target.checked);
+                    ecrireAideAuto(e.target.checked);
+                  }}
+                />{" "}
+                Aide automatique
+              </label>
+            )}
             <button className="secondaire petit table-bouton-journal" onClick={() => setJournalOuvert(!journalOuvert)}>
               {journalOuvert ? "Masquer le journal" : "Journal"}
             </button>
@@ -406,6 +447,8 @@ export function PlateauTable({
           moi={moi}
           selection={selectionActuelle}
           carte={selectionActuelle.carte.code ? cartes[selectionActuelle.carte.code] : undefined}
+          cartes={cartes}
+          aide={aide}
           jouer={jouer}
           surFermer={() => setSelection(null)}
         />
@@ -693,6 +736,8 @@ function PanneauCarte({
   moi,
   selection,
   carte,
+  cartes,
+  aide,
   jouer,
   surFermer,
 }: {
@@ -700,6 +745,8 @@ function PanneauCarte({
   moi: IndexJoueur;
   selection: Selection;
   carte: Carte | undefined;
+  cartes: Record<string, Carte>;
+  aide: boolean;
   jouer: (a: ActionTable) => void;
   surFermer: () => void;
 }) {
@@ -729,6 +776,8 @@ function PanneauCarte({
   const autorise = aMoi || (c.face && enJeu) || zone.endsWith(".defausse") || zone.endsWith(".bannis");
 
   const titre = c.libelle ? `Token ${c.libelle}` : NOM_CARTE(carte);
+  // Aide automatique : les gestes utiles en premier (fonction simple, sans hook : null s'il n'y a rien d'aidé).
+  const blocAide = aide && aMoi ? actionsAidees({ vue, moi, selection, carte, cartes, jouer, surFermer }) : null;
   return (
     <div className="fond-modale" onClick={surFermer}>
       <div className="modale panneau-carte-table" role="dialog" aria-label={titre} onClick={(e) => e.stopPropagation()}>
@@ -739,10 +788,12 @@ function PanneauCarte({
           <h2>{titre}</h2>
           {carte?.texte && <p className="aide panneau-carte-texte">{carte.texte}</p>}
           {c.token && <p className="aide">Token : il disparaît s'il quitte le jeu (défausse, main, deck, bannissement).</p>}
+          {blocAide}
           {!autorise ? (
             <p className="aide">Carte de {vue.joueurs[p].pseudo} : tu ne peux pas la manipuler ici.</p>
           ) : (
-            <>
+            <details className="panneau-carte-manuel" open={!blocAide}>
+              <summary>{blocAide ? "Toutes les actions (à la main)" : "Actions"}</summary>
               {enJeu && (
                 <div className="actions-ligne">
                   <button className="petit" onClick={() => jouer({ type: "incliner", carte: c.id })}>
@@ -781,7 +832,7 @@ function PanneauCarte({
                     </button>
                   ))}
               </div>
-            </>
+            </details>
           )}
           <button className="petit" onClick={surFermer}>
             Fermer
@@ -790,6 +841,132 @@ function PanneauCarte({
       </div>
     </div>
   );
+}
+
+/** Unités d'un joueur sur un champ de bataille (sans la carte du champ). */
+function unitesSurChamp(vue: VueTable, n: number, j: IndexJoueur, cartes: Record<string, Carte>): CarteVue[] {
+  return cartesZone(vue, `champ.${n}`).filter((c) => c.proprio === j && !(c.code && cartes[c.code]?.type === "Battlefield"));
+}
+
+/**
+ * Aide automatique : les gestes utiles en un clic. Jouer une carte (le site choisit et paie les runes, l'unité arrive
+ * inclinée, le sort part à la défausse), déplacer une unité (elle s'incline ; conquête comptée par la table).
+ */
+function actionsAidees({
+  vue,
+  moi,
+  selection,
+  carte,
+  cartes,
+  jouer,
+  surFermer,
+}: {
+  vue: VueTable;
+  moi: IndexJoueur;
+  selection: Selection;
+  carte: Carte | undefined;
+  cartes: Record<string, Carte>;
+  jouer: (a: ActionTable) => void;
+  surFermer: () => void;
+}): ReactNode {
+  const { carte: c, zone } = selection;
+  const agir = (action: ActionTable) => {
+    jouer(action);
+    surFermer();
+  };
+  const lui = (1 - moi) as IndexJoueur;
+  const champs = [0, 1];
+
+  // Jouer une carte depuis ma main ou ma zone de champion.
+  if ((zone === `${moi}.main` || zone === `${moi}.champion`) && carte && ["Unit", "Spell", "Gear"].includes(carte.type)) {
+    const reserve = cartesZone(vue, `${moi}.reserve`);
+    const paiement = calculerPaiement(carte, reserve, cartes);
+    const payer = paiement.ok ? { incliner: paiement.incliner, recycler: paiement.recycler } : { incliner: [], recycler: [] };
+    // On ne pose une unité directement sur un champ de bataille que si on le contrôle.
+    const controles = champs.filter((n) => unitesSurChamp(vue, n, moi, cartes).length > 0 && unitesSurChamp(vue, n, lui, cartes).length === 0);
+    return (
+      <div className="panneau-aide">
+        <p className="aide">
+          Coût : <strong>{libelleCout(carte)}</strong>
+          {paiement.ok ? (carte.energie || carte.puissance ? " · payé automatiquement avec tes runes" : "") : <span className="panneau-aide-manque"> · {paiement.raison}</span>}
+        </p>
+        <div className="actions-ligne">
+          {carte.type === "Spell" ? (
+            <button className="petit" disabled={!paiement.ok} onClick={() => agir({ type: "jouer", carte: c.id, vers: `${moi}.defausse`, payer })}>
+              Lancer le sort
+            </button>
+          ) : (
+            <>
+              <button className="petit" disabled={!paiement.ok} onClick={() => agir({ type: "jouer", carte: c.id, vers: `${moi}.base`, inclinee: carte.type === "Unit", payer })}>
+                Jouer dans ma base
+              </button>
+              {carte.type === "Unit" &&
+                controles.map((n) => (
+                  <button key={n} className="secondaire petit" disabled={!paiement.ok} onClick={() => agir({ type: "jouer", carte: c.id, vers: `champ.${n}`, inclinee: true, payer })}>
+                    Jouer au champ de bataille {n + 1}
+                  </button>
+                ))}
+            </>
+          )}
+        </div>
+        {carte.type === "Spell" && <p className="aide">Applique son effet toi-même (dégâts : « + marqueur » sur l'unité visée ; une unité détruite → « Défausse »).</p>}
+      </div>
+    );
+  }
+
+  // Déplacer une de mes unités en jeu (base ↔ champ de bataille).
+  const estUnite = c.token || (carte && carte.type === "Unit");
+  const dansBase = zone === `${moi}.base`;
+  const champActuel = zone.startsWith("champ.") ? Number(zone.slice(6)) : null;
+  if (estUnite && (dansBase || champActuel !== null)) {
+    const libelleChamp = (n: number) => {
+      const adverses = unitesSurChamp(vue, n, lui, cartes).length;
+      const amies = unitesSurChamp(vue, n, moi, cartes).length;
+      return adverses ? `Attaquer le champ de bataille ${n + 1}` : amies ? `Aller au champ de bataille ${n + 1}` : `Conquérir le champ de bataille ${n + 1} (+1)`;
+    };
+    return (
+      <div className="panneau-aide">
+        {c.inclinee && <p className="aide panneau-aide-manque">Unité inclinée : elle ne pourra bouger qu'à ton prochain tour.</p>}
+        <div className="actions-ligne">
+          {dansBase
+            ? champs.map((n) => (
+                <button key={n} className="petit" disabled={c.inclinee} onClick={() => agir({ type: "bouger", carte: c.id, vers: `champ.${n}` })}>
+                  {libelleChamp(n)}
+                </button>
+              ))
+            : (
+                <button className="petit" disabled={c.inclinee} onClick={() => agir({ type: "bouger", carte: c.id, vers: `${moi}.base` })}>
+                  Revenir à ma base
+                </button>
+              )}
+          <button className="secondaire petit" onClick={() => agir({ type: "deplacer", carte: c.id, vers: `${moi}.defausse` })}>
+            Elle meurt (défausse)
+          </button>
+        </div>
+        <div className="actions-ligne">
+          <span className="aide">Dégâts ({c.marqueurs}) :</span>
+          <button className="secondaire petit" onClick={() => jouer({ type: "marqueur", carte: c.id, delta: -1 })}>
+            − marqueur
+          </button>
+          <button className="secondaire petit" onClick={() => jouer({ type: "marqueur", carte: c.id, delta: 1 })}>
+            + marqueur
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Une autre de mes cartes en jeu (rune, Légende, équipement…) : l'incliner ou la redresser.
+  if (/.(reserve|legende|base|champion)$/.test(zone) || zone.startsWith("champ.")) {
+    return (
+      <div className="panneau-aide actions-ligne">
+        <button className="petit" onClick={() => agir({ type: "incliner", carte: c.id })}>
+          {c.inclinee ? "Redresser" : "Incliner"}
+        </button>
+      </div>
+    );
+  }
+  return null;
 }
 
 function VoirPile({
