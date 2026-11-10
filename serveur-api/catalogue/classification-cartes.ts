@@ -43,7 +43,18 @@ const schemaCarteSource = z.object({
   scrapedAt: texteCourt(40).nullish(),
 });
 
-export function classerVariante(numero: string, rarete: Rarete): Variante | null {
+/**
+ * Cartes rangées à la main dans les Special Alt (décision de l'utilisateur le 2026-11-10) : la source les numérote
+ * comme des Overnumbered (numéro au-delà du total du set), mais ce sont des Special. Clé : set, puis numéro.
+ * Radiance 177 à 183/167 : Ekko Revolutionary, K'Sante Courageous, Aphelios Exalted, Ezreal Dashing,
+ * Yone Blademaster, Kayn Unleashed, Sett Kingpin.
+ */
+export const SPECIAUX_FORCES: Readonly<Record<string, ReadonlySet<string>>> = {
+  rad: new Set(["177-167", "178-167", "179-167", "180-167", "181-167", "182-167", "183-167"]),
+};
+
+export function classerVariante(numero: string, rarete: Rarete, set?: string): Variante | null {
+  if (set && SPECIAUX_FORCES[set]?.has(numero)) return "special";
   if (/^\d+-star-\d+$/.test(numero)) return "signee";
   const m = /^(\d+)(a?)-(\d+)$/.exec(numero);
   if (m) {
@@ -85,7 +96,7 @@ export function construireCatalogue(brut: unknown): Catalogue {
       continue;
     }
     const c = r.data;
-    const variante = classerVariante(c.cardNumber, c.rarity);
+    const variante = classerVariante(c.cardNumber, c.rarity, c.setCode);
     if (!variante) {
       ignorees++;
       continue;
