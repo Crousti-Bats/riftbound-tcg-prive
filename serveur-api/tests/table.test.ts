@@ -13,6 +13,7 @@ import {
   schemaAction,
   vuePour,
 } from "../table/moteur-table";
+import { DECKS_DEMO, type DeckDemo } from "../decks/decks-demo";
 import { MAX_PARTIES_OUVERTES } from "../table/routes-parties";
 import { CARTES, catalogueDecks, deckValide } from "./outils/catalogue-decks-de-test";
 import { creerEnvironnementDeTest } from "./outils/client-api-de-test";
@@ -250,6 +251,26 @@ describe("API /api/parties (salon)", () => {
     const carol = await joueurAvecDeck(env, "Carol");
     const troisieme = await env.appeler("POST", `/api/parties/${code}/rejoindre`, { cookie: carol.cookie, corps: { deck: carol.deck } });
     expect(troisieme.json.erreur).toBe("partie_deja_commencee");
+  });
+
+  it("accepte un deck de démo prêté, sans posséder ses cartes", async () => {
+    const env = creerEnvironnementDeTest();
+    const appels = brancherSalles(env);
+    // Deck de démo de test (les vrais utilisent des cartes absentes du catalogue de test).
+    const demos = DECKS_DEMO as DeckDemo[];
+    demos.push({ id: -9, nom: "Démo de test", contenu: deckValide() });
+    try {
+      const alice = await env.inscrire("Alice", "motdepasse"); // collection vide
+      const bob = await env.inscrire("Bob", "motdepasse");
+      const code = (await env.appeler("POST", "/api/parties", { cookie: alice, corps: { deck: -9 } })).json.code as string;
+      expect(code).toMatch(/^[A-Z0-9]{8}$/);
+      expect((await env.appeler("POST", `/api/parties/${code}/rejoindre`, { cookie: bob, corps: { deck: -9 } })).statut).toBe(200);
+      expect((appels[0]?.corps as { joueurs: Array<{ deck: DeckDeTable }> }).joueurs[0]?.deck.principal).toHaveLength(39);
+      expect((await env.appeler("POST", "/api/parties", { cookie: alice, corps: { deck: -42 } })).json.erreur).toBe("deck_introuvable");
+      expect((await env.appeler("POST", "/api/parties", { cookie: alice, corps: { deck: 0 } })).statut).toBe(400);
+    } finally {
+      demos.pop();
+    }
   });
 
   it("exige un deck valide qui m'appartient", async () => {

@@ -12,6 +12,7 @@ import type { Catalogue, CarteCatalogue } from "../catalogue/types-catalogue";
 import { lireCorps } from "../lecture-requete";
 import { compterTentative, REGLES } from "../securite/limitation-tentatives";
 import type { ContexteApi } from "../types-application";
+import { deckDemo, DECKS_DEMO } from "./decks-demo";
 import { type ContenuDeck, DECK_VIDE, exporterTexte, nomsDesChampions, validerDeck } from "./regles-deck";
 
 export const routesDecks = new Hono<ContexteApi>();
@@ -56,6 +57,11 @@ async function chargerPossession(base: D1Database, compteId: number): Promise<Ma
   return new Map(results.map((r) => [r.card_code, Number(r.n)]));
 }
 
+/** Deck de démo prêté : on fait comme si le joueur possédait toutes ses cartes. */
+function possessionIllimitee(deck: ContenuDeck): Map<string, number> {
+  return new Map(codesDuDeck(deck).map((code) => [code, 99]));
+}
+
 /** Contenu stocké → contenu sûr (un JSON abîmé ou d'un ancien format donne un deck vide plutôt qu'une erreur). */
 function lireContenu(brut: string): ContenuDeck {
   try {
@@ -66,7 +72,7 @@ function lireContenu(brut: string): ContenuDeck {
   }
 }
 
-const codesDu = (deck: ContenuDeck) => [
+const codesDuDeck = (deck: ContenuDeck): string[] => [
   ...(deck.legende ? [deck.legende] : []),
   ...(deck.champion ? [deck.champion] : []),
   ...deck.principal.map((l) => l.code),
@@ -79,7 +85,7 @@ function analyser(deck: ContenuDeck, catalogue: Catalogue, possession: Map<strin
   const { parCode, champions } = indexer(catalogue);
   const cartes: Record<string, CarteCatalogue> = {};
   const possedees: Record<string, number> = {};
-  for (const code of codesDu(deck)) {
+  for (const code of codesDuDeck(deck)) {
     const carte = parCode.get(code);
     if (carte) cartes[code] = carte;
     possedees[code] = possession.get(code) ?? 0;
@@ -126,7 +132,21 @@ routesDecks.get("/", async (c) => {
       compteurs: validation.compteurs,
     };
   });
-  return c.json({ decks, max: MAX_DECKS });
+  // Decks de démo prêtés à tout le monde (jouables sans posséder les cartes, non modifiables).
+  const demos = DECKS_DEMO.map((d) => {
+    const validation = validerDeck(d.contenu, parCode, champions, possessionIllimitee(d.contenu));
+    return {
+      id: d.id,
+      nom: d.nom,
+      modifieLe: 0,
+      legende: (d.contenu.legende && parCode.get(d.contenu.legende)) || null,
+      valide: validation.valide,
+      compteurs: validation.compteurs,
+      demo: true,
+      export: exporterTexte(d.contenu, parCode, champions),
+    };
+  });
+  return c.json({ decks: [...decks, ...demos], max: MAX_DECKS });
 });
 
 routesDecks.post("/", async (c) => {
@@ -180,7 +200,7 @@ routesDecks.post("/:id", async (c) => {
 
   const catalogue = await obtenirCatalogue();
   const { parCode } = indexer(catalogue);
-  if (codesDu(contenu).some((code) => !parCode.has(code))) return c.json({ erreur: "carte_introuvable" }, 400);
+  if (codesDuDeck(contenu).some((code) => !parCode.has(code))) return c.json({ erreur: "carte_introuvable" }, 400);
 
   if (!(await compterTentative(base, `decks:compte:${compte.id}`, REGLES.decksParCompte)).autorisee) {
     return c.json({ erreur: "trop_de_modifications" }, 429);
@@ -208,21 +228,30 @@ routesDecks.delete("/:id", async (c) => {
 });
 
 /**
- * Deck prêt à jouer (table de jeu) : il doit m'appartenir et être valide (règles + possession) au moment où la
- * partie commence. Renvoie les codes, exemplaire par exemplaire.
+ * Deck prêt à jouer (table de jeu) : un deck de démo prêté, ou un des miens valide (règles + possession) au moment
+ * où la partie commence. Renvoie les codes, exemplaire par exemplaire.
  */
 export async function chargerDeckJouable(
   base: D1Database,
   compteId: number,
   deckId: number,
 ): Promise<{ ok: true; deck: { legende: string; champion: string; principal: string[]; runes: string[]; terrains: string[] } } | { ok: false; erreur: string }> {
-  const ligne = await base
-    .prepare("SELECT contenu FROM decks WHERE id = ? AND compte_id = ?")
-    .bind(deckId, compteId)
-    .first<{ contenu: string }>();
-  if (!ligne) return { ok: false, erreur: "deck_introuvable" };
-  const contenu = lireContenu(ligne.contenu);
-  const [possession, catalogue] = await Promise.all([chargerPossession(base, compteId), obtenirCatalogue()]);
+  const demo = deckDemo(deckId);
+  let contenu: ContenuDeck;
+  let possession: Map<string, number>;
+  if (demo) {
+    contenu = demo.contenu;
+    possession = possessionIllimitee(contenu);
+  } else {
+    const ligne = await base
+      .prepare("SELECT contenu FROM decks WHERE id = ? AND compte_id = ?")
+      .bind(deckId, compteId)
+      .first<{ contenu: string }>();
+    if (!ligne) return { ok: false, erreur: "deck_introuvable" };
+    contenu = lireContenu(ligne.contenu);
+    possession = await chargerPossession(base, compteId);
+  }
+  const catalogue = await obtenirCatalogue();
   const { parCode, champions } = indexer(catalogue);
   if (!validerDeck(contenu, parCode, champions, possession).valide || !contenu.legende || !contenu.champion) {
     return { ok: false, erreur: "deck_incomplet" };

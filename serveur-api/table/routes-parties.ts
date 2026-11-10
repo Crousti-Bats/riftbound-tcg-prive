@@ -25,7 +25,8 @@ export const MAX_PARTIES_OUVERTES = 5;
 /** Alphabet sans caractères ambigus (ni 0/O, ni 1/I/L). */
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const schemaCode = z.string().regex(/^[A-Z0-9]{8}$/);
-const schemaDeck = z.strictObject({ deck: z.number().int().min(1).max(1e12) });
+/** Un de mes decks (id positif) ou un deck de démo prêté (id négatif, voir decks-demo.ts). */
+const schemaDeck = z.strictObject({ deck: z.number().int().min(-99).max(1e12).refine((n) => n !== 0) });
 
 function nouveauCode(): string {
   const octets = new Uint8Array(8);

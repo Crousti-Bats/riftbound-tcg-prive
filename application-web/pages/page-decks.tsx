@@ -15,6 +15,9 @@ interface ResumeDeck {
   legende: Carte | null;
   valide: boolean;
   compteurs: { principal: number; runes: number; terrains: number };
+  /** Deck de démo prêté à tout le monde : jouable sans posséder les cartes, non modifiable. */
+  demo?: boolean;
+  export?: string;
 }
 
 export function PageDecks() {
@@ -70,19 +73,39 @@ export function PageDecks() {
             placeholder="Nom du deck (ex. Ekko tempo)"
             aria-label="Nom du nouveau deck"
           />
-          <button type="submit" disabled={enCours || (decks !== null && decks.length >= max)}>
+          <button type="submit" disabled={enCours || (decks !== null && decks.filter((d) => !d.demo).length >= max)}>
             Créer un deck
           </button>
         </form>
-        {decks !== null && decks.length >= max && <p className="aide">Tu as atteint {max} decks : supprimes-en un pour en créer un autre.</p>}
+        {decks !== null && decks.filter((d) => !d.demo).length >= max && <p className="aide">Tu as atteint {max} decks : supprimes-en un pour en créer un autre.</p>}
       </section>
 
       {erreur && <p className="message-erreur">{erreur}</p>}
       {!decks && !erreur && <p className="aide">Chargement…</p>}
-      {decks && decks.length === 0 && <p className="aide">Aucun deck pour l'instant.</p>}
+      {decks && decks.every((d) => d.demo) && <p className="aide">Tu n'as pas encore construit de deck : joue avec un deck de démo en attendant.</p>}
 
       <section className="liste-decks">
-        {decks?.map((d) => (
+        {decks?.filter((d) => d.demo).map((d) => (
+          <div key={d.id} className="carte resume-deck resume-deck-demo">
+            {d.legende ? (
+              <ImageCarte image={d.legende.image} largeur={300} alt="" className="miniature" paresseuse />
+            ) : (
+              <span className="miniature miniature-vide" aria-hidden="true" />
+            )}
+            <span className="resume-deck-infos">
+              <strong>{d.nom}</strong>
+              <span className="aide">Prêté à tout le monde pour tester la table de jeu, sans avoir les cartes.</span>
+              {d.export && (
+                <details>
+                  <summary>Voir la liste</summary>
+                  <pre className="liste-export">{d.export}</pre>
+                </details>
+              )}
+            </span>
+            <span className="etat-deck etat-deck-demo">Deck de démo</span>
+          </div>
+        ))}
+        {decks?.filter((d) => !d.demo).map((d) => (
           <a
             key={d.id}
             className="carte resume-deck"

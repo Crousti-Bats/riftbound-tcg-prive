@@ -815,6 +815,9 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
 .resume-deck-infos { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .resume-deck-infos strong { overflow-wrap: anywhere; }
 .etat-deck { flex: none; font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 999px; color: var(--texte-doux); border: 1px solid var(--bordure-forte); }
+.resume-deck-demo { align-items: flex-start; border-color: rgba(90, 169, 255, 0.35); }
+.resume-deck-demo details { margin-top: 4px; }
+.etat-deck-demo { color: #8cc4ff; border-color: rgba(90, 169, 255, 0.5); }
 .etat-deck-valide { color: var(--succes); border-color: color-mix(in srgb, var(--succes) 60%, transparent); }
 
 .statut-deck { font-size: 0.85rem; color: var(--texte-doux); }

@@ -1,6 +1,7 @@
 /** Tests des decks : règles de construction (Core Rules 103.x), possession, export texte, API /api/decks. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { amorcerCataloguePourTest, viderCacheMemoire } from "../catalogue/source-cartes";
+import { DECKS_DEMO } from "../decks/decks-demo";
 import { MAX_DECKS } from "../decks/routes-decks";
 import { type ContenuDeck, exporterTexte, validerDeck } from "../decks/regles-deck";
 import { CARTES, CHAMPIONS, PAR_CODE, catalogueDecks, deckValide, toutPosseder } from "./outils/catalogue-decks-de-test";
@@ -175,10 +176,13 @@ describe("API /api/decks", () => {
     expect(relu.contenu).toEqual(deckValide());
 
     const liste = (await env.appeler("GET", "/api/decks", { cookie })).json as {
-      decks: Array<{ id: number; nom: string; valide: boolean; legende: { code: string } | null }>;
+      decks: Array<{ id: number; nom: string; valide: boolean; legende: { code: string } | null; demo?: boolean }>;
     };
-    expect(liste.decks).toHaveLength(1);
-    expect(liste.decks[0]).toMatchObject({ id, nom: "Ekko tempo", valide: true, legende: { code: "leg-ekko" } });
+    const miens = liste.decks.filter((d) => !d.demo);
+    expect(miens).toHaveLength(1);
+    expect(miens[0]).toMatchObject({ id, nom: "Ekko tempo", valide: true, legende: { code: "leg-ekko" } });
+    // Les decks de démo prêtés sont proposés à tout le monde, après les miens.
+    expect(liste.decks.filter((d) => d.demo).map((d) => d.id)).toEqual(DECKS_DEMO.map((d) => d.id));
 
     expect((await env.appeler("DELETE", `/api/decks/${id}`, { cookie })).statut).toBe(200);
     expect((await env.appeler("GET", `/api/decks/${id}`, { cookie })).statut).toBe(404);
@@ -215,7 +219,7 @@ describe("API /api/decks", () => {
     expect((await env.appeler("GET", `/api/decks/${id}`, { cookie: bob })).statut).toBe(404);
     expect((await env.appeler("POST", `/api/decks/${id}`, { cookie: bob, corps: { nom: "Volé", contenu: deckValide() } })).statut).toBe(404);
     expect((await env.appeler("DELETE", `/api/decks/${id}`, { cookie: bob })).statut).toBe(404);
-    expect(((await env.appeler("GET", "/api/decks", { cookie: bob })).json.decks as unknown[]).length).toBe(0);
+    expect(((await env.appeler("GET", "/api/decks", { cookie: bob })).json.decks as Array<{ demo?: boolean }>).filter((d) => !d.demo)).toEqual([]);
     expect((await env.appeler("GET", "/api/decks", {})).statut).toBe(401);
   });
 
