@@ -16,7 +16,7 @@ import { journaliser, requeteJournal } from "../journal-evenements";
 import { lireCorps } from "../lecture-requete";
 import { collecterMonitoring } from "./monitoring";
 import { empreinteSha256, jetonAleatoire } from "../securite/jetons-et-empreintes";
-import { enregistrerEchec, estBloque, REGLES, reinitialiser } from "../securite/limitation-tentatives";
+import { compterTentative, REGLES, reinitialiser } from "../securite/limitation-tentatives";
 import { verifierMotDePasse } from "../securite/mots-de-passe";
 import type { ContexteApi } from "../types-application";
 import { schemaCreationInvitation, schemaElevation, schemaIdentifiant, schemaLimiteJournal } from "../validation-donnees";
@@ -28,11 +28,14 @@ routesAdministration.post("/elevation", exigerConnexion, async (c) => {
   const base = c.env.BASE_DE_DONNEES;
   if (!compte || compte.role !== "admin") return c.json({ erreur: "interdit" }, 403);
 
-  const cle = `elevation:compte:${compte.id}`;
-  if (await estBloque(base, cle, REGLES.elevationAdmin)) return c.json({ erreur: "trop_de_tentatives" }, 429);
-
   const lecture = await lireCorps(c, schemaElevation);
   if (!lecture.ok) return lecture.reponse;
+
+  // Comptée avant la vérification (atomique : résiste aux requêtes simultanées), remise à zéro si elle réussit.
+  const cle = `elevation:compte:${compte.id}`;
+  if (!(await compterTentative(base, cle, REGLES.elevationAdmin)).autorisee) {
+    return c.json({ erreur: "trop_de_tentatives" }, 429);
+  }
 
   const ligne = await base
     .prepare("SELECT hash_mot_de_passe FROM comptes WHERE id = ?")
@@ -40,7 +43,6 @@ routesAdministration.post("/elevation", exigerConnexion, async (c) => {
     .first<{ hash_mot_de_passe: string }>();
   const ip = ipClient(c);
   if (!ligne || !(await verifierMotDePasse(lecture.donnees.motDePasse, ligne.hash_mot_de_passe))) {
-    await enregistrerEchec(base, cle, REGLES.elevationAdmin);
     await journaliser(base, { categorie: "securite", type: "elevation_echouee", compteId: compte.id, pseudo: compte.pseudo, ip });
     return c.json({ erreur: "mot_de_passe_incorrect" }, 401);
   }
