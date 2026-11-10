@@ -278,6 +278,8 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 .jauge-stock { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
 .jauge-stock span { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.09); }
 .jauge-stock span.plein { background: linear-gradient(180deg, var(--accent-vif), var(--accent)); box-shadow: 0 0 8px rgba(243, 207, 134, 0.45); }
+.stock-offerts { margin: 0; color: var(--accent-vif); font-size: 0.95rem; font-weight: 600; }
+.stock-offerts strong { font-variant-numeric: tabular-nums; }
 .minuteur { margin: 0; color: var(--texte-doux); font-size: 0.9rem; }
 .minuteur strong { color: var(--texte); font-variant-numeric: tabular-nums; }
 

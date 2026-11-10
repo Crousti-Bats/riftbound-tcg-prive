@@ -38,6 +38,8 @@ const schemaOuverture = z.strictObject({ set: z.string().regex(/^[a-z]{2,5}$/) }
 interface LigneStock {
   stock_boosters: number;
   boosters_tick: number;
+  /** Boosters offerts : en plus du stock normal, sans régénération ni plafond (migration 0014). */
+  boosters_bonus: number;
 }
 
 routesBoosters.get("/etat", async (c) => {
@@ -46,7 +48,7 @@ routesBoosters.get("/etat", async (c) => {
   const base = c.env.BASE_DE_DONNEES;
 
   const ligne = await base
-    .prepare("SELECT stock_boosters, boosters_tick FROM comptes WHERE id = ?")
+    .prepare("SELECT stock_boosters, boosters_tick, boosters_bonus FROM comptes WHERE id = ?")
     .bind(compte.id)
     .first<LigneStock>();
   const maintenant = Date.now();
@@ -56,7 +58,12 @@ routesBoosters.get("/etat", async (c) => {
   const sets = catalogue.sets.filter((s) => s.ouvrable).map((s) => ({ code: s.code, nom: s.nom }));
 
   return c.json({
-    stock: { actuel: etat.stock, max: STOCK_MAX, prochainDansMs: prochainDansMs(etat, maintenant) },
+    stock: {
+      actuel: etat.stock,
+      max: STOCK_MAX,
+      prochainDansMs: prochainDansMs(etat, maintenant),
+      offerts: ligne?.boosters_bonus ?? 0,
+    },
     sets,
   });
 });
@@ -159,23 +166,30 @@ routesBoosters.post("/ouvrir", async (c) => {
   if (!infoSet || !infoSet.ouvrable) return c.json({ erreur: "set_non_ouvrable" }, 400);
 
   const ligne = await base
-    .prepare("SELECT stock_boosters, boosters_tick FROM comptes WHERE id = ?")
+    .prepare("SELECT stock_boosters, boosters_tick, boosters_bonus FROM comptes WHERE id = ?")
     .bind(compte.id)
     .first<LigneStock>();
   const maintenant = Date.now();
   const etat = regenerer(ligne?.stock_boosters ?? 0, ligne?.boosters_tick ?? maintenant, maintenant);
-  if (etat.stock < 1) {
+  const offerts = ligne?.boosters_bonus ?? 0;
+  if (etat.stock < 1 && offerts < 1) {
     return c.json({ erreur: "aucun_booster", prochainDansMs: prochainDansMs(etat, maintenant) }, 409);
   }
 
   // Décrément protégé (concurrence optimiste) : on n'écrit que si la ligne n'a pas bougé depuis la lecture.
   // Ainsi deux ouvertures simultanées ne peuvent pas consommer un seul booster deux fois.
-  const decrement = await base
-    .prepare(
-      "UPDATE comptes SET stock_boosters = ?, boosters_tick = ? WHERE id = ? AND stock_boosters = ? AND boosters_tick = ?",
-    )
-    .bind(etat.stock - 1, etat.tick, compte.id, ligne?.stock_boosters ?? 0, ligne?.boosters_tick ?? maintenant)
-    .run();
+  // Le stock normal passe en premier (le minuteur repart aussitôt) ; les boosters offerts ensuite.
+  const parStockNormal = etat.stock >= 1;
+  const decrement = await (parStockNormal
+    ? base
+        .prepare(
+          "UPDATE comptes SET stock_boosters = ?, boosters_tick = ? WHERE id = ? AND stock_boosters = ? AND boosters_tick = ?",
+        )
+        .bind(etat.stock - 1, etat.tick, compte.id, ligne?.stock_boosters ?? 0, ligne?.boosters_tick ?? maintenant)
+    : base
+        .prepare("UPDATE comptes SET boosters_bonus = ? WHERE id = ? AND boosters_bonus = ?")
+        .bind(offerts - 1, compte.id, offerts)
+  ).run();
   if (decrement.meta.changes !== 1) {
     // Une autre ouverture a modifié le stock entre-temps : on demande de réessayer (aucune carte n'a été ajoutée).
     return c.json({ erreur: "conflit_ouverture" }, 409);
@@ -220,10 +234,15 @@ routesBoosters.post("/ouvrir", async (c) => {
     return carte ? [{ ...carte, foil: t.foil, slot: t.slot }] : [];
   });
 
-  const nouvelEtat = { stock: etat.stock - 1, tick: etat.tick };
+  const nouvelEtat = parStockNormal ? { stock: etat.stock - 1, tick: etat.tick } : etat;
   return c.json({
     set,
     cartes,
-    stock: { actuel: nouvelEtat.stock, max: STOCK_MAX, prochainDansMs: prochainDansMs(nouvelEtat, maintenant) },
+    stock: {
+      actuel: nouvelEtat.stock,
+      max: STOCK_MAX,
+      prochainDansMs: prochainDansMs(nouvelEtat, maintenant),
+      offerts: parStockNormal ? offerts : offerts - 1,
+    },
   });
 });

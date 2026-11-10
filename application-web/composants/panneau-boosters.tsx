@@ -11,6 +11,8 @@ interface Stock {
   actuel: number;
   max: number;
   prochainDansMs: number | null;
+  /** Boosters offerts, en plus du stock normal (sans régénération ni plafond). */
+  offerts?: number;
 }
 interface EtatBoosters {
   stock: Stock;
@@ -101,6 +103,8 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const stock = etat?.stock;
   const actuel = stock?.actuel ?? 0;
   const max = stock?.max ?? 10;
+  const offerts = stock?.offerts ?? 0;
+  const total = actuel + offerts;
   const visuel = set in ILLUSTRATIONS_PAR_SET ? set : "ogn";
   const illustration = illustrations[visuel] ?? 1;
 
@@ -124,7 +128,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
     for (const [cle, nombre] of Object.entries(ILLUSTRATIONS_PAR_SET)) suivantes[cle] = autreIllustration(illustrations[cle] ?? 1, nombre);
     setIllustrations(suivantes);
   }
-  const peutOuvrir = Boolean(set) && actuel >= 1;
+  const peutOuvrir = Boolean(set) && total >= 1;
 
   return (
     <>
@@ -151,6 +155,11 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                       <span key={i} className={i < actuel ? "plein" : undefined} />
                     ))}
                   </div>
+                  {offerts > 0 && (
+                    <p className="stock-offerts">
+                      🎁 + <strong>{offerts}</strong> booster{offerts > 1 ? "s" : ""} offert{offerts > 1 ? "s" : ""}
+                    </p>
+                  )}
                   <p className="minuteur">
                     {actuel >= max ? (
                       "Stock plein : ouvre-en un pour relancer le minuteur."
@@ -179,7 +188,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                 </div>
 
                 <button className="bouton-principal" onClick={() => setEnOuverture(true)} disabled={!peutOuvrir}>
-                  {actuel < 1 ? "Plus de booster pour l'instant" : `Ouvrir un booster ${nomSet}`}
+                  {total < 1 ? "Plus de booster pour l'instant" : `Ouvrir un booster ${nomSet}`}
                 </button>
               </>
             )}
@@ -217,7 +226,7 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
               nomSet={nomSet}
               illustration={illustration}
               ouvrir={ouvrirSetChoisi}
-              restants={actuel}
+              restants={total}
               boosters={choixBoosters}
               surChangerSet={setSet}
               surOuvrirCarrousel={changerToutesLesIllustrations}
