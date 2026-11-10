@@ -1,5 +1,6 @@
 /** Types et outils du marché : annonces « Qui a ? / Qui veut ? », salon et messages privés. */
 import type { Carte } from "./libelles-cartes";
+import type { AvatarLeger } from "./profils";
 
 export type TypeAnnonce = "cherche" | "propose";
 
@@ -7,6 +8,7 @@ export interface Annonce {
   id: number;
   type: TypeAnnonce;
   auteur: string;
+  auteurAvatar: AvatarLeger | null;
   estMoi: boolean;
   foil: boolean;
   note: string | null;
@@ -19,6 +21,7 @@ export interface Annonce {
 export interface MessageVue {
   id: number;
   auteur: string;
+  auteurAvatar: AvatarLeger | null;
   estMoi: boolean;
   peutSupprimer: boolean;
   texte: string;
@@ -28,6 +31,7 @@ export interface MessageVue {
 
 export interface ConversationVue {
   avec: string;
+  avecAvatar: AvatarLeger | null;
   dernierMessage: string;
   deMoi: boolean;
   creeLe: number;

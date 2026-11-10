@@ -5,6 +5,7 @@
  * Le texte est affiché comme du texte (React l'échappe) : aucun HTML n'est interprété.
  */
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { AvatarJoueur, LienJoueur } from "./avatar-joueur";
 import { ImageCarte } from "./image-carte";
 import { appelerApi } from "../outils/appels-api";
 import { type Carte, classeRarete } from "../outils/libelles-cartes";
@@ -121,10 +122,10 @@ export function FilDiscussion({ source, placeholder, vide, surCarte, surMessageP
             <article key={m.id} className={`message ${m.estMoi ? "message-moi" : ""} ${suite ? "message-suite" : ""}`}>
               {!suite && (
                 <header className="message-entete">
-                  <span className="avatar avatar-petit" aria-hidden="true">
-                    {m.auteur.slice(0, 1).toUpperCase()}
-                  </span>
-                  <strong>{m.estMoi ? "Moi" : m.auteur}</strong>
+                  <LienJoueur pseudo={m.auteur}>
+                    <AvatarJoueur pseudo={m.auteur} avatar={m.auteurAvatar} taille="petit" />
+                  </LienJoueur>
+                  <strong>{m.estMoi ? "Moi" : <LienJoueur pseudo={m.auteur} />}</strong>
                   <time dateTime={new Date(m.creeLe).toISOString()}>{heureMessage(m.creeLe)}</time>
                 </header>
               )}

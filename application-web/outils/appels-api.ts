@@ -39,6 +39,8 @@ const MESSAGES: Record<string, string> = {
   notifications_non_configurees: "Les notifications ne sont pas encore configurées sur le serveur.",
   aucun_abonnement: "Aucun appareil abonné : active d'abord les notifications.",
   aucune_annonce: "Aucune annonce en cours.",
+  carte_introuvable: "Cette carte n'existe pas dans le catalogue.",
+  trop_de_modifications: "Tu as modifié ton profil trop souvent. Réessaie dans une heure.",
   hors_ligne: "Pas de connexion Internet. Réessaie quand tu seras de nouveau en ligne.",
   serveur_injoignable: "Le serveur ne répond pas. Réessaie dans un instant.",
 };

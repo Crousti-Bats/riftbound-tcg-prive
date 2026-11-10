@@ -68,12 +68,19 @@ async function cartesParCode(): Promise<Map<string, CarteCatalogue>> {
   return new Map((await obtenirCatalogue()).cartes.map((carte) => [carte.code, carte]));
 }
 
+/** Avatar d'un joueur (illustration d'une carte, voir routes-profils.ts) : image et orientation, ou null. */
+function imageAvatar(parCode: Map<string, CarteCatalogue>, code: string | null) {
+  const carte = code ? parCode.get(code) : undefined;
+  return carte ? { image: carte.image, orientation: carte.orientation } : null;
+}
+
 // ---------- Annonces ----------
 
 interface LigneAnnonce {
   id: number;
   compte_id: number;
   auteur: string;
+  auteur_avatar: string | null;
   type: "cherche" | "propose";
   card_code: string;
   est_foil: number;
@@ -92,7 +99,7 @@ routesMarche.get("/annonces", async (c) => {
   // « Qui veut ? » : masquée si l'auteur n'a plus la carte (échangée, collection vidée…).
   const { results } = await base
     .prepare(
-      `SELECT a.id, a.compte_id, c.pseudo AS auteur, a.type, a.card_code, a.est_foil, a.note, a.cree_le
+      `SELECT a.id, a.compte_id, c.pseudo AS auteur, c.avatar_card_code AS auteur_avatar, a.type, a.card_code, a.est_foil, a.note, a.cree_le
        FROM annonces a JOIN comptes c ON c.id = a.compte_id
        WHERE a.retiree_le IS NULL AND a.expire_le > ? AND c.actif = 1
          AND (a.type = 'cherche' OR EXISTS (
@@ -128,6 +135,7 @@ routesMarche.get("/annonces", async (c) => {
       id: a.id,
       type: a.type,
       auteur: a.auteur,
+      auteurAvatar: imageAvatar(parCode, a.auteur_avatar),
       estMoi: a.compte_id === compte.id,
       foil: a.est_foil === 1,
       note: a.note,
@@ -208,6 +216,7 @@ interface LigneMessage {
   id: number;
   expediteur_id: number;
   auteur: string;
+  auteur_avatar: string | null;
   texte: string;
   cree_le: number;
   annonce_id: number | null;
@@ -236,7 +245,7 @@ async function lireConversation(c: Context<ContexteApi>, conversation: string) {
       ? (
           await base
             .prepare(
-              `SELECT m.id, m.expediteur_id, c.pseudo AS auteur, m.texte, m.cree_le, m.annonce_id,
+              `SELECT m.id, m.expediteur_id, c.pseudo AS auteur, c.avatar_card_code AS auteur_avatar, m.texte, m.cree_le, m.annonce_id,
                       a.type AS annonce_type, a.card_code AS annonce_code, a.est_foil AS annonce_foil,
                       CASE WHEN a.id IS NOT NULL AND a.retiree_le IS NULL AND a.expire_le > ? THEN 1 ELSE 0 END AS annonce_active
                FROM messages m JOIN comptes c ON c.id = m.expediteur_id LEFT JOIN annonces a ON a.id = m.annonce_id
@@ -248,7 +257,7 @@ async function lireConversation(c: Context<ContexteApi>, conversation: string) {
       : (
           await base
             .prepare(
-              `SELECT m.id, m.expediteur_id, c.pseudo AS auteur, m.texte, m.cree_le, m.annonce_id,
+              `SELECT m.id, m.expediteur_id, c.pseudo AS auteur, c.avatar_card_code AS auteur_avatar, m.texte, m.cree_le, m.annonce_id,
                       a.type AS annonce_type, a.card_code AS annonce_code, a.est_foil AS annonce_foil,
                       CASE WHEN a.id IS NOT NULL AND a.retiree_le IS NULL AND a.expire_le > ? THEN 1 ELSE 0 END AS annonce_active
                FROM messages m JOIN comptes c ON c.id = m.expediteur_id LEFT JOIN annonces a ON a.id = m.annonce_id
@@ -269,12 +278,13 @@ async function lireConversation(c: Context<ContexteApi>, conversation: string) {
       .run();
   }
 
-  const parCode = lignes.some((l) => l.annonce_code) ? await cartesParCode() : new Map<string, CarteCatalogue>();
+  const parCode = lignes.some((l) => l.annonce_code || l.auteur_avatar) ? await cartesParCode() : new Map<string, CarteCatalogue>();
   const moderateur = estModerateur(compte);
   return c.json({
     messages: lignes.map((l) => ({
       id: l.id,
       auteur: l.auteur,
+      auteurAvatar: imageAvatar(parCode, l.auteur_avatar),
       estMoi: l.expediteur_id === compte.id,
       peutSupprimer: l.expediteur_id === compte.id || moderateur,
       texte: l.texte,
@@ -356,7 +366,7 @@ routesMarche.delete("/messages/:id", async (c) => {
 routesMarche.get("/conversations", async (c) => {
   const compte = moi(c);
   const { results } = await c.env.BASE_DE_DONNEES.prepare(
-    `SELECT m.conversation, m.texte, m.cree_le AS creeLe, m.expediteur_id AS expediteurId, c.pseudo AS avec,
+    `SELECT m.conversation, m.texte, m.cree_le AS creeLe, m.expediteur_id AS expediteurId, c.pseudo AS avec, c.avatar_card_code AS avecAvatar,
             (SELECT COUNT(*) FROM messages x
               WHERE x.conversation = m.conversation AND x.destinataire_id = ? AND x.supprime_le IS NULL
                 AND x.id > COALESCE((SELECT l.dernier_lu FROM lectures l WHERE l.compte_id = ? AND l.conversation = m.conversation), 0)
@@ -370,10 +380,12 @@ routesMarche.get("/conversations", async (c) => {
      ORDER BY m.id DESC LIMIT 50`,
   )
     .bind(compte.id, compte.id, compte.id, compte.id, compte.id)
-    .all<{ conversation: string; texte: string; creeLe: number; expediteurId: number; avec: string; nonLus: number }>();
+    .all<{ conversation: string; texte: string; creeLe: number; expediteurId: number; avec: string; avecAvatar: string | null; nonLus: number }>();
+  const parCode = results.some((r) => r.avecAvatar) ? await cartesParCode() : new Map<string, CarteCatalogue>();
   return c.json({
     conversations: results.map((r) => ({
       avec: r.avec,
+      avecAvatar: imageAvatar(parCode, r.avecAvatar),
       dernierMessage: r.texte,
       deMoi: r.expediteurId === compte.id,
       creeLe: r.creeLe,

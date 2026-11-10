@@ -1,4 +1,5 @@
 /** Mes échanges : propositions reçues (accepter / refuser), envoyées (annuler) et historique. */
+import { LienJoueur } from "../composants/avatar-joueur";
 import { useCallback, useEffect, useState } from "react";
 import { type ElementListe, ListeCartesEchange } from "../composants/liste-cartes-echange";
 import { appelerApi } from "../outils/appels-api";
@@ -99,7 +100,7 @@ export function PageEchanges() {
           return (
             <article key={e.id} className="carte carte-echange">
               <header className="entete-echange">
-                <strong>{e.jeSuisAuteur ? `Ta proposition à ${autre}` : `${autre} te propose un échange`}</strong>
+                <strong>{e.jeSuisAuteur ? <>Ta proposition à <LienJoueur pseudo={autre} /></> : <><LienJoueur pseudo={autre} /> te propose un échange</>}</strong>
                 <span className="aide">
                   {e.statut === "en_attente" ? tempsRestant(e.expireLe) : `${LIBELLES_STATUT[e.statut]} · ${formaterDate(e.termineLe)}`}
                 </span>

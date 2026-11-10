@@ -24,9 +24,14 @@ interface Props {
   /** Quantités déjà mises dans la proposition, par clé code|foil. */
   dejaChoisi: Map<string, number>;
   surAjout: (carte: CartePossedee, foil: boolean) => void;
+  /**
+   * "echange" (par défaut) : un bouton par version, avec le nombre d'exemplaires restants.
+   * "vitrine" : une seule fois chaque version. "avatar" : un seul bouton « Choisir », foil ou non.
+   */
+  mode?: "echange" | "vitrine" | "avatar";
 }
 
-export function SelecteurCartes({ source, sets, dejaChoisi, surAjout }: Props) {
+export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "echange" }: Props) {
   const [filtreSet, setFiltreSet] = useState("");
   const [rarete, setRarete] = useState("");
   const [variante, setVariante] = useState("");
@@ -104,6 +109,7 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout }: Props) {
                 <span className="badge-quantite">×{carte.quantite + carte.quantiteFoil}</span>
               </span>
               <span className="legende-carte">{carte.nom}</span>
+              {mode === "echange" ? (
               <span className="boutons-ajout">
                 {carte.quantite > 0 && (
                   <button className="petit" disabled={resteNormale <= 0} onClick={() => surAjout(carte, false)}>
@@ -116,6 +122,26 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout }: Props) {
                   </button>
                 )}
               </span>
+              ) : mode === "vitrine" ? (
+                <span className="boutons-ajout">
+                  {carte.quantite > 0 && (
+                    <button className="petit" disabled={dejaChoisi.has(cleLigne(carte.code, false))} onClick={() => surAjout(carte, false)}>
+                      Exposer
+                    </button>
+                  )}
+                  {carte.quantiteFoil > 0 && (
+                    <button className="petit" disabled={dejaChoisi.has(cleLigne(carte.code, true))} onClick={() => surAjout(carte, true)}>
+                      Exposer en foil ✨
+                    </button>
+                  )}
+                </span>
+              ) : (
+                <span className="boutons-ajout">
+                  <button className="petit" disabled={dejaChoisi.has(carte.code)} onClick={() => surAjout(carte, false)}>
+                    {dejaChoisi.has(carte.code) ? "Avatar actuel" : "Choisir"}
+                  </button>
+                </span>
+              )}
             </div>
           );
         })}
