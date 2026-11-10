@@ -71,7 +71,7 @@ const ICONES = {
 const LIENS: Lien[] = [
   { chemin: "/", libelle: "Boosters", icone: ICONES.accueil, actif: (c) => c === "/" },
   { chemin: "/collection", libelle: "Collection", icone: ICONES.collection, actif: (c) => c === "/collection" },
-  { chemin: "/decks", libelle: "Decks", icone: ICONES.decks, actif: (c) => c.startsWith("/decks") },
+  { chemin: "/jouer", libelle: "Jouer", icone: ICONES.decks, actif: (c) => c === "/jouer" || c.startsWith("/decks") || c.startsWith("/table") },
   { chemin: "/echanges", libelle: "Échanges", icone: ICONES.echanges, actif: (c) => c.startsWith("/echanges") },
   { chemin: "/marche", libelle: "Marché", icone: ICONES.marche, actif: (c) => c.startsWith("/marche") },
   { chemin: "/catalogue", libelle: "Catalogue", icone: ICONES.catalogue, actif: (c) => c === "/catalogue" },

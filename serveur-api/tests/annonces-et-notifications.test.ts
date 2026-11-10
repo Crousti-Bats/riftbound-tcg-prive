@@ -258,7 +258,7 @@ describe("Notifications : boosters pleins (tâche planifiée)", () => {
     const t = creerEnvironnementDeTest();
     const cles = await genererClesVapid();
     const alice = await joueurAbonne(t);
-    alice.stock(5, Date.now() - 100 * MINUTE); // 5 + 5 × 20 min = 10 : plein maintenant
+    alice.stock(5, Date.now() - 100 * MINUTE); // 5 + 6 × 15 min ≥ 10 : plein maintenant
     const service = fauxServicePush();
 
     expect(await prevenirBoostersPleins(t.d1, cles, service.telecharger)).toEqual({ comptes: 1, envoyes: 1 });
@@ -272,11 +272,11 @@ describe("Notifications : boosters pleins (tâche planifiée)", () => {
     const cles = await genererClesVapid();
     const alice = await joueurAbonne(t, "Alice");
     await joueurAbonne(t, "Bob"); // 10 boosters à l'inscription, jamais ouverts
-    alice.stock(8, Date.now() - 0 * MINUTE); // plein dans 40 minutes
+    alice.stock(8, Date.now() - 0 * MINUTE); // plein dans 30 minutes
     const service = fauxServicePush();
 
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(0);
-    vi.setSystemTime(Date.now() + 39 * MINUTE);
+    vi.setSystemTime(Date.now() + 29 * MINUTE);
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(0);
     vi.setSystemTime(Date.now() + 2 * MINUTE);
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(1);
@@ -293,7 +293,7 @@ describe("Notifications : boosters pleins (tâche planifiée)", () => {
 
     expect((await t.appeler("POST", "/api/boosters/ouvrir", { cookie: alice.cookie, corps: { set: "ogn" } })).statut).toBe(200);
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(0); // 9/10
-    vi.setSystemTime(Date.now() + 20 * MINUTE + 1);
+    vi.setSystemTime(Date.now() + 15 * MINUTE + 1);
     expect((await prevenirBoostersPleins(t.d1, cles, service.telecharger)).envoyes).toBe(1);
   });
 

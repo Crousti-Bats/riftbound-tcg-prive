@@ -20,13 +20,13 @@ beforeEach(() => {
 describe("Stock de boosters (régénération paresseuse)", () => {
   const T0 = 1_700_000_000_000;
 
-  it("règle du 2026-11-10 : 10 boosters au maximum, +1 toutes les 20 minutes", () => {
+  it("règle du 2026-11-10 : 10 boosters au maximum, +1 toutes les 15 minutes", () => {
     expect(STOCK_MAX).toBe(10);
-    expect(INTERVALLE_REGEN_MS).toBe(20 * MIN);
+    expect(INTERVALLE_REGEN_MS).toBe(15 * MIN);
   });
 
-  it("ajoute 1 booster toutes les 20 minutes", () => {
-    expect(regenerer(5, T0, T0 + 50 * MIN).stock).toBe(7);
+  it("ajoute 1 booster toutes les 15 minutes", () => {
+    expect(regenerer(5, T0, T0 + 50 * MIN).stock).toBe(8);
   });
 
   it("plafonne à 10", () => {
@@ -41,8 +41,8 @@ describe("Stock de boosters (régénération paresseuse)", () => {
 
   it("préserve la progression partielle (le tick n'avance que des intervalles entiers)", () => {
     const e = regenerer(5, T0, T0 + 50 * MIN);
-    expect(e.stock).toBe(7);
-    expect(e.tick).toBe(T0 + 40 * MIN);
+    expect(e.stock).toBe(8);
+    expect(e.tick).toBe(T0 + 45 * MIN);
     expect(prochainDansMs(e, T0 + 50 * MIN)).toBe(10 * MIN);
   });
 
@@ -257,14 +257,14 @@ describe("API /api/boosters", () => {
     expect(totalCollection(env.bd, "Alice")).toBe(28);
   });
 
-  it("régénère le stock avec le temps (+1 / 20 min, plafond 10)", async () => {
+  it("régénère le stock avec le temps (+1 / 15 min, plafond 10)", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
     env.bd
       .prepare("UPDATE comptes SET stock_boosters = 5, boosters_tick = ? WHERE pseudo = ?")
       .run(Date.now() - 50 * MIN, "Alice");
     const r = await env.appeler("GET", "/api/boosters/etat", { cookie });
-    expect((r.json as unknown as Etat).stock.actuel).toBe(7);
+    expect((r.json as unknown as Etat).stock.actuel).toBe(8);
   });
 
   it("refuse l'ouverture sans booster (409)", async () => {

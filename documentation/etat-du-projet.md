@@ -39,7 +39,7 @@ Un site privé de collection et d'échange de cartes Riftbound, accessible uniqu
 
 - Ouvrir des boosters en choisissant le set (Origins, Spiritforged, Unleashed, Vendetta, Radiance).
 - Composition des boosters et taux de drop alignés sur le vrai jeu.
-- Recevoir 1 booster toutes les 20 minutes, avec un stock de 10 au maximum (15 et 10 minutes jusqu'au 2026-11-10).
+- Recevoir 1 booster toutes les 15 minutes, avec un stock de 10 au maximum (avant, le 2026-11-10 : 15 et 10 minutes, puis 10 et 20 minutes).
 - Échanger des cartes entre joueurs.
 - Site responsive (téléphone, tablette, PC) et installable comme application (PWA).
 
@@ -172,7 +172,7 @@ On les convertit en probabilités pour chacun des 2 slots Rare+. Comme il y a 2 
 Les tests de l'étape 5 simuleront au moins 100 000 boosters et vérifieront ces fréquences **par booster** : Epic environ 16,7 %, Alt environ 8,3 %, Over environ 1,39 %, signée environ 0,42 %, Special et Ultime environ 0,1 %.
 
 **Autres décisions pour l'étape 5 (validées par l'utilisateur le 2026-11-08) :**
-- Un nouveau joueur reçoit **10 boosters** à l'inscription (stock plein). Ensuite, +1 toutes les 20 minutes, 10 au maximum (règle du 2026-11-10, voir §4undecies ; avant : 15 et 10 minutes).
+- Un nouveau joueur reçoit **10 boosters** à l'inscription (stock plein). Ensuite, +1 toutes les 15 minutes (20 minutes jusqu'au 2026-11-10, voir §4septdecies), 10 au maximum (règle du 2026-11-10, voir §4undecies ; avant : 15 et 10 minutes).
 - Le slot Rune sélectionne sur `type === "Rune"` (les runes d'Origins sont en variante `base`). Pour un set sans rune (Spiritforged, Unleashed), on tire un Token du set, sinon une Rune d'Origins (voir §3bis).
 - **Décisions tranchées à l'étape 5 (par l'utilisateur le 2026-11-09) :**
   - Les Légendes (type Legend, Rare) et les Terrains (type Battlefield, Uncommon) **entrent** dans leurs pools de rareté normaux.
@@ -339,6 +339,21 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Base** : migration `0015_decks.sql`, table `decks` (`contenu` JSON de cardCode et quantités, 8 000 caractères au plus). API : `GET/POST /api/decks`, `GET/POST/DELETE /api/decks/:id` (POST = enregistrer le deck entier), privée (404 pour le deck d'un autre). Limite `decksParCompte` : 400 enregistrements par heure.
 - **Vérifications** : 254 tests (17 dans `decks.test.ts`, 6 dans `outils/decks.test.ts`). Vérifié sur le vrai moteur local avec de vraies cartes (deck Ekko 40/12/3 validé, export ci-dessus) et dans Edge headless (CDP) à 1366 et 380 px : retrait → 39/40 + règle affichée + sauvegarde, ajout depuis la collection → 40/40, aucun défilement horizontal.
 
+## 4septdecies. Table de jeu en ligne (étape 1, demandé le 2026-11-10)
+
+- **Objectif** : « notre propre TCG Arena ». Table **libre** à deux joueurs, en direct : le site n'applique pas les règles (les joueurs déplacent leurs cartes, comme sur une vraie table), il transmet les gestes et garde secrètes les informations cachées. Pas de moteur de règles (énorme, et une copie du jeu de Riot).
+- **Parcours** : onglet **Jouer** (`/jouer`, remplace « Decks » ; `/decks` y mène aussi) → « Créer une partie » avec un deck prêt à jouer → code de 8 caractères et lien `/table/CODE` à envoyer → l'ami ouvre le lien, choisit son deck, rejoint → la partie commence. « Reprendre » une partie en cours (5 parties ouvertes au plus par joueur). « Quitter » termine la partie pour les deux et efface la salle.
+- **Mise en place automatique** : Légende, champion, 3 champs de bataille « disponibles » (on en pose un sur un des 2 champs de bataille de la table), deck mélangé, deck de runes mélangé, 4 cartes en main, premier joueur tiré au sort (★). Mulligan intégré (jusqu'à 2 cartes sous le deck, une fois).
+- **Gestes** : clic sur une carte → panneau (grande image, texte) : déplacer vers main, base, champ de bataille 1 ou 2, réserve de runes, défausse, bannir, dessus/dessous du deck, sous le deck de runes, zone de champion ; incliner/redresser ; marqueurs ± ; retourner (face cachée/visible) ; révéler une carte de sa main ; jouer face cachée. Piles cliquables (deck = piocher, runes = canaliser, défausse/bannies/champs dispo = voir et choisir). Boutons : piocher, canaliser, tout redresser, mélanger, dé, points ±. Journal en direct (avec le nom des cartes) et messages.
+- **Droits** : je manipule mes cartes partout ; une carte adverse seulement si elle est visible en jeu (incliner, marqueur, la détruire…) et toujours vers SES zones (« Bob (carte de Alice) déplace … vers sa défausse »). Jamais la main adverse ni l'ordre des decks : la vue envoyée à chaque joueur ne contient que le **nombre** de cartes des zones cachées.
+- **Architecture** : une partie = un **Durable Object** `SalleDeJeu` (binding `SALLES`, stockage SQLite, le seul permis sur le plan gratuit ; migration Wrangler `v1-salles`), WebSocket en mode « hibernation ». Classe simple (sans `extends DurableObject`) qui délègue tout au moteur pur `serveur-api/table/moteur-table.ts` (testé sans Cloudflare). Le Worker (`table/routes-parties.ts`) vérifie la session, l'**origine** (contre le détournement de WebSocket) et la participation, puis transmet l'identifiant du joueur à la salle (`X-Table-Joueur`) ; la salle n'est jamais joignable directement. Anti-abus : 40 messages / 10 s par connexion, 4 Ko par message, actions validées par Zod. Salon en D1 : migration `0016_parties.sql` (table `parties`). Cartes affichées : `GET /api/catalogue/lot?codes=…` (100 au plus).
+- **Quotas gratuits Durable Objects** : 100 000 requêtes/jour (messages WebSocket entrants comptés 1 pour 20, sortants gratuits), 100 000 lignes écrites/jour (1 par action). Largement suffisant pour un groupe d'amis.
+- **Client** : `pages/page-table.tsx` (salon d'attente + plateau), `outils/table.ts` (connexion avec reconnexion automatique 1 s → 15 s, vue la plus récente gardée, cache des cartes). Sur téléphone : plateau en colonne, barre d'onglets du bas masquée, journal repliable.
+- **Vérifications** : 272 tests (16 dans `tests/table.test.ts` : mise en place, informations cachées, droits, face cachée, mulligan, salon, WebSocket protégé ; 2 côté client). Build de production OK (binding et migration du Durable Object présents). **Partie réelle à deux sur le moteur local** (vrai Durable Object) : un joueur par WebSocket (Node), l'autre dans Edge headless : actions dans les deux sens en direct, coup interdit refusé, état conservé à la reconnexion, aucun défilement horizontal (1440 et 390 px). Bug corrigé pendant le test : la fermeture tardive d'une ancienne connexion effaçait la nouvelle (React lance les effets deux fois en développement).
+- **Decks de démo prêtés** (pour tester en production) : `serveur-api/decks/decks-demo.ts`, deux decks construits avec les vraies cartes autour de champions du produit d'initiation : **Annie** (Fury + Chaos) et **Garen** (Body + Order). Ce ne sont pas les listes officielles (introuvables). Proposés à tout le monde dans la liste des decks (étiquette « Deck de démo », liste visible, non modifiables) et dans « Créer / Rejoindre une partie », **sans posséder les cartes** : collections, échanges et marché inchangés. Identifiants négatifs (-1, -2), aucune ligne en base. Validés contre le vrai catalogue avant ajout. Pour les retirer : vider `DECKS_DEMO`.
+- **Boosters : +1 toutes les 15 minutes** (au lieu de 20, demandé le 2026-11-10) : `INTERVALLE_REGEN_MS`. Pas de migration : le calcul paresseux recompte le temps écoulé avec le nouvel intervalle (les joueurs gagnent un peu à la mise en ligne, jamais l'inverse). Notifications « boosters pleins » ajustées d'elles-mêmes.
+- **Étapes suivantes possibles** : glisser-déposer, regarder le dessus du deck, annuler sa dernière action, spectateurs, invitation depuis le profil ou le chat, sons et animations.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -496,7 +511,7 @@ serveur-api/                          L'API (Cloudflare Worker, Hono)
   boosters/aleatoire.ts               aléatoire injectable (crypto en prod, PRNG seedé pour les tests)
   boosters/pools.ts                   pré-indexe les cartes par set/rareté/variante (mémoïsé)
   boosters/tirage-booster.ts          tirage PUR des 14 cartes selon les taux
-  boosters/stock.ts                   stock paresseux (+1/20 min, max 10)
+  boosters/stock.ts                   stock paresseux (+1/15 min, max 10)
   boosters/routes-boosters.ts         /api/boosters : etat, ouvrir
   tests/                              tests automatiques (vraie base SQLite en mémoire + vraies migrations)
     outils/base-d1-de-test.ts         imite D1 avec node:sqlite
