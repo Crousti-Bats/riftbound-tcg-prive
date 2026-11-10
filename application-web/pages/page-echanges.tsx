@@ -67,9 +67,6 @@ export function PageEchanges() {
         <h1>Échanges</h1>
         <nav className="barre-actions">
           <button onClick={() => naviguer("/echanges/nouveau")}>Nouvel échange</button>
-          <button className="secondaire" onClick={() => naviguer("/")}>
-            Retour
-          </button>
         </nav>
       </header>
 

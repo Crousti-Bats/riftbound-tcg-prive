@@ -1,4 +1,4 @@
-/** Hub d'ouverture : stock de boosters, minuteur du prochain, choix du set, bouton Ouvrir, puis l'overlay de révélation. */
+/** Hub d'ouverture (bandeau principal de l'accueil) : stock de boosters, minuteur du prochain, choix du set, bouton Ouvrir, puis l'overlay de révélation. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OuvertureBooster } from "./ouverture-booster";
 import { appelerApi } from "../outils/appels-api";
@@ -14,9 +14,12 @@ interface EtatBoosters {
   sets: Array<{ code: string; nom: string }>;
 }
 
+/** Sets qui ont un visuel de booster et un fond dans /ouverture/. */
+const VISUELS_SETS = ["ogn", "sfd", "unl", "ven", "rad"];
+
 const dateProchain = (stock: Stock) => (stock.prochainDansMs == null ? null : Date.now() + stock.prochainDansMs);
 
-export function PanneauBoosters() {
+export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const [etat, setEtat] = useState<EtatBoosters | null>(null);
   const [set, setSet] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -73,45 +76,87 @@ export function PanneauBoosters() {
   );
 
   const stock = etat?.stock;
+  const actuel = stock?.actuel ?? 0;
+  const max = stock?.max ?? 15;
+  const visuel = VISUELS_SETS.includes(set) ? set : "ogn";
+  const nomSet = etat?.sets.find((s) => s.code === set)?.nom ?? set;
+  const peutOuvrir = Boolean(set) && actuel >= 1;
 
   return (
-    <section className="carte panneau-boosters">
-      <h2>Ouvrir un booster</h2>
-      {!etat && !erreur && <p className="aide">Chargement…</p>}
-      {etat && (
-        <>
-          <p className="stock-boosters">
-            <span className="stock-nombre">{stock?.actuel ?? 0}</span>
-            <span className="aide"> / {stock?.max ?? 15} boosters</span>
-          </p>
-          <p className="aide">
-            {stock && stock.actuel >= stock.max ? "Stock plein." : `Prochain booster dans ${formaterDuree(restantMs)}.`}
-          </p>
-          <div className="barre-actions">
-            <label className="choix-set">
-              Set
-              <select value={set} onChange={(e) => setSet(e.target.value)}>
+    <section className="hero-booster" aria-labelledby="titre-boosters">
+      <div className="hero-fond" style={{ backgroundImage: `url(/ouverture/fond-${visuel}.jpg)` }} aria-hidden="true" />
+      <div className="hero-contenu">
+        <div className="hero-infos">
+          <p className="surtitre">Bonjour {pseudo}</p>
+          <h1 id="titre-boosters">Ouvre tes boosters</h1>
+
+          {!etat && !erreur && <p className="aide">Chargement…</p>}
+          {etat && (
+            <>
+              <div className="stock">
+                <p className="stock-boosters">
+                  <span className="stock-nombre">{actuel}</span>
+                  <span className="stock-max">/ {max}</span>
+                  <span className="stock-libelle">booster{actuel > 1 ? "s" : ""} disponible{actuel > 1 ? "s" : ""}</span>
+                </p>
+                <div className="jauge-stock" role="img" aria-label={`${actuel} boosters sur ${max}`}>
+                  {Array.from({ length: max }, (_, i) => (
+                    <span key={i} className={i < actuel ? "plein" : undefined} />
+                  ))}
+                </div>
+                <p className="minuteur">
+                  {actuel >= max ? (
+                    "Stock plein : ouvre-en un pour relancer le minuteur."
+                  ) : (
+                    <>
+                      Prochain booster dans <strong>{formaterDuree(restantMs)}</strong>
+                    </>
+                  )}
+                </p>
+              </div>
+
+              <div className="choix-sets" role="radiogroup" aria-label="Set du booster">
                 {etat.sets.map((s) => (
-                  <option key={s.code} value={s.code}>
+                  <button
+                    key={s.code}
+                    type="button"
+                    role="radio"
+                    aria-checked={s.code === set}
+                    className={s.code === set ? "puce-set actif" : "puce-set"}
+                    onClick={() => setSet(s.code)}
+                  >
                     {s.nom}
-                  </option>
+                  </button>
                 ))}
-              </select>
-            </label>
-            <button onClick={() => setEnOuverture(true)} disabled={!set || (stock?.actuel ?? 0) < 1}>
-              Ouvrir un booster
-            </button>
-          </div>
-        </>
-      )}
-      {erreur && <p className="message-erreur">{erreur}</p>}
+              </div>
+
+              <button className="bouton-principal" onClick={() => setEnOuverture(true)} disabled={!peutOuvrir}>
+                {actuel < 1 ? "Plus de booster pour l'instant" : `Ouvrir un booster ${nomSet}`}
+              </button>
+            </>
+          )}
+          {erreur && <p className="message-erreur">{erreur}</p>}
+        </div>
+
+        {etat && (
+          <button
+            type="button"
+            className="hero-paquet"
+            onClick={() => setEnOuverture(true)}
+            disabled={!peutOuvrir}
+            aria-label={`Ouvrir un booster ${nomSet}`}
+          >
+            <img key={visuel} src={`/ouverture/booster-${visuel}-1.webp`} alt="" width="621" height="1100" />
+          </button>
+        )}
+      </div>
 
       {enOuverture && set && (
         <OuvertureBooster
           set={set}
-          nomSet={etat?.sets.find((s) => s.code === set)?.nom ?? set}
+          nomSet={nomSet}
           ouvrir={ouvrirSetChoisi}
-          peutOuvrirAutre={(stock?.actuel ?? 0) >= 1}
+          peutOuvrirAutre={actuel >= 1}
           surFermer={fermer}
         />
       )}

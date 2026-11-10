@@ -67,7 +67,6 @@ export function PageAdmin({ compte, surChangementCompte }: Props) {
       <header className="entete">
         <h1>Administration</h1>
         <nav className="barre-actions">
-          <button className="secondaire" onClick={() => naviguer("/")}>Retour au jeu</button>
           {compte.adminActif && <button className="secondaire" onClick={fermer}>Fermer l'accès admin</button>}
         </nav>
       </header>
@@ -257,6 +256,7 @@ function OngletInvitations({ surExpiration }: { surExpiration: () => Promise<voi
 
 function OngletComptes({ moi, surExpiration }: { moi: string; surExpiration: () => Promise<void> }) {
   const { donnees, erreur, recharger, setErreur } = useDonneesAdmin<{ comptes: Compte[] }>("/admin/comptes", surExpiration);
+  const [info, setInfo] = useState<string | null>(null);
 
   async function agir(c: Compte, action: "desactiver" | "reactiver" | "deconnecter") {
     const textes = { desactiver: "Désactiver", reactiver: "Réactiver", deconnecter: "Déconnecter" };
@@ -269,10 +269,34 @@ function OngletComptes({ moi, surExpiration }: { moi: string; surExpiration: () 
     }
   }
 
+  async function viderCollection(c: Compte | null) {
+    const question = c
+      ? `Vider TOUTE la collection de ${c.pseudo} ? Ses échanges en attente seront annulés. Impossible de revenir en arrière.`
+      : "Vider les collections de TOUS les joueurs ? Les échanges en attente seront annulés. Impossible de revenir en arrière.";
+    if (!window.confirm(question)) return;
+    try {
+      const r = await appelerApi<{ lignesSupprimees: number }>(
+        "POST",
+        c ? `/admin/comptes/${c.id}/vider-collection` : "/admin/collections/vider",
+        {},
+      );
+      setInfo(`${c ? `Collection de ${c.pseudo} vidée` : "Toutes les collections ont été vidées"} (${r.lignesSupprimees} ligne(s) supprimée(s)).`);
+      await recharger();
+    } catch (err) {
+      setErreur((err as Error).message);
+    }
+  }
+
   return (
     <section className="carte">
-      <h2>Comptes</h2>
+      <div className="entete">
+        <h2>Comptes</h2>
+        <button className="petit danger" onClick={() => void viderCollection(null)}>
+          Vider toutes les collections
+        </button>
+      </div>
       {erreur && <p className="message-erreur">{erreur}</p>}
+      {info && <p className="message-succes">{info}</p>}
       <div className="tableau-defilant">
         <table>
           <thead>
@@ -288,6 +312,7 @@ function OngletComptes({ moi, surExpiration }: { moi: string; surExpiration: () 
                 <td>{formaterDate(c.derniereActivite)}</td>
                 <td>{c.sessionsActives}</td>
                 <td className="actions-ligne">
+                  <button className="petit secondaire" onClick={() => void viderCollection(c)}>Vider la collection</button>
                   {c.pseudo !== moi && (
                     <>
                       {c.actif ? (
@@ -322,6 +347,8 @@ const LIBELLES_EVENEMENTS: Record<string, string> = {
   compte_desactiver: "Compte désactivé",
   compte_reactiver: "Compte réactivé",
   compte_deconnecter: "Compte déconnecté",
+  collection_videe: "Collection vidée",
+  collections_videes: "Toutes les collections vidées",
 };
 
 function OngletJournal({ surExpiration }: { surExpiration: () => Promise<void> }) {
