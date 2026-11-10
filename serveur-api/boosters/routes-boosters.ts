@@ -207,6 +207,13 @@ routesBoosters.post("/ouvrir", async (c) => {
       )
       .bind(compte.id, t.code, t.foil ? 1 : 0),
   );
+  // Les cartes obtenues quittent ma wishlist (une seule requête pour tout le booster).
+  const codesTires = [...new Set(tirees.map((t) => t.code))];
+  requetes.push(
+    base
+      .prepare("DELETE FROM wishlist WHERE compte_id = ? AND card_code IN (SELECT value FROM json_each(?))")
+      .bind(compte.id, JSON.stringify(codesTires)),
+  );
   requetes.push(
     base
       .prepare("INSERT INTO ouvertures_boosters (compte_id, set_code, horodatage) VALUES (?, ?, ?)")

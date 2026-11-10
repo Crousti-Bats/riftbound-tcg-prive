@@ -380,6 +380,14 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Code** : scénario et déroulé dans `outils/tutoriel.ts` (`ETAPES` : texte, consignes, condition de réussite, aide, actions de l'adversaire ; `ControleurTutoriel` hors de React, lu avec `useSyncExternalStore`, qui gère les minuteurs). Le plateau de `page-table.tsx` est maintenant un composant réutilisable `PlateauTable` (la partie en ligne passe par `Plateau`, qui y branche la connexion WebSocket) ; option `sansMulligan`.
 - **Vérifications** : 279 tests (4 nouveaux dans `outils/tutoriel.test.ts` : mise en place identique à chaque fois, chaque étape réussie par son aide **et pas avant**, tuto complet via le contrôleur avec minuteurs simulés, gestes refusés pendant le tour adverse, « Recommencer »). Dans Edge headless (CDP) sur le serveur de dev : tuto complet de bout en bout à 1366 px et 390 px (21 étapes, 3 points, aucune erreur console, aucun défilement horizontal), et premières étapes jouées **par de vrais clics** sur les cartes (validation automatique correcte).
 
+## 4duovicies. Une carte obtenue quitte la wishlist (signalé le 2026-11-10)
+
+- Bug signalé : après un échange, la carte reçue restait dans la wishlist de celui qui l'a reçue. Avant, une carte obtenue était seulement masquée du marché et du profil (filtrée à la lecture), mais restait dans « Mes annonces » et gardait son ♥.
+- Désormais elle est **retirée de la wishlist** : à l'acceptation d'un échange (dans les deux sens, pour celui qui reçoit, dans le même lot atomique que le transfert et sous la même garde : un échange échoué ne touche à rien) et à l'ouverture d'un booster (une requête `json_each` pour les 14 cartes, dans le lot de l'ouverture).
+- Navigateur : la wishlist en mémoire est relue après une ouverture et sur la page Échanges (après une action et à l'affichage, pour celui dont la proposition a été acceptée).
+- Migration `0017_wishlist_cartes_obtenues.sql` : ménage unique des cartes déjà possédées encore en wishlist (dont l'échange qui a révélé le bug).
+- Vérifications : 282 tests (3 nouveaux, qui échouent sur l'ancien code). Migration appliquée en local.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -451,6 +459,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **2026-11-10 — Taux /2, ♥ sur les boosters, bulle de discussion, photo de profil (§4duodecies).** Migration 0013. 6 nouveaux tests.
 - **2026-11-10 — Boosters 10 max / 20 min, aperçu, annulation, wishlist, tri (§4undecies).** Migrations 0011 et 0012. 11 nouveaux tests.
 - **2026-11-10 — Profils des joueurs (§4decies).** Avatar (illustration d'une carte possédée), bio de 200 caractères, vitrine de 6 cartes, statistiques, page `/profil/<pseudo>`, avatars dans la navigation et le marché. Migration 0010. 9 tests.
+- **2026-11-10 — Carte obtenue retirée de la wishlist (§4duovicies).** Échange accepté et booster ouvert ; migration 0017 pour le ménage. 3 nouveaux tests.
 - **2026-11-10 — Tuto interactif (§4vicies).** Partie solo guidée de 21 étapes sur la vraie table, contre l'ordinateur, entièrement dans le navigateur. Plateau extrait en `PlateauTable`, schéma zod de la table séparé du moteur. 4 nouveaux tests (279 au total).
 - **2026-11-10 — Étape 10 : revue de sécurité et 6 correctifs (§4octies).** Appareils connus (migration 0008), limites atomiques, journalisation d'un blocage une seule fois et purge automatique, plafond de 500 messages par jour, inscription sans énumération des pseudos, IPv6 par /64. 19 tests d'abus (179 au total). Le test de requêtes simultanées échoue sur l'ancien code (30 essais passaient au lieu de 5). Vérifié dans le vrai moteur Cloudflare en local.
 - **2026-11-09 — Étape 9.** PWA et responsive (§4sexies). Service worker écrit à la main et généré au build (aucune nouvelle dépendance), `/api/*` jamais en cache. Manifeste, icône maskable, carte « Installer l'application », bandeau hors ligne et reconnexion automatique. Marges safe-area, `dvh`, réglages petits écrans et écrans tactiles. 17 nouveaux tests (138 au total), dont l'exécution réelle du service worker dans un bac à sable. Vérifié dans Edge (installable, hors ligne, 3 tailles d'écran). Test d'échange instable corrigé (catalogue périmé après un saut de 48 h).

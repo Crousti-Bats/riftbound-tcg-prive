@@ -5,7 +5,7 @@ import { ApercuBooster } from "./apercu-booster";
 import { OuvertureBooster } from "./ouverture-booster";
 import { appelerApi } from "../outils/appels-api";
 import { type CarteOuverte, formaterDuree } from "../outils/libelles-cartes";
-import { useWishlist } from "../outils/wishlist";
+import { rechargerWishlist, useWishlist } from "../outils/wishlist";
 
 interface Stock {
   actuel: number;
@@ -95,6 +95,8 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
       appelerApi<{ cartes: CarteOuverte[]; stock: Stock }>("POST", "/boosters/ouvrir", { set }).then((r) => {
         setEtat((prev) => (prev ? { ...prev, stock: r.stock } : prev));
         setProchaineA(dateProchain(r.stock));
+        // Les cartes obtenues ont quitté ma wishlist côté serveur : on met à jour les ♥.
+        void rechargerWishlist().catch(() => undefined);
         return r.cartes;
       }),
     [set],

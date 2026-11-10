@@ -5,6 +5,7 @@ import { type ElementListe, ListeCartesEchange } from "../composants/liste-carte
 import { appelerApi } from "../outils/appels-api";
 import { cleLigne, type EchangeVue, LIBELLES_STATUT, type LigneEchangeVue, type ListesEchanges, pointDeVue } from "../outils/echanges";
 import { formaterDate, naviguer } from "../outils/navigation";
+import { rechargerWishlist } from "../outils/wishlist";
 
 type Onglet = "recues" | "envoyees" | "historique";
 
@@ -31,6 +32,8 @@ export function PageEchanges() {
     try {
       setListes(await appelerApi<ListesEchanges>("GET", "/echanges"));
       setErreur(null);
+      // Un échange accepté a pu me faire recevoir des cartes de ma wishlist : le serveur les en a retirées.
+      void rechargerWishlist().catch(() => undefined);
     } catch (e) {
       setErreur((e as Error).message);
     }
@@ -38,6 +41,8 @@ export function PageEchanges() {
 
   useEffect(() => {
     appelerApi<ListesEchanges>("GET", "/echanges").then(setListes, (e: Error) => setErreur(e.message));
+    // Une de mes propositions a pu être acceptée entre-temps : ma wishlist a peut-être changé.
+    void rechargerWishlist().catch(() => undefined);
   }, []);
 
   async function agir(e: EchangeVue, action: "accepter" | "refuser" | "annuler") {

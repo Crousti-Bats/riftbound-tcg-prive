@@ -289,6 +289,13 @@ routesEchanges.post("/:id/accepter", async (c) => {
            ON CONFLICT (compte_id, card_code, est_foil) DO UPDATE SET quantite = quantite + excluded.quantite`,
         )
         .bind(receveur, l.card_code, l.est_foil, l.quantite, echange.id, jeton),
+      // 3 bis. La carte reçue quitte la wishlist du receveur (il l'a maintenant).
+      base
+        .prepare(
+          `DELETE FROM wishlist WHERE compte_id = ? AND card_code = ?
+             AND EXISTS (SELECT 1 FROM echanges WHERE id = ? AND jeton_acceptation = ?)`,
+        )
+        .bind(receveur, l.card_code, echange.id, jeton),
     );
   }
   // 4. Ménage : plus de ligne à 0 dans les collections des deux joueurs.

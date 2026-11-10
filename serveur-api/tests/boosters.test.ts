@@ -257,6 +257,22 @@ describe("API /api/boosters", () => {
     expect(totalCollection(env.bd, "Alice")).toBe(28);
   });
 
+  it("les cartes obtenues dans un booster quittent ma wishlist, les autres y restent", async () => {
+    const env = creerEnvironnementDeTest();
+    const cookie = await env.inscrire("Alice", "motdepasse");
+    const moi = (env.bd.prepare("SELECT id FROM comptes WHERE pseudo = 'Alice'").get() as { id: number }).id;
+    const codes = catalogueDeTest().cartes.filter((c) => c.set === "ogn").map((c) => c.code);
+    const inserer = env.bd.prepare("INSERT INTO wishlist (compte_id, card_code, ajoutee_le) VALUES (?, ?, 0)");
+    for (const code of codes) inserer.run(moi, code);
+    expect(codes.length).toBeGreaterThan(14);
+
+    const ouverture = (await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn" } })).json as unknown as Ouverture;
+    const obtenues = new Set(ouverture.cartes.map((c) => c.code));
+    const restantes = (env.bd.prepare("SELECT card_code FROM wishlist WHERE compte_id = ?").all(moi) as Array<{ card_code: string }>).map((l) => l.card_code);
+    expect(restantes.filter((code) => obtenues.has(code))).toEqual([]);
+    expect(restantes).toHaveLength(codes.filter((code) => !obtenues.has(code)).length);
+  });
+
   it("régénère le stock avec le temps (+1 / 15 min, plafond 10)", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
