@@ -13,13 +13,15 @@ import { definirSon, sonActif } from "../outils/ouverture-sons";
 interface Props {
   set: string;
   nomSet: string;
+  /** Illustration du booster affichée sur l'accueil (le premier booster ouvert reprend la même). */
+  illustration?: number;
   /** Appel au serveur (POST /boosters/ouvrir), lancé quand le booster se déchire. */
   ouvrir: () => Promise<CarteOuverte[]>;
   peutOuvrirAutre: boolean;
   surFermer: () => void;
 }
 
-export function OuvertureBooster({ set, nomSet, ouvrir, peutOuvrirAutre, surFermer }: Props) {
+export function OuvertureBooster({ set, nomSet, illustration, ouvrir, peutOuvrirAutre, surFermer }: Props) {
   const racine = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene | null>(null);
   const appelOuvrir = useRef(ouvrir);
@@ -39,6 +41,7 @@ export function OuvertureBooster({ set, nomSet, ouvrir, peutOuvrirAutre, surFerm
     const s = monterScene(racine.current, {
       set,
       nomSet,
+      illustration,
       ouvrir: () => {
         setErreur(null);
         return appelOuvrir.current();
@@ -52,7 +55,7 @@ export function OuvertureBooster({ set, nomSet, ouvrir, peutOuvrirAutre, surFerm
       s.detruire();
       scene.current = null;
     };
-  }, [set, nomSet]);
+  }, [set, nomSet, illustration]);
 
   useEffect(() => {
     if (!avis) return;
