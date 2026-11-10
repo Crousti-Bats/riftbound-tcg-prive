@@ -186,6 +186,56 @@ routesAdministration.post("/comptes/:id/desactiver", (c) => actionSurCompte(c, "
 routesAdministration.post("/comptes/:id/reactiver", (c) => actionSurCompte(c, "reactiver"));
 routesAdministration.post("/comptes/:id/deconnecter", (c) => actionSurCompte(c, "deconnecter"));
 
+// ---------- Remise à zéro des collections ----------
+// Vide la collection (toutes les cartes, foil compris) et annule les échanges en attente concernés :
+// ils porteraient sur des cartes qui n'existent plus. Le stock de boosters et l'historique d'ouvertures sont conservés.
+
+routesAdministration.post("/comptes/:id/vider-collection", async (c) => {
+  const admin = c.get("compte");
+  const id = schemaIdentifiant.safeParse(c.req.param("id"));
+  if (!id.success || !admin) return c.json({ erreur: "identifiant_invalide" }, 400);
+
+  const base = c.env.BASE_DE_DONNEES;
+  const cible = await base.prepare("SELECT pseudo FROM comptes WHERE id = ?").bind(id.data).first<{ pseudo: string }>();
+  if (!cible) return c.json({ erreur: "introuvable" }, 404);
+
+  const [suppression] = await base.batch([
+    base.prepare("DELETE FROM collection WHERE compte_id = ?").bind(id.data),
+    base
+      .prepare(
+        "UPDATE echanges SET statut = 'annule', termine_le = ? WHERE statut = 'en_attente' AND (auteur_id = ? OR destinataire_id = ?)",
+      )
+      .bind(Date.now(), id.data, id.data),
+    requeteJournal(base, {
+      categorie: "admin",
+      type: "collection_videe",
+      compteId: admin.id,
+      pseudo: admin.pseudo,
+      ip: ipClient(c),
+      details: { cibleId: id.data, ciblePseudo: cible.pseudo },
+    }),
+  ]);
+  return c.json({ ok: true, lignesSupprimees: suppression?.meta.changes ?? 0 });
+});
+
+routesAdministration.post("/collections/vider", async (c) => {
+  const admin = c.get("compte");
+  if (!admin) return c.json({ erreur: "non_connecte" }, 401);
+  const base = c.env.BASE_DE_DONNEES;
+  const [suppression] = await base.batch([
+    base.prepare("DELETE FROM collection"),
+    base.prepare("UPDATE echanges SET statut = 'annule', termine_le = ? WHERE statut = 'en_attente'").bind(Date.now()),
+    requeteJournal(base, {
+      categorie: "admin",
+      type: "collections_videes",
+      compteId: admin.id,
+      pseudo: admin.pseudo,
+      ip: ipClient(c),
+    }),
+  ]);
+  return c.json({ ok: true, lignesSupprimees: suppression?.meta.changes ?? 0 });
+});
+
 // ---------- Journal ----------
 
 routesAdministration.get("/journal", async (c) => {

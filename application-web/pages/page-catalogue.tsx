@@ -6,7 +6,6 @@ import { FiltresCartes } from "../composants/filtres-cartes";
 import { Pagination } from "../composants/pagination";
 import { appelerApi } from "../outils/appels-api";
 import { type Carte, classeRarete, LIBELLES_RARETE, LIBELLES_VARIANTE, type SetInfo } from "../outils/libelles-cartes";
-import { naviguer } from "../outils/navigation";
 
 interface ReponseCartes {
   cartes: Carte[];
@@ -70,11 +69,6 @@ export function PageCatalogue() {
     <main className="conteneur">
       <header className="entete">
         <h1>Catalogue</h1>
-        <nav className="barre-actions">
-          <button className="secondaire" onClick={() => naviguer("/")}>
-            Retour
-          </button>
-        </nav>
       </header>
 
       <FiltresCartes

@@ -1,6 +1,7 @@
 /** Racine du site : charge le compte connecté et affiche la bonne page. */
 import { useCallback, useEffect, useState } from "react";
 import { BandeauHorsLigne } from "./composants/bandeau-hors-ligne";
+import { BarreNavigation } from "./composants/barre-navigation";
 import { type CompteCourant, chargerCompteCourant } from "./outils/appels-api";
 import { naviguer, useCheminCourant } from "./outils/navigation";
 import { PageAccueil } from "./pages/page-accueil";
@@ -70,7 +71,10 @@ export function RacineApplication() {
           </div>
         </main>
       ) : (
-        <Page compte={compte} chemin={chemin} rafraichirCompte={rafraichirCompte} />
+        <>
+          {compte && <BarreNavigation compte={compte} chemin={chemin} surDeconnexion={rafraichirCompte} />}
+          <Page compte={compte} chemin={chemin} rafraichirCompte={rafraichirCompte} />
+        </>
       )}
     </>
   );
@@ -98,5 +102,5 @@ function Page({
   if (chemin.startsWith("/admin") && compte.role === "admin") {
     return <PageAdmin compte={compte} surChangementCompte={rafraichirCompte} />;
   }
-  return <PageAccueil compte={compte} surDeconnexion={rafraichirCompte} />;
+  return <PageAccueil compte={compte} />;
 }

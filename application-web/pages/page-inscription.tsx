@@ -36,8 +36,11 @@ export function PageInscription({ surConnexion }: { surConnexion: () => Promise<
   }
 
   return (
-    <main className="conteneur conteneur-etroit">
-      <h1>Riftbound TCG</h1>
+    <main className="conteneur conteneur-etroit page-publique">
+      <h1 className="titre-connexion">
+        <img src="/icones/logo-transparent-512.png" alt="" width="84" height="84" />
+        Riftbound TCG
+      </h1>
       <form className="carte formulaire" onSubmit={envoyer}>
         <h2>Créer mon compte</h2>
         <label>

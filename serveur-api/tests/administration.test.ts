@@ -111,6 +111,42 @@ describe("Gestion des comptes", () => {
     expect((await t.appeler("POST", `/api/admin/comptes/${id}/desactiver`, { cookie: admin, corps: {} })).statut).toBe(400);
   });
 
+  it("vider la collection d'un joueur ne touche pas aux autres et annule ses échanges en attente", async () => {
+    const t = creerEnvironnementDeTest();
+    const admin = await adminEleve(t);
+    await t.inscrire("Bob", "mot-de-passe-de-bob");
+    const idDe = (p: string) => (t.bd.prepare("SELECT id FROM comptes WHERE pseudo = ?").get(p) as { id: number }).id;
+    const bob = idDe("Bob");
+    const crousti = idDe("Crousti");
+    const ajouter = t.bd.prepare("INSERT INTO collection (compte_id, card_code, est_foil, quantite) VALUES (?, ?, ?, ?)");
+    ajouter.run(bob, "ogn-c0", 0, 3);
+    ajouter.run(bob, "ogn-c1", 1, 1);
+    ajouter.run(crousti, "ogn-c0", 0, 2);
+    t.bd
+      .prepare("INSERT INTO echanges (auteur_id, destinataire_id, statut, cree_le, expire_le) VALUES (?, ?, 'en_attente', ?, ?)")
+      .run(crousti, bob, Date.now(), Date.now() + 86_400_000);
+
+    const r = await t.appeler("POST", `/api/admin/comptes/${bob}/vider-collection`, { cookie: admin, corps: {} });
+    expect(r.statut).toBe(200);
+    expect(r.json.lignesSupprimees).toBe(2);
+    const compter = (id: number) => (t.bd.prepare("SELECT COUNT(*) AS n FROM collection WHERE compte_id = ?").get(id) as { n: number }).n;
+    expect(compter(bob)).toBe(0);
+    expect(compter(crousti)).toBe(1);
+    expect((t.bd.prepare("SELECT statut FROM echanges").get() as { statut: string }).statut).toBe("annule");
+  });
+
+  it("vider toutes les collections est réservé à l'admin", async () => {
+    const t = creerEnvironnementDeTest();
+    const joueur = await t.inscrire("Alice", "mot-de-passe-joueur");
+    expect((await t.appeler("POST", "/api/admin/collections/vider", { cookie: joueur, corps: {} })).statut).toBe(403);
+
+    const admin = await adminEleve(t);
+    const id = (t.bd.prepare("SELECT id FROM comptes WHERE pseudo = 'Alice'").get() as { id: number }).id;
+    t.bd.prepare("INSERT INTO collection (compte_id, card_code, est_foil, quantite) VALUES (?, 'ogn-c0', 0, 1)").run(id);
+    expect((await t.appeler("POST", "/api/admin/collections/vider", { cookie: admin, corps: {} })).statut).toBe(200);
+    expect((t.bd.prepare("SELECT COUNT(*) AS n FROM collection").get() as { n: number }).n).toBe(0);
+  });
+
   it("chaque action admin est journalisée", async () => {
     const t = creerEnvironnementDeTest();
     const cookie = await adminEleve(t);

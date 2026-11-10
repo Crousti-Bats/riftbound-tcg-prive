@@ -79,18 +79,20 @@ export function PageCollection() {
     <main className="conteneur">
       <header className="entete">
         <h1>Ma collection</h1>
-        <nav className="barre-actions">
-          <button className="secondaire" onClick={() => naviguer("/")}>
-            Retour
-          </button>
-        </nav>
       </header>
 
       {resume && (
-        <section className="carte">
-          <p>
-            <strong>{resume.totalCartes}</strong> carte(s) · <strong>{resume.cartesDistinctes}</strong> différente(s)
-          </p>
+        <section className="carte resume-collection">
+          <div className="chiffres-collection">
+            <p>
+              <strong>{resume.totalCartes}</strong>
+              <span>carte{resume.totalCartes > 1 ? "s" : ""}</span>
+            </p>
+            <p>
+              <strong>{resume.cartesDistinctes}</strong>
+              <span>différente{resume.cartesDistinctes > 1 ? "s" : ""}</span>
+            </p>
+          </div>
           <div className="completion">
             {resume.parSet
               .filter((s) => s.total > 0)
