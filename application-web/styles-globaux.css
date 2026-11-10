@@ -984,6 +984,27 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
   body:has(.table-jeu) .nav-bas { display: none; }
 }
 
+/* ---------- Tuto interactif (/tutoriel) ---------- */
+.tuto-panneau { position: fixed; right: max(16px, calc((100vw - 1500px) / 2 + 8px)); bottom: 16px; z-index: 40; width: min(290px, calc(100vw - 32px)); max-height: min(78dvh, 640px); overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: var(--rayon); border: 1px solid var(--bordure-or); background: var(--fond-carte); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55); }
+.tuto-panneau h2 { margin: 0; font-size: 1.1rem; color: var(--accent-vif); }
+.tuto-panneau p { margin: 0; line-height: 1.45; }
+.tuto-entete { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tuto-entete .bouton-icone { width: 30px; height: 30px; min-height: 30px; }
+.tuto-progression { height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.tuto-progression span { display: block; height: 100%; background: var(--accent); transition: width 0.4s ease; }
+.tuto-consignes { margin: 0; padding: 10px 12px 10px 30px; border-radius: var(--rayon-petit); background: rgba(212, 173, 98, 0.08); border: 1px solid var(--bordure-or); }
+.tuto-consignes li { margin: 3px 0; line-height: 1.4; }
+.tuto-bravo { font-weight: 800; color: var(--succes); }
+.tuto-attente { color: var(--texte-doux); font-style: italic; }
+.tuto-recommencer { align-self: flex-start; padding: 0; min-height: 0; border: 0; background: none; color: var(--texte-doux); font-size: 0.8rem; text-decoration: underline; cursor: pointer; }
+.tuto-rouvrir { position: fixed; right: 16px; bottom: 16px; z-index: 40; }
+@media (max-width: 900px) {
+  .tuto-panneau { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 40dvh; padding: 12px; }
+  body:has(.fond-modale) .tuto-panneau { display: none; }
+  .tuto-panneau.reduit { max-height: none; }
+  body:has(.tuto-panneau) .table-jeu { padding-bottom: 42dvh; }
+}
+
 /* ---------- Apprendre à jouer ---------- */
 .apprendre { max-width: 900px; }
 .apprendre-intro { margin: 0 0 16px; }
@@ -1010,7 +1031,7 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
 .apprendre-table th { color: var(--texte-doux); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
 .apprendre-table td:first-child { font-weight: 600; width: 38%; }
 .encart-apprendre { display: block; padding: 10px 14px; border-radius: var(--rayon-petit); border: 1px solid var(--bordure-or); background: rgba(212, 173, 98, 0.08); color: var(--texte); text-decoration: none; }
-.encart-apprendre:hover { background: rgba(212, 173, 98, 0.14); }
+.encart-apprendre a { color: var(--accent-vif); font-weight: 600; }
 .table-regles { font-size: 0.85rem; color: var(--accent-vif); }
 @media (max-width: 560px) {
   .apprendre-duo { grid-template-columns: minmax(0, 1fr); }

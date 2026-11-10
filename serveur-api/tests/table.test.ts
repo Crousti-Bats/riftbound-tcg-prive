@@ -10,9 +10,9 @@ import {
   appliquerAction,
   creerPartie,
   idZone,
-  schemaAction,
   vuePour,
 } from "../table/moteur-table";
+import { schemaAction } from "../table/schema-action";
 import { DECKS_DEMO, type DeckDemo } from "../decks/decks-demo";
 import { MAX_PARTIES_OUVERTES } from "../table/routes-parties";
 import { CARTES, catalogueDecks, deckValide } from "./outils/catalogue-decks-de-test";

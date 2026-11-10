@@ -8,7 +8,8 @@
  * Classe simple (sans `extends DurableObject`) : toute la logique est dans moteur-table.ts, testé sans Cloudflare.
  */
 import { z } from "zod";
-import { type DeckDeTable, type EtatTable, type IndexJoueur, aleatoireCrypto, appliquerAction, creerPartie, schemaAction, vuePour } from "./moteur-table";
+import { type DeckDeTable, type EtatTable, type IndexJoueur, aleatoireCrypto, appliquerAction, creerPartie, vuePour } from "./moteur-table";
+import { schemaAction } from "./schema-action";
 
 const TAILLE_MAX_MESSAGE = 4096;
 /** Anti-abus : 40 messages par tranche de 10 secondes et par connexion. */

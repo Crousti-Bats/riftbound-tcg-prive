@@ -3,8 +3,10 @@
  * Table « libre » : le site n'applique pas les règles de Riftbound, il transmet les gestes des joueurs (piocher,
  * jouer, déplacer, incliner…) et garde secrètes les informations cachées (ma main, l'ordre des decks).
  * Fonctions pures (aucun réseau, aucune base) : l'aléatoire est injecté. Testé dans tests/table.test.ts.
+ * Aucune dépendance à l'exécution : le tutoriel (application-web/pages/page-tutoriel.tsx) l'utilise aussi dans le navigateur.
  */
-import { z } from "zod";
+import type { z } from "zod";
+import type { schemaAction } from "./schema-action";
 
 export type IndexJoueur = 0 | 1;
 
@@ -190,40 +192,7 @@ function estPublique(etat: EtatTable, idCarte: string, zone: string | null): boo
 
 // ---------- Actions ----------
 
-const schemaIdCarte = z.string().regex(/^c\d{1,4}$/);
-const schemaIdZone = z.string().regex(/^([01]\.[a-z]{3,10}|champ\.\d)$/);
-
-export const schemaAction = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("piocher"), n: z.number().int().min(1).max(10) }),
-  z.strictObject({ type: z.literal("canaliser"), n: z.number().int().min(1).max(5) }),
-  z.strictObject({ type: z.literal("melanger"), zone: z.enum(["deck", "runes"]) }),
-  z.strictObject({
-    type: z.literal("deplacer"),
-    carte: schemaIdCarte,
-    vers: schemaIdZone,
-    position: z.enum(["dessus", "dessous"]).optional(),
-    /** Jouer face cachée (seulement vers une zone en jeu). */
-    cachee: z.boolean().optional(),
-  }),
-  z.strictObject({ type: z.literal("incliner"), carte: schemaIdCarte }),
-  z.strictObject({ type: z.literal("retourner"), carte: schemaIdCarte }),
-  z.strictObject({ type: z.literal("marqueur"), carte: schemaIdCarte, delta: z.number().int().min(-5).max(5) }),
-  z.strictObject({ type: z.literal("redresser") }),
-  z.strictObject({ type: z.literal("points"), delta: z.number().int().min(-5).max(5) }),
-  z.strictObject({ type: z.literal("reveler"), carte: schemaIdCarte }),
-  z.strictObject({ type: z.literal("mulligan"), cartes: z.array(schemaIdCarte).max(2) }),
-  z.strictObject({
-    type: z.literal("creerToken"),
-    /** Un token du jeu (voir EtatTable.tokens)… */
-    code: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
-    /** … ou un token libre, par son nom (« Bomb »). */
-    libelle: z.string().trim().min(1).max(30).optional(),
-    vers: schemaIdZone,
-    n: z.number().int().min(1).max(5),
-  }),
-  z.strictObject({ type: z.literal("de") }),
-  z.strictObject({ type: z.literal("dire"), texte: z.string().trim().min(1).max(200) }),
-]);
+/** Actions validées par le schéma zod de schema-action.ts (séparé : le tutoriel du navigateur réutilise ce moteur sans zod). */
 export type ActionTable = z.infer<typeof schemaAction>;
 
 export type ResultatAction = { ok: true } | { ok: false; erreur: string };
