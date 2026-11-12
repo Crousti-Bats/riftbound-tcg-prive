@@ -24,14 +24,14 @@ const solde = (env: Env, id: number) => (env.bd.prepare("SELECT eclats FROM comp
 describe("Règles des éclats", () => {
   const carte = (rarete: string, variante: string, type = "Unit") => ({ rarete, variante, type }) as never;
 
-  it("valeurs : la variante prime, foil ×2, runes et tokens sans valeur ; fabrication ×4", () => {
+  it("valeurs : la variante prime, foil ×2, runes et tokens sans valeur ; fabrication ×40", () => {
     expect(valeurRecyclage(carte("Common", "base"), false)).toBe(1);
     expect(valeurRecyclage(carte("Rare", "base"), true)).toBe(10);
-    expect(coutFabrication(carte("Rare", "base"))).toBe(20);
+    expect(coutFabrication(carte("Rare", "base"))).toBe(200);
     expect(valeurRecyclage(carte("Showcase", "alt"), false)).toBe(80);
     expect(valeurRecyclage(carte("Common", "base", "Rune"), false)).toBe(0);
     expect(valeurRecyclage(carte("Common", "token", "Token"), false)).toBe(0);
-    expect(coutFabrication(carte("Epic", "base"))).toBe(160);
+    expect(coutFabrication(carte("Epic", "base"))).toBe(1600);
     expect(coutFabrication(carte("Common", "base", "Rune"))).toBeNull();
   });
 
@@ -138,14 +138,14 @@ describe("API /api/eclats", () => {
     const bonusAvant = (env.bd.prepare("SELECT boosters_bonus FROM comptes WHERE id = ?").get(id) as { boosters_bonus: number }).boosters_bonus;
 
     expect((await env.appeler("POST", "/api/eclats/acheter-booster", { cookie, corps: {} })).json).toMatchObject({ erreur: "eclats_insuffisants" });
-    env.bd.prepare("UPDATE comptes SET eclats = ? WHERE id = ?").run(PRIX_BOOSTER + 160, id);
+    env.bd.prepare("UPDATE comptes SET eclats = ? WHERE id = ?").run(PRIX_BOOSTER + 1600, id);
 
     const achat = await env.appeler("POST", "/api/eclats/acheter-booster", { cookie, corps: {} });
-    expect(achat.json).toMatchObject({ solde: 160, offerts: bonusAvant + 1 });
+    expect(achat.json).toMatchObject({ solde: 1600, offerts: bonusAvant + 1 });
 
     env.bd.prepare("INSERT INTO wishlist (compte_id, card_code, ajoutee_le) VALUES (?, 'ogn-e1', 0)").run(id);
     const fab = await env.appeler("POST", "/api/eclats/fabriquer", { cookie, corps: { code: "ogn-e1" } });
-    expect(fab.json).toMatchObject({ cout: 160, solde: 0 });
+    expect(fab.json).toMatchObject({ cout: 1600, solde: 0 });
     expect(quantite(env, id, "ogn-e1", 0)).toBe(1);
     expect(env.bd.prepare("SELECT 1 FROM wishlist WHERE compte_id = ?").get(id)).toBeUndefined();
 
@@ -160,7 +160,7 @@ describe("API /api/eclats", () => {
     const cookie = await env.inscrire("Alice", "motdepasse");
     ajouter(env, idDe(env, "Alice"), "ogn-alt0", 0, 2);
     const r = await env.appeler("GET", "/api/eclats/carte/ogn-alt0", { cookie });
-    expect(r.json).toMatchObject({ proteges: 1, recyclables: 1, valeur: { normale: 80, foil: 160 }, coutFabrication: 320 });
+    expect(r.json).toMatchObject({ proteges: 1, recyclables: 1, valeur: { normale: 80, foil: 160 }, coutFabrication: 3200 });
     expect((await env.appeler("GET", "/api/eclats")).statut).toBe(401);
   });
 });
