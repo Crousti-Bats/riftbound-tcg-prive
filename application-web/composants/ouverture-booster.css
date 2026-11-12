@@ -205,7 +205,7 @@
 @keyframes ob-entre { from { opacity: 0; transform: translateY(10px) scale(0.95); } }
 /* Actions du récapitulatif : barre collée en bas, gros bouton pilule + deux boutons contour. */
 .ob-actions-recap {
-  position: sticky; bottom: calc(-1 * max(28px, env(safe-area-inset-bottom))); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  position: fixed; bottom: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 12px;
   margin: 24px calc(-1 * max(16px, env(safe-area-inset-right))) calc(-1 * max(28px, env(safe-area-inset-bottom))) calc(-1 * max(16px, env(safe-area-inset-left)));
   padding: 28px max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ob-fond-1) 88%, transparent) 30%, var(--ob-fond-1));
