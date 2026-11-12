@@ -20,6 +20,7 @@ import { lireCorps } from "../lecture-requete";
 import { compterTentative, REGLES } from "../securite/limitation-tentatives";
 import type { ContexteApi } from "../types-application";
 import {
+  categorieEclats,
   coutFabrication,
   doublonsDe,
   exemplairesProteges,
@@ -104,7 +105,15 @@ routesEclats.get("/", async (c) => {
     const carte = parCode.get(code);
     if (!carte) return [];
     const eclats = valeurRecyclage(carte, false) * d.normale + valeurRecyclage(carte, true) * d.foil;
-    return [{ ...carte, doublons: d, eclats }];
+    return [
+      {
+        ...carte,
+        categorie: categorieEclats(carte),
+        doublons: d,
+        valeur: { normale: valeurRecyclage(carte, false), foil: valeurRecyclage(carte, true) },
+        eclats,
+      },
+    ];
   });
   cartes.sort((a, b) => b.eclats - a.eclats);
   return c.json({
@@ -139,11 +148,17 @@ routesEclats.get("/carte/:code", async (c) => {
   });
 });
 
-/** Absent : tous mes doublons. Présent : `n` exemplaires d'une carte, en normale ou en foil. */
+/**
+ * `code` : `n` exemplaires d'une carte, en normale ou en foil.
+ * Sinon, tous mes doublons, limités si on le demande aux cartes de `codes` (la sélection faite dans la fenêtre de
+ * recyclage : seulement les communes, seulement certaines cartes…) et sans les foils si `avecFoils` vaut false.
+ */
 const schemaRecyclage = z.strictObject({
   code: schemaCode.optional(),
   foil: z.boolean().optional(),
   n: z.number().int().min(1).max(999).optional(),
+  codes: z.array(schemaCode).min(1).max(3000).optional(),
+  avecFoils: z.boolean().optional(),
 });
 
 routesEclats.post("/recycler", async (c) => {
@@ -170,7 +185,10 @@ routesEclats.post("/recycler", async (c) => {
     if (n > disponibles || n > recyclables) return c.json({ erreur: "pas_assez_de_doublons" }, 409);
     lignes = [{ c: demande.code, f: demande.foil ? 1 : 0, n }];
   } else {
-    lignes = tousLesDoublons(possession, usage, parCode);
+    const choisies = demande.codes ? new Set(demande.codes) : null;
+    lignes = tousLesDoublons(possession, usage, parCode).filter(
+      (l) => (!choisies || choisies.has(l.c)) && (demande.avecFoils !== false || l.f === 0),
+    );
   }
   if (lignes.length === 0) return c.json({ erreur: "aucun_doublon" }, 409);
 

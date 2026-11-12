@@ -1063,6 +1063,11 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
 .modale.modale-recyclage { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
 .modale-recyclage h2, .modale-recyclage p { margin: 0; }
 .liste-recyclage { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
-.liste-recyclage li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.liste-recyclage li { display: grid; grid-template-columns: auto 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .liste-recyclage li span { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 .miniature-recyclage { width: 40px; height: auto; border-radius: 4px; border: 2px solid var(--couleur-rarete, var(--bordure)); }
+.choix-recyclage { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 10px 12px; border: 1px solid var(--bordure); border-radius: var(--rayon); }
+.choix-recyclage legend { padding: 0 4px; color: var(--texte-doux); }
+.categorie-recyclage { display: inline-flex; align-items: baseline; gap: 6px; }
+button.lien-seulement { padding: 0; border: 0; background: none; box-shadow: none; color: var(--accent-vif); font-size: 0.8rem; text-decoration: underline; cursor: pointer; }
+.liste-recyclage li.recyclage-exclue { opacity: 0.45; }
