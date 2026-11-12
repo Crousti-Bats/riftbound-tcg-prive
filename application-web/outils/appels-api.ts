@@ -53,6 +53,13 @@ const MESSAGES: Record<string, string> = {
   partie_non_commencee: "La partie n'a pas encore commencé.",
   table_indisponible: "La table de jeu est momentanément indisponible. Réessaie dans un instant.",
   trop_de_modifications: "Trop de modifications d'affilée. Réessaie dans une heure.",
+  trop_de_requetes: "Trop d'actions d'affilée. Réessaie dans une heure.",
+  non_recyclable: "Cette carte ne peut pas être recyclée (runes et tokens).",
+  pas_assez_de_doublons: "Tu n'as pas assez d'exemplaires en trop : on garde toujours 1 exemplaire, et ceux de tes decks.",
+  aucun_doublon: "Aucun doublon à recycler.",
+  collection_modifiee: "Ta collection a changé entre-temps (échange, booster…). Rien n'a été recyclé : réessaie.",
+  eclats_insuffisants: "Pas assez d'éclats.",
+  non_fabricable: "Cette carte ne peut pas être fabriquée (runes et tokens).",
   hors_ligne: "Pas de connexion Internet. Réessaie quand tu seras de nouveau en ligne.",
   serveur_injoignable: "Le serveur ne répond pas. Réessaie dans un instant.",
 };

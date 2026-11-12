@@ -18,6 +18,7 @@ import { routesNotifications } from "./notifications/routes-notifications";
 import { routesProfils } from "./profils/routes-profils";
 import { routesWishlist } from "./wishlist/routes-wishlist";
 import { routesDecks } from "./decks/routes-decks";
+import { routesEclats } from "./eclats/routes-eclats";
 import { routesParties } from "./table/routes-parties";
 import { protectionCsrf } from "./securite/protection-csrf";
 import type { ContexteApi } from "./types-application";
@@ -56,6 +57,7 @@ app.route("/api/notifications", routesNotifications);
 app.route("/api/profils", routesProfils);
 app.route("/api/wishlist", routesWishlist);
 app.route("/api/decks", routesDecks);
+app.route("/api/eclats", routesEclats);
 app.route("/api/parties", routesParties);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));

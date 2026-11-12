@@ -405,6 +405,7 @@ function SelecteurCollection({ deck, legende, surChoix }: { deck: ContenuDeck; l
         surVariante={(v) => changer(() => setVariante(v))}
         tri={tri}
         surTri={(v) => changer(() => setTri(v))}
+        triQuantite
       >
         {legende && (
           <label className="bascule">

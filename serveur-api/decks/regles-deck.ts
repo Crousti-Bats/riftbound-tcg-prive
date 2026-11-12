@@ -153,6 +153,17 @@ export function validerDeck(
   for (const nom of horsDomaine) erreurs.push(`${nom} n'est pas dans les domaines de ta Légende.`);
 
   // Possession : on ne joue que ce que l'on a.
+  for (const [code, n] of utilisationDuDeck(deck)) {
+    const possede = possession.get(code) ?? 0;
+    const c = parCode.get(code);
+    if (c && n > possede) erreurs.push(`Tu as ${possede} × ${nomComplet(c)}, il en faut ${n}.`);
+  }
+
+  return { valide: erreurs.length === 0, erreurs, compteurs };
+}
+
+/** Nombre d'exemplaires de chaque carte qu'utilise un deck (Légende, champion, deck principal, runes, terrains). */
+export function utilisationDuDeck(deck: ContenuDeck): Map<string, number> {
   const utilise = new Map<string, number>();
   const ajouter = (code: string | null, n = 1) => {
     if (code) utilise.set(code, (utilise.get(code) ?? 0) + n);
@@ -162,13 +173,7 @@ export function validerDeck(
   deck.principal.forEach((l) => ajouter(l.code, l.n));
   deck.runes.forEach((l) => ajouter(l.code, l.n));
   deck.terrains.forEach((code) => ajouter(code));
-  for (const [code, n] of utilise) {
-    const possede = possession.get(code) ?? 0;
-    const c = parCode.get(code);
-    if (c && n > possede) erreurs.push(`Tu as ${possede} × ${nomComplet(c)}, il en faut ${n}.`);
-  }
-
-  return { valide: erreurs.length === 0, erreurs, compteurs };
+  return utilise;
 }
 
 /**

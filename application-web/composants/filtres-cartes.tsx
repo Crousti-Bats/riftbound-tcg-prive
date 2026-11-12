@@ -14,9 +14,11 @@ interface Props {
   surRarete: (valeur: string) => void;
   variante: string;
   surVariante: (valeur: string) => void;
-  /** Ordre d'affichage : "" (par set et numéro), "rarete-desc" ou "rarete-asc". */
+  /** Ordre d'affichage : "" (par set et numéro), "rarete-desc", "rarete-asc", ou par quantité (voir triQuantite). */
   tri?: string;
   surTri?: (valeur: string) => void;
+  /** Propose aussi le tri par nombre d'exemplaires (cartes possédées seulement). */
+  triQuantite?: boolean;
   /** Filtres supplémentaires (ex. bascules foil/doublons de la collection). */
   children?: ReactNode;
 }
@@ -85,6 +87,8 @@ export function FiltresCartes(props: Props) {
             <option value="">Set et numéro (défaut)</option>
             <option value="rarete-desc">Plus rares d'abord</option>
             <option value="rarete-asc">Plus communes d'abord</option>
+            {props.triQuantite && <option value="quantite-desc">Plus d'exemplaires d'abord</option>}
+            {props.triQuantite && <option value="quantite-asc">Moins d'exemplaires d'abord</option>}
           </select>
         </label>
       )}

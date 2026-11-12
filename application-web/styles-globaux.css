@@ -1052,3 +1052,17 @@ label.bouton.desactive { opacity: 0.6; cursor: progress; }
 .table-aide-auto { font-size: 0.85rem; color: var(--texte-doux); }
 .table-champ-combat { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .table-combat { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 8px; margin-bottom: 4px; border-radius: var(--rayon-petit); background: rgba(212, 173, 98, 0.12); font-size: 0.85rem; }
+
+/* ---------- Éclats (doublons recyclés) ---------- */
+.eclats-collection { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.solde-eclats { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent-vif); }
+.achat-booster { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; }
+.achat-booster span { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent-vif); }
+.eclats-fiche { display: flex; flex-direction: column; gap: 8px; }
+.eclats-fiche .aide, .eclats-fiche .message-succes, .eclats-fiche .message-erreur { margin: 0; }
+.modale.modale-recyclage { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+.modale-recyclage h2, .modale-recyclage p { margin: 0; }
+.liste-recyclage { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.liste-recyclage li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.liste-recyclage li span { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.miniature-recyclage { width: 40px; height: auto; border-radius: 4px; border: 2px solid var(--couleur-rarete, var(--bordure)); }

@@ -63,7 +63,7 @@ function possessionIllimitee(deck: ContenuDeck): Map<string, number> {
 }
 
 /** Contenu stocké → contenu sûr (un JSON abîmé ou d'un ancien format donne un deck vide plutôt qu'une erreur). */
-function lireContenu(brut: string): ContenuDeck {
+export function lireContenu(brut: string): ContenuDeck {
   try {
     const r = schemaContenu.safeParse(JSON.parse(brut));
     return r.success ? r.data : DECK_VIDE;
