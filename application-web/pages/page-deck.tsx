@@ -343,6 +343,7 @@ function SelecteurCollection({ deck, legende, surChoix }: { deck: ContenuDeck; l
   const [type, setType] = useState("");
   const [rarete, setRarete] = useState("");
   const [variante, setVariante] = useState("");
+  const [tri, setTri] = useState("rarete-desc");
   const [compatibles, setCompatibles] = useState(true);
   const [page, setPage] = useState(1);
   const [resultat, setResultat] = useState<ReponseCollection | null>(null);
@@ -370,6 +371,7 @@ function SelecteurCollection({ deck, legende, surChoix }: { deck: ContenuDeck; l
     if (type) p.set("type", type);
     if (rarete) p.set("rarete", rarete);
     if (variante) p.set("variante", variante);
+    if (tri) p.set("tri", tri);
     if (rechercheAppliquee) p.set("recherche", rechercheAppliquee);
     if (compatibles && domaines) p.set("domaines", domaines);
     appelerApi<ReponseCollection>("GET", `/collection?${p.toString()}`).then(
@@ -379,7 +381,7 @@ function SelecteurCollection({ deck, legende, surChoix }: { deck: ContenuDeck; l
       },
       (e: Error) => setErreur(e.message),
     );
-  }, [filtreSet, type, rarete, variante, rechercheAppliquee, compatibles, domaines, page]);
+  }, [filtreSet, type, rarete, variante, tri, rechercheAppliquee, compatibles, domaines, page]);
 
   const changer = (maj: () => void) => {
     maj();
@@ -401,6 +403,8 @@ function SelecteurCollection({ deck, legende, surChoix }: { deck: ContenuDeck; l
         surRarete={(v) => changer(() => setRarete(v))}
         variante={variante}
         surVariante={(v) => changer(() => setVariante(v))}
+        tri={tri}
+        surTri={(v) => changer(() => setTri(v))}
       >
         {legende && (
           <label className="bascule">
