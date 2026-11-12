@@ -7,8 +7,8 @@
  */
 import type { CarteCatalogue } from "../catalogue/types-catalogue";
 
-/** Prix d'un booster (ouvrable dans le set de son choix). Un booster recyclé rapporte environ 40 éclats. */
-export const PRIX_BOOSTER = 100;
+/** Prix d'un booster (ouvrable dans le set de son choix), 200 depuis le 2026-11-12 (avant : 100). Un booster recyclé rapporte environ 30 éclats. */
+export const PRIX_BOOSTER = 200;
 /** Une foil rapporte deux fois plus qu'une carte normale. */
 export const MULTIPLICATEUR_FOIL = 2;
 /** Fabriquer une carte coûte 4 fois ce que rapporte son recyclage. */
