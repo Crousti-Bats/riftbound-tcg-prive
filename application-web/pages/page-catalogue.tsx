@@ -19,7 +19,7 @@ export function PageCatalogue() {
   const [filtreSet, setFiltreSet] = useState("");
   const [rarete, setRarete] = useState("");
   const [variante, setVariante] = useState("");
-  const [tri, setTri] = useState("");
+  const [tri, setTri] = useState("rarete-desc");
   const [typeCarte, setTypeCarte] = useState("");
   const [recherche, setRecherche] = useState("");
   const [rechercheAppliquee, setRechercheAppliquee] = useState("");

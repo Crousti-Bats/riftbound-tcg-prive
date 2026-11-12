@@ -49,7 +49,7 @@ function OngletAnnonces({ surCarte, surEcrire }: { surCarte: (c: Carte, foil: bo
   const [filtre, setFiltre] = useState<"tout" | TypeAnnonce | "miennes">("tout");
   const [recherche, setRecherche] = useState("");
   const [jePeuxAider, setJePeuxAider] = useState(false);
-  const [ordre, setOrdre] = useState<"recentes" | "rarete-desc" | "rarete-asc">("recentes");
+  const [ordre, setOrdre] = useState<"recentes" | "rarete-desc" | "rarete-asc">("rarete-desc");
   const [filtreSet, setFiltreSet] = useState("");
   const [sets, setSets] = useState<SetInfo[]>([]);
   const [formulaire, setFormulaire] = useState(false);

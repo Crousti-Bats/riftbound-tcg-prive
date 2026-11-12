@@ -143,6 +143,28 @@ describe("Accepter", () => {
     expect(historique.historique[0]?.statut).toBe("accepte");
   });
 
+  it("une carte reçue quitte la wishlist de celui qui la reçoit (dans les deux sens), pas les autres", async () => {
+    const { env, alice, bob } = await deuxJoueurs();
+    const souhaits = (pseudo: string) =>
+      (env.bd.prepare("SELECT card_code FROM wishlist WHERE compte_id = ? ORDER BY card_code").all(id(env, pseudo)) as Array<{ card_code: string }>).map((l) => l.card_code);
+    for (const code of ["ogn-e0", "ogn-c1"]) await env.appeler("POST", "/api/wishlist", { cookie: alice, corps: { code } });
+    for (const code of ["ogn-c0", "ogn-e0"]) await env.appeler("POST", "/api/wishlist", { cookie: bob, corps: { code } });
+    const { json } = await proposer(env, alice);
+    expect((await env.appeler("POST", `/api/echanges/${String(json.id)}/accepter`, { cookie: bob, corps: {} })).statut).toBe(200);
+    // Alice a reçu ogn-e0 (retirée), pas ogn-c1 (gardée). Bob a reçu ogn-c0 (retirée) ; ogn-e0, qu'il a donnée, reste.
+    expect(souhaits("Alice")).toEqual(["ogn-c1"]);
+    expect(souhaits("Bob")).toEqual(["ogn-e0"]);
+  });
+
+  it("un échange échoué ne touche pas aux wishlists", async () => {
+    const { env, alice, bob } = await deuxJoueurs();
+    await env.appeler("POST", "/api/wishlist", { cookie: alice, corps: { code: "ogn-e0" } });
+    const { json } = await proposer(env, alice);
+    env.bd.prepare("DELETE FROM collection WHERE compte_id = ? AND card_code = 'ogn-e0'").run(id(env, "Bob"));
+    await env.appeler("POST", `/api/echanges/${String(json.id)}/accepter`, { cookie: bob, corps: {} });
+    expect(env.bd.prepare("SELECT COUNT(*) AS n FROM wishlist WHERE card_code = 'ogn-e0'").get()).toEqual({ n: 1 });
+  });
+
   it("permet les dons (rien demandé en retour)", async () => {
     const { env, alice, bob } = await deuxJoueurs();
     const { json } = await proposer(env, alice, proposition({ demande: [] }));
