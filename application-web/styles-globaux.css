@@ -407,6 +407,7 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 .miniature-paysage { object-fit: contain; background: var(--fond-carte); }
 .miniature-vide { background: var(--fond-carte); }
 .nom-ligne { font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; }
+.rarete-ligne { display: block; font-size: 0.78rem; font-weight: 600; color: var(--couleur-rarete, var(--texte-doux)); }
 .quantite-ligne { display: inline-flex; align-items: center; gap: 6px; }
 .quantite-ligne button { min-width: 32px; }
 
