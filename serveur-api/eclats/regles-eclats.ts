@@ -14,8 +14,36 @@ export const MULTIPLICATEUR_FOIL = 2;
 /** Fabriquer une carte coûte 4 fois ce que rapporte son recyclage. */
 export const MULTIPLICATEUR_FABRICATION = 4;
 
-const VALEUR_VARIANTE: Partial<Record<string, number>> = { ultime: 1000, special: 1000, signee: 500, overnumbered: 200, alt: 80 };
-const VALEUR_RARETE: Partial<Record<string, number>> = { Epic: 40, Showcase: 40, Rare: 10, Uncommon: 3, Common: 1 };
+/** Catégories de recyclage, de la moins à la plus précieuse (on peut recycler seulement certaines d'entre elles). */
+export const CATEGORIES_ECLATS = ["commune", "peu-commune", "rare", "epique", "alt", "overnumbered", "signee", "special"] as const;
+export type CategorieEclats = (typeof CATEGORIES_ECLATS)[number];
+
+/** Éclats rapportés par un exemplaire normal de chaque catégorie (Special et Ultime ensemble). */
+export const VALEUR_CATEGORIE: Record<CategorieEclats, number> = {
+  commune: 1,
+  "peu-commune": 3,
+  rare: 5,
+  epique: 40,
+  alt: 80,
+  overnumbered: 200,
+  signee: 500,
+  special: 1000,
+};
+
+const CATEGORIE_VARIANTE: Partial<Record<string, CategorieEclats>> = {
+  ultime: "special",
+  special: "special",
+  signee: "signee",
+  overnumbered: "overnumbered",
+  alt: "alt",
+};
+const CATEGORIE_RARETE: Partial<Record<string, CategorieEclats>> = {
+  Epic: "epique",
+  Showcase: "epique",
+  Rare: "rare",
+  Uncommon: "peu-commune",
+  Common: "commune",
+};
 
 type CarteEclats = Pick<CarteCatalogue, "rarete" | "variante" | "type">;
 
@@ -25,10 +53,16 @@ function estRuneOuToken(carte: CarteEclats): boolean {
   return ["rune", "rune_alt", "token"].includes(carte.variante) || type === "rune" || type === "token";
 }
 
-/** Éclats rapportés par le recyclage d'un exemplaire (0 : non recyclable). La variante prime sur la rareté. */
+/** Catégorie de recyclage d'une carte (la variante prime sur la rareté), ou null si elle n'est pas recyclable. */
+export function categorieEclats(carte: CarteEclats): CategorieEclats | null {
+  if (estRuneOuToken(carte)) return null;
+  return CATEGORIE_VARIANTE[carte.variante] ?? CATEGORIE_RARETE[carte.rarete] ?? null;
+}
+
+/** Éclats rapportés par le recyclage d'un exemplaire (0 : non recyclable). */
 export function valeurRecyclage(carte: CarteEclats, foil: boolean): number {
-  if (estRuneOuToken(carte)) return 0;
-  const base = VALEUR_VARIANTE[carte.variante] ?? VALEUR_RARETE[carte.rarete] ?? 0;
+  const categorie = categorieEclats(carte);
+  const base = categorie ? VALEUR_CATEGORIE[categorie] : 0;
   return foil ? base * MULTIPLICATEUR_FOIL : base;
 }
 

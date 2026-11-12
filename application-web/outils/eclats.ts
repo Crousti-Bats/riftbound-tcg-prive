@@ -6,8 +6,23 @@ import { useSyncExternalStore } from "react";
 import { appelerApi } from "./appels-api";
 import type { Carte } from "./libelles-cartes";
 
+/** Catégories de recyclage (mêmes codes que le serveur), de la moins à la plus précieuse. */
+export const CATEGORIES_ECLATS = [
+  { code: "commune", libelle: "Communes" },
+  { code: "peu-commune", libelle: "Peu communes" },
+  { code: "rare", libelle: "Rares" },
+  { code: "epique", libelle: "Épiques" },
+  { code: "alt", libelle: "Alt Art" },
+  { code: "overnumbered", libelle: "Overnumbered" },
+  { code: "signee", libelle: "Signées" },
+  { code: "special", libelle: "Special et Ultime" },
+] as const;
+
 export interface DoublonVue extends Carte {
+  categorie: string | null;
   doublons: { normale: number; foil: number };
+  /** Éclats rapportés par un exemplaire normal et par une foil. */
+  valeur: { normale: number; foil: number };
   eclats: number;
 }
 export interface EtatEclats {

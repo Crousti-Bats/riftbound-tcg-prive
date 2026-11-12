@@ -26,7 +26,8 @@ describe("Règles des éclats", () => {
 
   it("valeurs : la variante prime, foil ×2, runes et tokens sans valeur ; fabrication ×4", () => {
     expect(valeurRecyclage(carte("Common", "base"), false)).toBe(1);
-    expect(valeurRecyclage(carte("Rare", "base"), true)).toBe(20);
+    expect(valeurRecyclage(carte("Rare", "base"), true)).toBe(10);
+    expect(coutFabrication(carte("Rare", "base"))).toBe(20);
     expect(valeurRecyclage(carte("Showcase", "alt"), false)).toBe(80);
     expect(valeurRecyclage(carte("Common", "base", "Rune"), false)).toBe(0);
     expect(valeurRecyclage(carte("Common", "token", "Token"), false)).toBe(0);
@@ -49,7 +50,7 @@ describe("API /api/eclats", () => {
     const id = idDe(env, "Alice");
     ajouter(env, id, "ogn-c0", 0, 5); // 4 doublons × 1
     ajouter(env, id, "ogn-r0", 0, 1);
-    ajouter(env, id, "ogn-r0", 1, 1); // 1 doublon : la normale part (10), la foil reste
+    ajouter(env, id, "ogn-r0", 1, 1); // 1 doublon : la normale part (5), la foil reste
     ajouter(env, id, "ogn-e0", 0, 4); // deck en utilise 3 → 1 doublon × 40
     ajouter(env, id, "ogn-rune0", 0, 9); // rune : jamais recyclée
     env.bd
@@ -57,11 +58,11 @@ describe("API /api/eclats", () => {
       .run(id, JSON.stringify({ legende: null, champion: null, principal: [{ code: "ogn-e0", n: 3 }], runes: [], terrains: [] }));
 
     const apercu = (await env.appeler("GET", "/api/eclats", { cookie })).json as { doublons: { exemplaires: number; eclats: number } };
-    expect(apercu.doublons).toMatchObject({ exemplaires: 6, eclats: 54 });
+    expect(apercu.doublons).toMatchObject({ exemplaires: 6, eclats: 49 });
 
     const r = await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: {} });
     expect(r.statut).toBe(200);
-    expect(r.json).toMatchObject({ gain: 54, exemplaires: 6, solde: 54 });
+    expect(r.json).toMatchObject({ gain: 49, exemplaires: 6, solde: 49 });
     expect(quantite(env, id, "ogn-c0", 0)).toBe(1);
     expect(quantite(env, id, "ogn-r0", 0)).toBe(0);
     expect(quantite(env, id, "ogn-r0", 1)).toBe(1);
@@ -80,13 +81,39 @@ describe("API /api/eclats", () => {
     ajouter(env, id, "ogn-r1", 1, 2);
 
     const foil = await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { code: "ogn-r1", foil: true, n: 2 } });
-    expect(foil.json).toMatchObject({ gain: 40, solde: 40 });
+    expect(foil.json).toMatchObject({ gain: 20, solde: 20 });
     expect(quantite(env, id, "ogn-r1", 1)).toBe(0);
     // Il n'en reste qu'un : refusé.
     expect((await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { code: "ogn-r1", n: 1 } })).statut).toBe(409);
     expect(quantite(env, id, "ogn-r1", 0)).toBe(1);
     // Rune ou carte inconnue : refusé.
     expect((await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { code: "ogn-rune0" } })).statut).toBe(400);
+  });
+
+  it("recycle seulement la sélection : certaines cartes, avec ou sans les foils", async () => {
+    const env = creerEnvironnementDeTest();
+    const cookie = await env.inscrire("Alice", "motdepasse");
+    const id = idDe(env, "Alice");
+    ajouter(env, id, "ogn-c0", 0, 3); // commune : 5 exemplaires, 4 en trop = 3 normales + 1 foil
+    ajouter(env, id, "ogn-c0", 1, 2);
+    ajouter(env, id, "ogn-u0", 0, 2); // peu commune : 1 doublon
+    ajouter(env, id, "ogn-r0", 0, 2); // rare : 1 doublon, non sélectionnée
+
+    const apercu = (await env.appeler("GET", "/api/eclats", { cookie })).json as {
+      doublons: { cartes: Array<{ code: string; categorie: string }> };
+    };
+    expect(apercu.doublons.cartes.find((c) => c.code === "ogn-c0")?.categorie).toBe("commune");
+    expect(apercu.doublons.cartes.find((c) => c.code === "ogn-u0")?.categorie).toBe("peu-commune");
+
+    const r = await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { codes: ["ogn-c0", "ogn-u0"], avecFoils: false } });
+    expect(r.json).toMatchObject({ gain: 3 + 3, exemplaires: 4 });
+    expect(quantite(env, id, "ogn-c0", 0)).toBe(0);
+    expect(quantite(env, id, "ogn-c0", 1)).toBe(2); // la foil en trop n'est pas recyclée
+    expect(quantite(env, id, "ogn-u0", 0)).toBe(1);
+    expect(quantite(env, id, "ogn-r0", 0)).toBe(2); // pas dans la sélection
+
+    // Sélection sans aucun doublon : rien à faire.
+    expect((await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { codes: ["ogn-u0"] } })).statut).toBe(409);
   });
 
   it("un recyclage dont la collection a changé entre-temps est entièrement annulé", async () => {
