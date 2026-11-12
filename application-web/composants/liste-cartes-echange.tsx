@@ -1,6 +1,6 @@
-/** Petite liste de cartes d'un échange (miniatures + quantité + foil). Optionnellement modifiable (panier). */
+/** Petite liste de cartes d'un échange (miniatures + rareté + quantité + foil). Optionnellement modifiable (panier). */
 import { ImageCarte } from "./image-carte";
-import { classeRarete, type Carte } from "../outils/libelles-cartes";
+import { classeRarete, type Carte, libelleRarete } from "../outils/libelles-cartes";
 
 export interface ElementListe {
   cle: string;
@@ -39,6 +39,7 @@ export function ListeCartesEchange({ elements, vide, surChangement, maxParCle }:
           <span className="nom-ligne">
             {e.carte?.nom ?? e.code}
             {e.foil && <span title="Foil"> ✨</span>}
+            {e.carte && <small className="rarete-ligne">{libelleRarete(e.carte)}</small>}
           </span>
           {surChangement ? (
             <span className="quantite-ligne">
