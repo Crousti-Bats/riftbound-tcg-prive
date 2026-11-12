@@ -189,10 +189,12 @@
 .ob-overlay button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ---------- Récapitulatif (React) ---------- */
-.ob-recap { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; z-index: 5; padding: 64px max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+/* Colonne flex : la barre d'actions (margin-top: auto) tombe en bas de l'écran même quand il y a peu de cartes,
+   et reste collée en bas (sticky) quand la liste défile. */
+.ob-recap { position: absolute; inset: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; z-index: 5; padding: 64px max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .ob-recap h2 { font-family: var(--ob-police-titre); font-weight: 400; text-align: center; margin: 4px 0 2px; font-size: clamp(1.4rem, 5vw, 2rem); color: var(--ob-accent); }
 .ob-recap > p { text-align: center; margin: 0 0 16px; color: var(--ob-texte-doux); font-family: var(--ob-police-ui); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.82rem; }
-.ob-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30%, 130px), 1fr)); gap: 12px; max-width: 920px; margin: 0 auto; }
+.ob-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30%, 130px), 1fr)); gap: 12px; width: 100%; max-width: 920px; margin: 0 auto 24px; }
 .ob-overlay button.ob-mini {
   --c: #9aa7bd; position: relative; display: block; padding: 0; min-height: 0; background: none; border: none; border-radius: 5% / 3.6%;
   aspect-ratio: 744 / 1039; animation: ob-entre 0.4s ease both; animation-delay: calc(var(--i, 0) * 45ms); cursor: pointer;
@@ -206,7 +208,7 @@
 /* Actions du récapitulatif : barre collée en bas, gros bouton pilule + deux boutons contour. */
 .ob-actions-recap {
   position: sticky; bottom: calc(-1 * max(28px, env(safe-area-inset-bottom))); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 12px;
-  margin: 24px calc(-1 * max(16px, env(safe-area-inset-right))) calc(-1 * max(28px, env(safe-area-inset-bottom))) calc(-1 * max(16px, env(safe-area-inset-left)));
+  flex-shrink: 0; margin: auto calc(-1 * max(16px, env(safe-area-inset-right))) calc(-1 * max(28px, env(safe-area-inset-bottom))) calc(-1 * max(16px, env(safe-area-inset-left)));
   padding: 28px max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ob-fond-1) 88%, transparent) 30%, var(--ob-fond-1));
 }
