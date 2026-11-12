@@ -148,6 +148,9 @@ export function construireCatalogue(brut: unknown): Catalogue {
 /** Tri par rareté proposé par le catalogue et les collections (sinon : ordre du catalogue, par set et numéro). */
 export const TRIS = ["rarete-desc", "rarete-asc"] as const;
 export type Tri = (typeof TRIS)[number];
+/** La collection peut aussi se trier par nombre d'exemplaires (normale + foil). */
+export const TRIS_COLLECTION = [...TRIS, "quantite-desc", "quantite-asc"] as const;
+export type TriCollection = (typeof TRIS_COLLECTION)[number];
 
 const RANG_VARIANTE: Partial<Record<string, number>> = { ultime: 9, special: 8, signee: 7, overnumbered: 6, alt: 5 };
 const RANG_RARETE: Partial<Record<string, number>> = { Epic: 4, Showcase: 4, Rare: 3, Uncommon: 2, Common: 1 };

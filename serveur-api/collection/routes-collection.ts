@@ -4,7 +4,7 @@ import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { schemaPseudo } from "../validation-donnees";
 import { exigerConnexion } from "../authentification/sessions";
-import { correspondAuType, TRIS, trierParRarete } from "../catalogue/classification-cartes";
+import { correspondAuType, TRIS_COLLECTION, trierParRarete } from "../catalogue/classification-cartes";
 import { sansAccents } from "../catalogue/recherche-texte";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
 import { RARETES, VARIANTES } from "../catalogue/types-catalogue";
@@ -29,7 +29,7 @@ const schemaRecherche = z.object({
   recherche: z.string().trim().max(50).optional(),
   /** Une carte précise (pré-remplissage d'un échange depuis une annonce du marché). */
   code: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
-  tri: z.enum(TRIS).optional(),
+  tri: z.enum(TRIS_COLLECTION).optional(),
   /** Éditeur de deck : seulement les cartes jouables avec ces domaines (« Fury,Mind ») ; sans domaine = toujours. */
   domaines: z.string().regex(/^[A-Za-z]{2,15}(,[A-Za-z]{2,15}){0,5}$/).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
@@ -132,7 +132,16 @@ async function listerCartesPossedees(c: Context<ContexteApi>, compteId: number, 
       ...(chezAutre ? { chezAutre: (autre?.normale ?? 0) + (autre?.foil ?? 0) } : {}),
     });
   }
-  const cartes = trierParRarete(trouvees, tri);
+  let cartes = trouvees;
+  if (tri === "quantite-desc" || tri === "quantite-asc") {
+    // À nombre égal, les plus rares d'abord (tri stable : sinon l'ordre du catalogue).
+    const sens = tri === "quantite-desc" ? -1 : 1;
+    cartes = trierParRarete(trouvees, "rarete-desc").sort(
+      (a, b) => sens * (a.quantite + a.quantiteFoil - (b.quantite + b.quantiteFoil)),
+    );
+  } else if (tri) {
+    cartes = trierParRarete(trouvees, tri);
+  }
 
   const debut = (page - 1) * CARTES_PAR_PAGE;
   return c.json({ cartes: cartes.slice(debut, debut + CARTES_PAR_PAGE), total: cartes.length, page, parPage: CARTES_PAR_PAGE });

@@ -1,4 +1,5 @@
 /** Fiche détaillée d'une carte, en fenêtre modale. Partagée par le catalogue, la collection et l'ouverture. */
+import { ActionsEclats } from "./actions-eclats";
 import { ImageCarte } from "./image-carte";
 import { useEffect, useState } from "react";
 import { basculerWishlist, useWishlist } from "../outils/wishlist";
@@ -12,9 +13,11 @@ interface Props {
   possession?: { quantite: number; quantiteFoil: number };
   /** Carte obtenue en foil (ouverture de booster). */
   foil?: boolean;
+  /** Appelé après un recyclage ou une fabrication (la page relit sa liste). */
+  surChangement?: () => void;
 }
 
-export function FicheCarte({ carte, nomSet, surFermeture, possession, foil }: Props) {
+export function FicheCarte({ carte, nomSet, surFermeture, possession, foil, surChangement }: Props) {
   const wishlist = useWishlist();
   const enWishlist = wishlist.has(carte.code);
   const [erreurWishlist, setErreurWishlist] = useState<string | null>(null);
@@ -94,6 +97,7 @@ export function FicheCarte({ carte, nomSet, surFermeture, possession, foil }: Pr
             )}
           </dl>
           {carte.texte && <p className="texte-carte">{carte.texte}</p>}
+          <ActionsEclats code={carte.code} surChangement={surChangement} />
           <div className="actions-fiche">
             <button
               className={enWishlist ? "bouton-wishlist actif" : "bouton-wishlist secondaire"}

@@ -106,6 +106,7 @@ export function SelecteurCartes({ source, sets, dejaChoisi, surAjout, mode = "ec
         surVariante={(v) => changerFiltre(() => setVariante(v))}
         tri={tri}
         surTri={(v) => changerFiltre(() => setTri(v))}
+        triQuantite
       >
         {comparaison && (
           <label className="bascule">

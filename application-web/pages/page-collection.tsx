@@ -3,9 +3,11 @@ import { ImageCarte } from "../composants/image-carte";
 import { useEffect, useMemo, useState } from "react";
 import { FicheCarte } from "../composants/fiche-carte";
 import { FiltresCartes } from "../composants/filtres-cartes";
+import { RecyclageDoublons } from "../composants/recyclage-doublons";
 import { Pagination } from "../composants/pagination";
 import { appelerApi } from "../outils/appels-api";
 import { type CartePossedee, classeRarete, libelleRarete, type SetInfo } from "../outils/libelles-cartes";
+import { formaterEclats, useSoldeEclats } from "../outils/eclats";
 import { naviguer } from "../outils/navigation";
 
 interface ReponseCollection {
@@ -35,10 +37,14 @@ export function PageCollection() {
   const [resultat, setResultat] = useState<ReponseCollection | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [selection, setSelection] = useState<CartePossedee | null>(null);
+  const [recyclage, setRecyclage] = useState(false);
+  /** Incrémentée après un recyclage ou une fabrication : la liste et le résumé sont relus. */
+  const [version, setVersion] = useState(0);
+  const solde = useSoldeEclats();
 
   useEffect(() => {
     appelerApi<Resume>("GET", "/collection/resume").then(setResume, (e: Error) => setErreur(e.message));
-  }, []);
+  }, [version]);
 
   useEffect(() => {
     const minuteur = setTimeout(() => {
@@ -62,10 +68,12 @@ export function PageCollection() {
       (r) => {
         setResultat(r);
         setErreur(null);
+        // La fiche ouverte suit les nouvelles quantités.
+        setSelection((avant) => (avant ? (r.cartes.find((c) => c.code === avant.code) ?? avant) : avant));
       },
       (e: Error) => setErreur(e.message),
     );
-  }, [filtreSet, rarete, variante, tri, typeCarte, rechercheAppliquee, foil, doublons, page]);
+  }, [filtreSet, rarete, variante, tri, typeCarte, rechercheAppliquee, foil, doublons, page, version]);
 
   const sets = useMemo<SetInfo[]>(
     () => (resume?.parSet ?? []).map((s) => ({ code: s.code, nom: s.nom, ouvrable: true, nbCartes: s.total })),
@@ -81,6 +89,14 @@ export function PageCollection() {
     <main className="conteneur">
       <header className="entete">
         <h1>Ma collection</h1>
+        <div className="eclats-collection">
+          <span className="solde-eclats" title="Éclats : recycle tes doublons, puis achète un booster ou fabrique une carte">
+            {solde === null ? "…" : formaterEclats(solde)}
+          </span>
+          <button className="secondaire" onClick={() => setRecyclage(true)}>
+            ♻ Recycler mes doublons
+          </button>
+        </div>
       </header>
 
       {resume && (
@@ -126,6 +142,7 @@ export function PageCollection() {
         surVariante={(v) => changerFiltre(() => setVariante(v))}
         tri={tri}
         surTri={(v) => changerFiltre(() => setTri(v))}
+        triQuantite
       >
         <label className="bascule">
           <input type="checkbox" checked={foil} onChange={(e) => changerFiltre(() => setFoil(e.target.checked))} /> Foil
@@ -200,6 +217,13 @@ export function PageCollection() {
           nomSet={sets.find((s) => s.code === selection.set)?.nom ?? selection.set}
           possession={{ quantite: selection.quantite, quantiteFoil: selection.quantiteFoil }}
           surFermeture={() => setSelection(null)}
+          surChangement={() => setVersion((v) => v + 1)}
+        />
+      )}
+      {recyclage && (
+        <RecyclageDoublons
+          surFermeture={() => setRecyclage(false)}
+          surRecyclage={() => setVersion((v) => v + 1)}
         />
       )}
     </main>

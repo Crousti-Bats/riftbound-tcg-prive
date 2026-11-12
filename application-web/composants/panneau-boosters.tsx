@@ -5,6 +5,7 @@ import { ApercuBooster } from "./apercu-booster";
 import { OuvertureBooster } from "./ouverture-booster";
 import { appelerApi } from "../outils/appels-api";
 import { type CarteOuverte, formaterDuree } from "../outils/libelles-cartes";
+import { formaterEclats, publierSolde, usePrixBooster, useSoldeEclats } from "../outils/eclats";
 import { rechargerWishlist, useWishlist } from "../outils/wishlist";
 
 interface Stock {
@@ -102,6 +103,21 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
     [set],
   );
 
+  const solde = useSoldeEclats();
+  const prixBooster = usePrixBooster();
+  const [achat, setAchat] = useState(false);
+  const acheterBooster = () => {
+    setAchat(true);
+    setErreur(null);
+    appelerApi<{ solde: number; offerts: number }>("POST", "/eclats/acheter-booster", {})
+      .then((r) => {
+        publierSolde(r.solde);
+        setEtat((prev) => (prev ? { ...prev, stock: { ...prev.stock, offerts: r.offerts } } : prev));
+      })
+      .catch((e: Error) => setErreur(e.message))
+      .finally(() => setAchat(false));
+  };
+
   const stock = etat?.stock;
   const actuel = stock?.actuel ?? 0;
   const max = stock?.max ?? 10;
@@ -160,6 +176,14 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                   {offerts > 0 && (
                     <p className="stock-offerts">
                       🎁 + <strong>{offerts}</strong> booster{offerts > 1 ? "s" : ""} offert{offerts > 1 ? "s" : ""}
+                    </p>
+                  )}
+                  {solde !== null && prixBooster !== null && (
+                    <p className="achat-booster">
+                      <span title="Recycle tes doublons dans Ma collection pour gagner des éclats">{formaterEclats(solde)}</span>
+                      <button className="secondaire" onClick={acheterBooster} disabled={achat || solde < prixBooster}>
+                        Acheter un booster ({formaterEclats(prixBooster)})
+                      </button>
                     </p>
                   )}
                   <p className="minuteur">
