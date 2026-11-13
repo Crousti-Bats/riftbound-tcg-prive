@@ -25,6 +25,12 @@ const RACCOURCIS: Array<{ chemin: string; titre: string; texte: string; icone: R
     icone: <span aria-hidden="true">✉</span>,
   },
   {
+    chemin: "/minijeux",
+    titre: "Mini-jeux",
+    texte: "Devine le champion du jour, joue au Memory : gagne des éclats.",
+    icone: <span aria-hidden="true">?</span>,
+  },
+  {
     chemin: "/catalogue",
     titre: "Catalogue",
     texte: "Toutes les cartes de Riftbound, set par set.",

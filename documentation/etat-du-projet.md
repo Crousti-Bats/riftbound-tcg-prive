@@ -2,7 +2,7 @@
 
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
-**Dernière mise à jour :** 2026-11-12
+**Dernière mise à jour :** 2026-11-13
 **Étape en cours :** 10 — Durcissement sécurité (en cours : revue faite, 6 correctifs livrés en PR, voir §4octies)
 **Prochaine étape :** fin de l'étape 10 : merger la PR des correctifs, décider de la modération des messages privés et de Cloudflare Access sur `/admin`, puis rapport PDF de l'étape 10.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
@@ -407,6 +407,31 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Site** : solde 💎 et bouton **« ♻ Recycler mes doublons »** en haut de Ma collection (fenêtre récapitulative : chaque carte, quantités, gain, puis « Tout recycler ») ; sur chaque fiche de carte, « Recycler 1 normale / 1 foil » et « 🔨 Fabriquer » (grisé avec le manque si le solde ne suffit pas) ; sur l'accueil, solde et **« Acheter un booster (200 💎) »** sous le stock.
 - **Vérifications** : 305 tests (8 nouveaux : valeurs, ordre normales puis foil, protection par deck, runes jamais recyclées, foil ×2, refus sous le seuil, recyclages simultanés : un seul crédité, achat et fabrication avec solde insuffisant sans écriture, tri par quantité). Vrai moteur local (migration 0018 appliquée) : 23 boosters ouverts, 132 doublons recyclés pour 275 éclats, 4 recyclages simultanés → 1 crédité et 3 refusés, achat de booster. Interface non vue en capture (pas de navigateur sans écran sur ce poste) : à vérifier à l'œil.
 
+## 4tervicies. Mini-jeux : « Devine le champion » et Memory (demandé le 2026-11-13)
+
+- Demande : « on peut ajouter des minijeux ? » puis « memory, je veux un loldle » (« le même jeu que loldle.net »), avec des éclats plafonnés. On reprend le **principe** des jeux « -dle » (un champion par jour, indices colorés à chaque essai) avec les données Riftbound. On ne copie ni le nom, ni l'apparence, ni les textes de Loldle.
+- **Page `/minijeux`** (onglet « Jouer », raccourci sur l'accueil et sur la page Jouer) : l'état du jour de chaque mode et les éclats gagnés au Memory.
+- **Devine le champion** (`/minijeux/champion/<mode>`) : 57 champions (un nom porté par une unité « Champion » ET par une Légende), le même pour tous les joueurs, qui change à **minuit heure de Paris**. Il n'est jamais le même que la veille. Trois modes, chacun avec son propre champion :
+  - **Classique** : tableau des essais, avec une case par colonne : domaines (de la Légende), région, sortie (set de la première Légende), énergie (version la moins chère), Might (version la plus forte), nombre de cartes. Vert = juste, orange = en partie, rouge = faux, ↑/↓ = la réponse est plus haute ou plus basse (ou sortie plus tard ou plus tôt).
+  - **Capacité** : le texte de la Légende, avec le nom du champion masqué (« ??? »).
+  - **Illustration** : une illustration du champion (Légende ou unité), zoomée ×5 au départ, puis −0,5 à chaque erreur.
+  - Recherche avec suggestions (sans accents ni apostrophes : « khazix » trouve Kha'Zix), « N joueurs ont trouvé aujourd'hui », champion de la veille.
+- **Memory** (`/minijeux/memory`) : 8 paires (16 cases) tirées de **ma collection** (complétée par le catalogue s'il manque des cartes ; ni runes, ni tokens, ni terrains). Les parties sont illimitées.
+- **Gains** (dans `serveur-api/minijeux/regles-minijeux.ts`) : Classique 30 💎 au 1er essai, −2 par essai, 10 au minimum ; Capacité et Illustration 15, −1 par essai, 5 au minimum. Memory : 10 💎 en 12 coups ou moins, 6 en 16, 3 au-delà, **plafond de 30 💎 par jour**. Au maximum, cela fait 90 💎 par jour (un booster coûte 200).
+- **Anti-triche** (le dépôt est public) :
+  - Le champion du jour est tiré par `crypto.getRandomValues` à la première visite du jour, puis figé en base (`defis_du_jour`). Une graine calculée à partir de la date donnerait la réponse.
+  - Le navigateur ne reçoit jamais la réponse avant de l'avoir trouvée : il envoie un champion, et le serveur compare.
+  - L'illustration passe par le serveur (`GET /api/minijeux/devinette/illustration/image`), sans quoi son adresse trahirait la carte. Le serveur ne télécharge que l'adresse du CDN Riot venue du catalogue, ce qui exclut le SSRF.
+  - La grille du Memory reste sur le serveur : une carte n'est envoyée qu'une fois retournée, et le serveur compte les coups.
+  - Gains crédités dans le même lot D1 que le coup gagnant, une seule fois (`gain_credite`), avec contrôle de concurrence sur le nombre d'essais et de coups (des réponses simultanées ne sont créditées qu'une fois).
+  - Limite de 60 parties de Memory par heure (`memory:compte:<id>`). Les essais sont naturellement limités à 57 par mode et par jour (un champion déjà proposé est refusé sans écriture).
+- **API** (`serveur-api/minijeux/routes-minijeux.ts`, connexion obligatoire) : `GET /api/minijeux` (résumé du jour), `GET /api/minijeux/champions`, `GET /api/minijeux/devinette/:mode`, `POST /api/minijeux/devinette/:mode/essai {champion}`, `GET /api/minijeux/devinette/illustration/image`, `POST /api/minijeux/memory`, `POST /api/minijeux/memory/:id/retourner {position}`.
+- **Base** : migration 0019 (`defis_du_jour`, `devinettes`, `parties_memory`), avec seulement des cardCode. Ménage à la connexion : parties de Memory et essais de plus de 7 jours.
+- **Vérifications** :
+  - 317 tests, dont 11 nouveaux : champions, comparaisons, gains, minuit à Paris (heure d'hiver et d'été), réponse jamais dévoilée, bonnes réponses simultanées créditées une fois, tirage figé et différent de la veille, grille sans rune, plafond du Memory, cases déjà retournées, partie d'un autre joueur.
+  - Vrai moteur local (migration 0019 appliquée) : Classique trouvé en 23 essais (+10), Capacité en 53 (+5), Memory en 13 coups (+6), illustration servie en WebP.
+  - Captures dans Chrome headless (PC et téléphone) : pages des mini-jeux, tableau coloré, recherche, Memory, aucune erreur dans la console.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -478,6 +503,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **2026-11-10 — Taux /2, ♥ sur les boosters, bulle de discussion, photo de profil (§4duodecies).** Migration 0013. 6 nouveaux tests.
 - **2026-11-10 — Boosters 10 max / 20 min, aperçu, annulation, wishlist, tri (§4undecies).** Migrations 0011 et 0012. 11 nouveaux tests.
 - **2026-11-10 — Profils des joueurs (§4decies).** Avatar (illustration d'une carte possédée), bio de 200 caractères, vitrine de 6 cartes, statistiques, page `/profil/<pseudo>`, avatars dans la navigation et le marché. Migration 0010. 9 tests.
+- **2026-11-13 — Mini-jeux (§4tervicies).** « Devine le champion » (classique, capacité, illustration ; un champion par jour) et Memory avec les cartes de sa collection, qui rapportent des éclats (Memory plafonné à 30 par jour). Migration 0019. 11 nouveaux tests (317 au total).
 - **2026-11-12 — Fabrication ×10, barre du récapitulatif toujours en bas (§4duovicies).** Fabriquer une carte coûte 40 × sa valeur de recyclage (au lieu de 4 ×). Barre « Ouvrir un autre » collée en bas de l'écran même avec peu de cartes (colonne flex + `margin-top: auto`, toujours sticky quand la liste défile).
 - **2026-11-12 — Booster à 200 éclats (§4duovicies).** Au lieu de 100.
 - **2026-11-12 — Recyclage sélectif, Rares à 5 éclats (§4duovicies).** Choix par catégorie, avec ou sans les foils, carte par carte. 1 nouveau test (306 au total).

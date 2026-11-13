@@ -21,6 +21,9 @@ import { PageEchanges } from "./pages/page-echanges";
 import { PageNouvelEchange } from "./pages/page-nouvel-echange";
 import { PageInscription } from "./pages/page-inscription";
 import { PageMarche } from "./pages/page-marche";
+import { PageDevineChampion } from "./pages/page-devine-champion";
+import { PageMemory } from "./pages/page-memory";
+import { PageMiniJeux } from "./pages/page-mini-jeux";
 import { PageProfil } from "./pages/page-profil";
 import { PageReinitialisation } from "./pages/page-reinitialisation";
 
@@ -120,6 +123,13 @@ function Page({
   if (chemin === "/collection") return <PageCollection />;
   if (chemin === "/jouer" || chemin === "/decks") return <PageDecks />;
   if (chemin === "/apprendre") return <PageApprendre />;
+  if (chemin === "/minijeux") return <PageMiniJeux />;
+  if (chemin === "/minijeux/memory") return <PageMemory />;
+  if (chemin === "/minijeux/champion") return <PageDevineChampion key="classique" mode="classique" />;
+  if (chemin === "/minijeux/champion/capacite" || chemin === "/minijeux/champion/illustration" || chemin === "/minijeux/champion/classique") {
+    const mode = chemin.slice("/minijeux/champion/".length) as "classique" | "capacite" | "illustration";
+    return <PageDevineChampion key={mode} mode={mode} />;
+  }
   if (chemin === "/tutoriel") return <PageTutoriel pseudo={compte.pseudo} />;
   if (/^\/table\/[A-Z0-9]{8}$/.test(chemin)) {
     const code = chemin.slice("/table/".length);
