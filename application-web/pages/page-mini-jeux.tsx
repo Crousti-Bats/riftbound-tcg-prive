@@ -24,7 +24,9 @@ export function PageMiniJeux() {
       <header className="entete">
         <div>
           <h1>Mini-jeux</h1>
-          <p className="aide">Un nouveau champion à deviner chaque jour à minuit. Chaque victoire rapporte des éclats 💎.</p>
+          <p className="aide">
+            Chaque jour à minuit, un nouveau champion de League of Legends à deviner dans 4 modes. Chaque victoire rapporte des éclats 💎.
+          </p>
         </div>
       </header>
       {erreur && <p className="message-erreur">{erreur}</p>}

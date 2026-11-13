@@ -28,6 +28,20 @@
 }
 .mj-illustration img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease, transform-origin 0.6s ease; }
 
+.mj-icone { width: 34px; height: 34px; border-radius: 6px; flex: none; object-fit: cover; box-shadow: 0 0 0 1px var(--bordure-or); }
+.mj-icone-grande { width: 120px; height: 120px; border-radius: 12px; box-shadow: 0 0 0 2px var(--bordure-or), 0 8px 24px rgba(0, 0, 0, 0.45); }
+.mj-icone-vide { display: inline-grid; place-items: center; font-weight: 800; color: var(--accent-texte); background: var(--accent); }
+.mj-tableau td.mj-champion .mj-icone { vertical-align: middle; margin-right: 8px; }
+.mj-hier .mj-icone, .mj-essais .mj-icone { width: 28px; height: 28px; }
+
+.mj-emojis { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.mj-emoji {
+  display: grid; place-items: center; width: 56px; height: 56px; font-size: 2rem; border-radius: var(--rayon-petit);
+  background: var(--fond-champ); border: 1px solid var(--bordure-or); animation: mj-apparait 0.35s ease both;
+}
+.mj-emoji.cache { color: var(--texte-doux); font-size: 1.3rem; font-weight: 800; border-style: dashed; border-color: var(--bordure-forte); animation: none; }
+@keyframes mj-apparait { from { transform: scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
 .mj-recherche { position: relative; display: flex; flex-direction: column; gap: 8px; max-width: 520px; width: 100%; margin: 0 auto; }
 .mj-suggestions {
   list-style: none; margin: 0; padding: 4px; display: flex; flex-direction: column; gap: 2px;
@@ -44,7 +58,6 @@
 .mj-tableau tbody tr:not(:first-child) td.mj-case { animation: none; }
 .mj-tableau tbody tr:hover td { background: unset; }
 .mj-tableau td.mj-champion { text-align: left; background: var(--fond-champ); }
-.mj-tableau td.mj-champion .avatar { display: inline-grid; vertical-align: middle; margin-right: 8px; }
 .mj-juste { background: rgba(76, 175, 122, 0.85) !important; color: #fff; }
 .mj-partiel { background: rgba(232, 121, 42, 0.85) !important; color: #fff; }
 .mj-faux { background: rgba(224, 86, 91, 0.75) !important; color: #fff; }
@@ -94,7 +107,8 @@
   .mj-grille { gap: 6px; }
   .mj-tableau th, .mj-tableau td { padding: 6px 5px; font-size: 0.76rem; white-space: normal; }
   .mj-tableau td.mj-champion { min-width: 96px; }
-  .mj-tableau td.mj-champion .avatar { width: 26px; height: 26px; margin-right: 4px; }
+  .mj-tableau td.mj-champion .mj-icone { width: 26px; height: 26px; margin-right: 4px; }
+  .mj-emoji { width: 48px; height: 48px; font-size: 1.7rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mj-carte-interieur, .mj-illustration img { transition: none; }

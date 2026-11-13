@@ -17,16 +17,17 @@ import type { CarteCatalogue, Catalogue } from "../catalogue/types-catalogue";
 import { lireCorps } from "../lecture-requete";
 import { compterTentative, REGLES } from "../securite/limitation-tentatives";
 import type { ContexteApi } from "../types-application";
+import { CHAMPIONS_LOL, type ChampionLol, championLol } from "./champions-lol";
 import {
   centreDuZoom,
-  type Champion,
   championDeLaCarte,
+  championsRiftbound,
   comparer,
+  emojisVisibles,
   gainDevinette,
   gainMemory,
   jourDeParis,
   jourPrecedent,
-  listerChampions,
   type Mode,
   MODES,
   PAIRES_MEMORY,
@@ -40,7 +41,8 @@ export const routesMiniJeux = new Hono<ContexteApi>();
 routesMiniJeux.use("*", exigerConnexion);
 
 const schemaMode = z.enum(MODES);
-const schemaCode = z.string().regex(/^[a-z0-9-]{3,40}$/);
+/** Identifiant Data Dragon d'un champion (ex. « XinZhao »). */
+const schemaChampion = z.string().regex(/^[A-Za-z]{2,20}$/);
 
 function idCompte(c: Context<ContexteApi>): number {
   const compte = c.get("compte");
@@ -50,51 +52,59 @@ function idCompte(c: Context<ContexteApi>): number {
 
 const tirer = <T>(liste: readonly T[], alea: Aleatoire): T | undefined => liste[Math.floor(alea() * liste.length)];
 
-const vignette = (ch: Champion) => ({ id: ch.id, nom: ch.nom, image: ch.image });
+const vignette = (ch: ChampionLol) => ({ id: ch.id, nom: ch.nom, image: ch.image });
 
 // ---------- Défi du jour ----------
 
 interface Defi {
-  /** Carte réponse : Légende (classique, capacité) ou carte illustrée (illustration). */
-  carte: CarteCatalogue;
-  champion: Champion;
+  champion: ChampionLol;
+  /** Carte Riftbound montrée en indice (modes « capacite » et « illustration »). */
+  carte: CarteCatalogue | null;
 }
 
-/** Choisit la carte réponse d'un mode pour un champion tiré au hasard (jamais celui de la veille). */
-function choisirReponse(champions: readonly Champion[], mode: Mode, exclu: string | null, alea: Aleatoire): CarteCatalogue | null {
-  const candidats = champions.filter((ch) => {
-    if (ch.nom === exclu) return false;
-    if (mode === "capacite") return ch.legendes.some((l) => (l.texte ?? "").trim().length > 0);
-    if (mode === "illustration") return ch.illustrations.length > 0;
-    return true;
+const aUnTexte = (l: CarteCatalogue) => (l.texte ?? "").trim().length > 0;
+
+/**
+ * Tire la réponse d'un mode (jamais le champion de la veille). Ce qui est enregistré : l'identifiant du champion LoL
+ * (classique, emoji) ou le cardCode de la carte Riftbound montrée (capacité, illustration).
+ */
+function choisirReponse(catalogue: Catalogue, mode: Mode, exclu: string | null, alea: Aleatoire): string | null {
+  if (mode === "classique" || mode === "emoji") return tirer(CHAMPIONS_LOL.filter((ch) => ch.id !== exclu), alea)?.id ?? null;
+  const candidats = championsRiftbound(catalogue).filter((ch) => {
+    if (ch.lol.id === exclu) return false;
+    return mode === "capacite" ? ch.legendes.some(aUnTexte) : ch.illustrations.length > 0;
   });
   const champion = tirer(candidats, alea);
   if (!champion) return null;
-  if (mode === "capacite") return tirer(champion.legendes.filter((l) => (l.texte ?? "").trim().length > 0), alea) ?? null;
-  if (mode === "illustration") return tirer(champion.illustrations, alea) ?? null;
-  return champion.legendes[0] ?? null;
+  return (mode === "capacite" ? tirer(champion.legendes.filter(aUnTexte), alea) : tirer(champion.illustrations, alea))?.code ?? null;
 }
+
+/** Ce que désigne une réponse enregistrée (null si elle n'existe plus dans les données). */
+function lireReponse(catalogue: Catalogue, mode: Mode, reponse: string): Defi | null {
+  if (mode === "classique" || mode === "emoji") {
+    const champion = championLol(reponse);
+    return champion ? { champion, carte: null } : null;
+  }
+  const carte = catalogue.cartes.find((c) => c.code === reponse);
+  const champion = carte ? championDeLaCarte(championsRiftbound(catalogue), carte.code) : null;
+  return carte && champion ? { champion: champion.lol, carte } : null;
+}
+
+const lireDefi = (base: D1Database, jour: string, mode: Mode) =>
+  base.prepare("SELECT reponse FROM defis_du_jour WHERE jour = ? AND mode = ?").bind(jour, mode).first<{ reponse: string }>();
 
 /** Le défi d'un jour : lu en base, ou tiré puis enregistré à la première visite (INSERT OR IGNORE : un seul gagnant). */
 async function defiDuJour(base: D1Database, catalogue: Catalogue, jour: string, mode: Mode): Promise<Defi | null> {
-  const champions = listerChampions(catalogue);
-  const parCode = new Map(catalogue.cartes.map((c) => [c.code, c]));
-  const lire = () => base.prepare("SELECT reponse FROM defis_du_jour WHERE jour = ? AND mode = ?").bind(jour, mode).first<{ reponse: string }>();
-  let ligne = await lire();
+  let ligne = await lireDefi(base, jour, mode);
   if (!ligne) {
-    const hier = await base
-      .prepare("SELECT reponse FROM defis_du_jour WHERE jour = ? AND mode = ?")
-      .bind(jourPrecedent(jour), mode)
-      .first<{ reponse: string }>();
-    const exclu = hier ? (championDeLaCarte(champions, hier.reponse)?.nom ?? null) : null;
-    const carte = choisirReponse(champions, mode, exclu, aleatoireCrypto());
-    if (!carte) return null;
-    await base.prepare("INSERT OR IGNORE INTO defis_du_jour (jour, mode, reponse) VALUES (?, ?, ?)").bind(jour, mode, carte.code).run();
-    ligne = await lire();
+    const hier = await lireDefi(base, jourPrecedent(jour), mode);
+    const exclu = hier ? (lireReponse(catalogue, mode, hier.reponse)?.champion.id ?? null) : null;
+    const reponse = choisirReponse(catalogue, mode, exclu, aleatoireCrypto());
+    if (!reponse) return null;
+    await base.prepare("INSERT OR IGNORE INTO defis_du_jour (jour, mode, reponse) VALUES (?, ?, ?)").bind(jour, mode, reponse).run();
+    ligne = await lireDefi(base, jour, mode);
   }
-  const carte = ligne ? parCode.get(ligne.reponse) : undefined;
-  const champion = carte ? championDeLaCarte(champions, carte.code) : null;
-  return carte && champion ? { carte, champion } : null;
+  return ligne ? lireReponse(catalogue, mode, ligne.reponse) : null;
 }
 
 interface LigneDevinette {
@@ -113,12 +123,20 @@ const lireEssais = (texte: string | undefined): string[] => {
   }
 };
 
+function indiceDu(mode: Mode, defi: Defi, jour: string, erreurs: number, trouve: boolean, catalogue: Catalogue) {
+  if (mode === "emoji") return { emojis: emojisVisibles(defi.champion, erreurs, trouve), total: defi.champion.emojis.length };
+  if (mode === "capacite" && defi.carte) {
+    const champion = championsRiftbound(catalogue).find((ch) => ch.lol.id === defi.champion.id);
+    return { texte: champion ? texteMasque(defi.carte, champion) : "" };
+  }
+  if (mode === "illustration" && defi.carte) return { centre: centreDuZoom(jour, defi.carte.code), zoom: zoomIllustration(erreurs, trouve) };
+  return null;
+}
+
 /** Tout l'état d'un mode pour aujourd'hui, tel que l'affiche la page (jamais la réponse avant qu'elle soit trouvée). */
 async function etatDevinette(base: D1Database, catalogue: Catalogue, compteId: number, mode: Mode, jour: string) {
   const defi = await defiDuJour(base, catalogue, jour, mode);
   if (!defi) return null;
-  const champions = listerChampions(catalogue);
-  const parId = new Map(champions.map((ch) => [ch.id, ch]));
   const [ligne, trouves, hier] = await base.batch([
     base.prepare("SELECT essais, nb_essais, trouve, gain FROM devinettes WHERE compte_id = ? AND jour = ? AND mode = ?").bind(compteId, jour, mode),
     base.prepare("SELECT COUNT(*) AS n FROM devinettes WHERE jour = ? AND mode = ? AND trouve = 1").bind(jour, mode),
@@ -127,14 +145,14 @@ async function etatDevinette(base: D1Database, catalogue: Catalogue, compteId: n
   const moi = ligne?.results[0] as LigneDevinette | undefined;
   const trouve = moi?.trouve === 1;
   const essais = lireEssais(moi?.essais).flatMap((id) => {
-    const ch = parId.get(id);
+    const ch = championLol(id);
     if (!ch) return [];
-    const juste = ch.nom === defi.champion.nom;
+    const juste = ch.id === defi.champion.id;
     return [{ champion: vignette(ch), juste, ...(mode === "classique" ? { comparaison: comparer(ch, defi.champion) } : {}) }];
   });
   const erreurs = essais.filter((e) => !e.juste).length;
   const reponseHier = (hier?.results[0] as { reponse: string } | undefined)?.reponse;
-  const championHier = reponseHier ? championDeLaCarte(champions, reponseHier) : null;
+  const championHier = reponseHier ? lireReponse(catalogue, mode, reponseHier)?.champion : null;
   return {
     jour,
     mode,
@@ -145,14 +163,9 @@ async function etatDevinette(base: D1Database, catalogue: Catalogue, compteId: n
     gainPossible: trouve ? 0 : gainDevinette(mode, essais.length + 1),
     trouvesAujourdhui: (trouves?.results[0] as { n: number } | undefined)?.n ?? 0,
     hier: championHier ? vignette(championHier) : null,
-    indice:
-      mode === "capacite"
-        ? { texte: texteMasque(defi.carte, defi.champion) }
-        : mode === "illustration"
-          ? { centre: centreDuZoom(jour, defi.carte.code), zoom: zoomIllustration(erreurs, trouve) }
-          : null,
+    indice: indiceDu(mode, defi, jour, erreurs, trouve, catalogue),
     reponse: trouve
-      ? { ...vignette(defi.champion), carte: { code: defi.carte.code, nom: defi.carte.nom, image: defi.carte.image } }
+      ? { ...vignette(defi.champion), carte: defi.carte ? { code: defi.carte.code, nom: defi.carte.nom, image: defi.carte.image } : null }
       : null,
   };
 }
@@ -184,14 +197,13 @@ routesMiniJeux.get("/", async (c) => {
 
 /** La liste des champions qu'on peut proposer (pour la recherche). */
 routesMiniJeux.get("/champions", async (c) => {
-  const catalogue = await obtenirCatalogue();
-  return c.json({ champions: listerChampions(catalogue).map(vignette) });
+  return c.json({ champions: CHAMPIONS_LOL.map(vignette) });
 });
 
 routesMiniJeux.get("/devinette/illustration/image", async (c) => {
   const catalogue = await obtenirCatalogue();
   const defi = await defiDuJour(c.env.BASE_DE_DONNEES, catalogue, jourDeParis(Date.now()), "illustration");
-  if (!defi || !defi.carte.image.startsWith(PREFIXE_IMAGES)) return c.json({ erreur: "defi_indisponible" }, 503);
+  if (!defi?.carte || !defi.carte.image.startsWith(PREFIXE_IMAGES)) return c.json({ erreur: "defi_indisponible" }, 503);
   // Adresse fixe du CDN officiel, venue du catalogue (jamais du client) : pas de SSRF possible.
   const image = await fetch(`${defi.carte.image}?w=744&fm=webp`).catch(() => null);
   const type = image?.headers.get("Content-Type") ?? "";
@@ -213,14 +225,14 @@ routesMiniJeux.post("/devinette/:mode/essai", async (c) => {
   const base = c.env.BASE_DE_DONNEES;
   const mode = schemaMode.safeParse(c.req.param("mode"));
   if (!mode.success) return c.json({ erreur: "donnees_invalides" }, 400);
-  const corps = await lireCorps(c, z.object({ champion: schemaCode }).strict());
+  const corps = await lireCorps(c, z.object({ champion: schemaChampion }).strict());
   if (!corps.ok) return corps.reponse;
 
   const catalogue = await obtenirCatalogue();
   const jour = jourDeParis(Date.now());
   const defi = await defiDuJour(base, catalogue, jour, mode.data);
   if (!defi) return c.json({ erreur: "defi_indisponible" }, 503);
-  const propose = listerChampions(catalogue).find((ch) => ch.id === corps.donnees.champion);
+  const propose = championLol(corps.donnees.champion);
   if (!propose) return c.json({ erreur: "champion_inconnu" }, 400);
 
   const ligne = await base
@@ -232,7 +244,7 @@ routesMiniJeux.post("/devinette/:mode/essai", async (c) => {
   if (essais.includes(propose.id)) return c.json({ erreur: "deja_propose" }, 409);
 
   const nb = (ligne?.nb_essais ?? 0) + 1;
-  const juste = propose.nom === defi.champion.nom;
+  const juste = propose.id === defi.champion.id;
   const gain = juste ? gainDevinette(mode.data, nb) : 0;
   const cle = [moi, jour, mode.data] as const;
   // Un seul lot : l'essai n'est enregistré que si personne n'a joué entre-temps (nb_essais inchangé),

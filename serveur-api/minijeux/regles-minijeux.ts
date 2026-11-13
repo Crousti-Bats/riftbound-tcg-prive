@@ -1,53 +1,26 @@
 /**
- * Règles des mini-jeux (demandé le 2026-11-13), sans accès à la base : tout se calcule à partir du catalogue.
+ * Règles des mini-jeux (demandé le 2026-11-13), sans accès à la base.
  *
- * « Devine le champion » : chaque jour, un champion à trouver dans trois modes.
- * - classique : chaque proposition est comparée à la réponse, colonne par colonne (vert, orange, rouge, flèches) ;
- * - capacite : le texte de la Légende du champion, nom masqué ;
- * - illustration : une illustration du champion, très zoomée, qui se dézoome à chaque erreur.
- * Un champion = un nom porté par une unité « Champion » ET par au moins une Légende (56 dans les données actuelles).
+ * « Devine le champion », sur le modèle des jeux « -dle » : chaque jour, un champion à trouver dans quatre modes.
+ * On peut proposer n'importe lequel des champions de League of Legends (table champions-lol.ts).
+ * - classique : chaque proposition est comparée à la réponse, colonne par colonne (genre, postes, espèces, ressource,
+ *   portée, régions, année de sortie) : vert, orange, rouge, flèches ;
+ * - emoji : des emojis qui décrivent le champion, un de plus à chaque erreur ;
+ * - capacite : le texte de la Légende Riftbound du champion, nom masqué ;
+ * - illustration : une illustration Riftbound du champion, très zoomée, qui se dézoome à chaque erreur.
+ * Pour les deux derniers modes, la réponse est un champion qui a une Légende Riftbound (57 dans les données actuelles).
  */
 import { SETS_CONNUS } from "../catalogue/classification-cartes";
 import type { CarteCatalogue, Catalogue } from "../catalogue/types-catalogue";
+import { type ChampionLol, championLolDuNom } from "./champions-lol";
 
-export const MODES = ["classique", "capacite", "illustration"] as const;
+export const MODES = ["classique", "emoji", "capacite", "illustration"] as const;
 export type Mode = (typeof MODES)[number];
 
-/** Régions de Runeterra présentes dans les tags des cartes. */
-export const REGIONS = [
-  "Bandle City",
-  "Bilgewater",
-  "Demacia",
-  "Freljord",
-  "Ionia",
-  "Ixtal",
-  "Mount Targon",
-  "Noxus",
-  "Piltover",
-  "Shadow Isles",
-  "Shurima",
-  "The Void",
-  "Zaun",
-] as const;
-const ENSEMBLE_REGIONS = new Set<string>(REGIONS);
-
-export interface Champion {
-  /** Identifiant du champion : cardCode de sa première Légende (ordre de sortie des sets). */
-  id: string;
-  nom: string;
-  /** Illustration de sa première Légende (vignette de la liste). */
-  image: string;
+/** Un champion présent dans les cartes Riftbound (modes « capacite » et « illustration »). */
+export interface ChampionRiftbound {
+  lol: ChampionLol;
   legendes: CarteCatalogue[];
-  domaines: string[];
-  regions: string[];
-  /** Set de sa première Légende. */
-  sortie: string;
-  /** Coût en énergie de sa version la moins chère. */
-  energie: number | null;
-  /** Might de sa version la plus forte. */
-  might: number | null;
-  /** Nombre de cartes à son nom (versions de base). */
-  cartes: number;
   /** Cartes dont l'illustration peut servir au mode « illustration » (Légendes et unités du champion, portrait). */
   illustrations: CarteCatalogue[];
 }
@@ -56,59 +29,43 @@ const ordreSet = (set: string) => SETS_CONNUS[set]?.ordre ?? 99;
 const parOrdre = (a: CarteCatalogue, b: CarteCatalogue) =>
   ordreSet(a.set) - ordreSet(b.set) || a.numero.localeCompare(b.numero, "en", { numeric: true });
 
-const cache = new WeakMap<Catalogue, Champion[]>();
+const cache = new WeakMap<Catalogue, ChampionRiftbound[]>();
 
-/** Les champions jouables du catalogue, triés par nom (calcul mis en cache par catalogue). */
-export function listerChampions(catalogue: Catalogue): Champion[] {
+/** Les champions qui ont une Légende Riftbound, reliés à leur fiche LoL (calcul mis en cache par catalogue). */
+export function championsRiftbound(catalogue: Catalogue): ChampionRiftbound[] {
   const deja = cache.get(catalogue);
   if (deja) return deja;
   const cartes = catalogue.cartes;
-  const unites = cartes.filter((c) => c.type === "Unit" && c.etiquettes.includes("Champion") && c.variante === "base");
-  const noms = new Set(unites.map((u) => u.nom));
+  const estUniteChampion = (c: CarteCatalogue) => c.type === "Unit" && c.etiquettes.includes("Champion");
+  const noms = new Set(cartes.filter((c) => estUniteChampion(c) && c.variante === "base").map((u) => u.nom));
   const legendesParNom = new Map<string, CarteCatalogue[]>();
   for (const l of cartes.filter((c) => c.type === "Legend" && c.variante === "base").sort(parOrdre)) {
     const nom = l.tags.find((t) => noms.has(t));
     if (nom) legendesParNom.set(nom, [...(legendesParNom.get(nom) ?? []), l]);
   }
-  const champions: Champion[] = [];
+  const champions: ChampionRiftbound[] = [];
   for (const [nom, legendes] of legendesParNom) {
-    const premiere = legendes[0];
-    if (!premiere) continue;
-    const sesUnites = unites.filter((u) => u.nom === nom);
-    const energies = sesUnites.map((u) => u.energie).filter((n): n is number => n !== null);
-    const mights = sesUnites.map((u) => u.force).filter((n): n is number => n !== null);
-    const regions = [...new Set(sesUnites.flatMap((u) => u.tags.filter((t) => ENSEMBLE_REGIONS.has(t))))].sort();
-    const aSonNom = cartes.filter((c) => c.tags.includes(nom));
-    champions.push({
-      id: premiere.code,
-      nom,
-      image: premiere.image,
-      legendes,
-      domaines: [...premiere.domaines],
-      regions,
-      sortie: premiere.set,
-      energie: energies.length ? Math.min(...energies) : null,
-      might: mights.length ? Math.max(...mights) : null,
-      cartes: aSonNom.filter((c) => c.variante === "base").length,
-      illustrations: aSonNom
-        .filter((c) => (c.type === "Legend" || (c.type === "Unit" && c.etiquettes.includes("Champion"))) && c.orientation === "portrait")
-        .sort(parOrdre),
-    });
+    const lol = championLolDuNom(nom);
+    if (!lol) continue;
+    const illustrations = cartes
+      .filter((c) => c.tags.includes(nom) && (c.type === "Legend" || estUniteChampion(c)) && c.orientation === "portrait")
+      .sort(parOrdre);
+    champions.push({ lol, legendes, illustrations });
   }
-  champions.sort((a, b) => a.nom.localeCompare(b.nom, "en"));
+  champions.sort((a, b) => a.lol.nom.localeCompare(b.lol.nom, "fr"));
   cache.set(catalogue, champions);
   return champions;
 }
 
 /** Le champion d'une carte réponse (Légende ou carte illustrée), ou null si elle n'appartient à aucun champion. */
-export function championDeLaCarte(champions: readonly Champion[], code: string): Champion | null {
-  return champions.find((ch) => ch.id === code || ch.legendes.some((l) => l.code === code) || ch.illustrations.some((c) => c.code === code)) ?? null;
+export function championDeLaCarte(champions: readonly ChampionRiftbound[], code: string): ChampionRiftbound | null {
+  return champions.find((ch) => ch.legendes.some((l) => l.code === code) || ch.illustrations.some((c) => c.code === code)) ?? null;
 }
 
 // ---------- Comparaison (mode classique) ----------
 
 export type Etat = "juste" | "partiel" | "faux";
-/** Pour un nombre ou un set : la réponse est-elle plus haut ou plus bas que la proposition ? */
+/** Pour l'année : la réponse est-elle plus récente ou plus ancienne que la proposition ? */
 export type Sens = "plus" | "moins" | null;
 
 export interface Colonne<V> {
@@ -118,12 +75,13 @@ export interface Colonne<V> {
 }
 
 export interface Comparaison {
-  domaines: Colonne<string[]>;
+  genre: Colonne<string>;
+  postes: Colonne<string[]>;
+  especes: Colonne<string[]>;
+  ressource: Colonne<string>;
+  portee: Colonne<string[]>;
   regions: Colonne<string[]>;
-  sortie: Colonne<string>;
-  energie: Colonne<number | null>;
-  might: Colonne<number | null>;
-  cartes: Colonne<number>;
+  annee: Colonne<number>;
 }
 
 export function comparerEnsembles(propose: readonly string[], reponse: readonly string[]): Etat {
@@ -133,22 +91,28 @@ export function comparerEnsembles(propose: readonly string[], reponse: readonly 
   return [...a].some((x) => b.has(x)) ? "partiel" : "faux";
 }
 
-export function comparerNombres(propose: number | null, reponse: number | null): Colonne<number | null> {
-  if (propose === reponse) return { valeur: propose, etat: "juste", sens: null };
-  if (propose === null || reponse === null) return { valeur: propose, etat: "faux", sens: null };
-  return { valeur: propose, etat: "faux", sens: reponse > propose ? "plus" : "moins" };
+const egal = <V>(propose: V, reponse: V): Colonne<V> => ({ valeur: propose, etat: propose === reponse ? "juste" : "faux" });
+const ensemble = (propose: string[], reponse: string[]): Colonne<string[]> => ({ valeur: propose, etat: comparerEnsembles(propose, reponse) });
+
+export function comparer(propose: ChampionLol, reponse: ChampionLol): Comparaison {
+  return {
+    genre: egal(propose.genre, reponse.genre),
+    postes: ensemble(propose.postes, reponse.postes),
+    especes: ensemble(propose.especes, reponse.especes),
+    ressource: egal(propose.ressource, reponse.ressource),
+    portee: ensemble(propose.portee, reponse.portee),
+    regions: ensemble(propose.regions, reponse.regions),
+    annee: {
+      valeur: propose.annee,
+      etat: propose.annee === reponse.annee ? "juste" : "faux",
+      sens: propose.annee === reponse.annee ? null : reponse.annee > propose.annee ? "plus" : "moins",
+    },
+  };
 }
 
-export function comparer(propose: Champion, reponse: Champion): Comparaison {
-  const sortie = ordreSet(reponse.sortie) - ordreSet(propose.sortie);
-  return {
-    domaines: { valeur: propose.domaines, etat: comparerEnsembles(propose.domaines, reponse.domaines) },
-    regions: { valeur: propose.regions, etat: comparerEnsembles(propose.regions, reponse.regions) },
-    sortie: { valeur: propose.sortie, etat: sortie === 0 ? "juste" : "faux", sens: sortie === 0 ? null : sortie > 0 ? "plus" : "moins" },
-    energie: comparerNombres(propose.energie, reponse.energie),
-    might: comparerNombres(propose.might, reponse.might),
-    cartes: comparerNombres(propose.cartes, reponse.cartes) as Colonne<number>,
-  };
+/** Mode emoji : 1 emoji au départ, 1 de plus à chaque erreur ; tous une fois le champion trouvé. */
+export function emojisVisibles(champion: ChampionLol, erreurs: number, trouve: boolean): string[] {
+  return trouve ? champion.emojis : champion.emojis.slice(0, Math.min(champion.emojis.length, 1 + erreurs));
 }
 
 // ---------- Indices des modes « capacite » et « illustration » ----------
@@ -156,9 +120,10 @@ export function comparer(propose: Champion, reponse: Champion): Comparaison {
 const echapper = (texte: string) => texte.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Texte de la Légende, avec le nom du champion et celui de la Légende masqués. */
-export function texteMasque(legende: CarteCatalogue, champion: Champion): string {
+export function texteMasque(legende: CarteCatalogue, champion: ChampionRiftbound): string {
   let texte = legende.texte ?? "";
-  for (const nom of [champion.nom, legende.nom]) texte = texte.replace(new RegExp(echapper(nom), "gi"), "???");
+  const nomsDuChampion = legende.tags.filter((t) => championLolDuNom(t)?.id === champion.lol.id);
+  for (const nom of [...nomsDuChampion, champion.lol.nom, legende.nom]) texte = texte.replace(new RegExp(echapper(nom), "gi"), "???");
   return texte;
 }
 
@@ -189,6 +154,7 @@ export function zoomIllustration(erreurs: number, trouve: boolean): number {
 /** Gain d'un défi trouvé, selon le nombre d'essais (le 1er essai rapporte le maximum). */
 export const GAINS_DEVINETTE: Record<Mode, { max: number; min: number; pas: number }> = {
   classique: { max: 30, min: 10, pas: 2 },
+  emoji: { max: 15, min: 5, pas: 1 },
   capacite: { max: 15, min: 5, pas: 1 },
   illustration: { max: 15, min: 5, pas: 1 },
 };

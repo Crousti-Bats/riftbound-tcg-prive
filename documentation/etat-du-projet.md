@@ -409,28 +409,48 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 
 ## 4tervicies. Mini-jeux : « Devine le champion » et Memory (demandé le 2026-11-13)
 
-- Demande : « on peut ajouter des minijeux ? » puis « memory, je veux un loldle » (« le même jeu que loldle.net »), avec des éclats plafonnés. On reprend le **principe** des jeux « -dle » (un champion par jour, indices colorés à chaque essai) avec les données Riftbound. On ne copie ni le nom, ni l'apparence, ni les textes de Loldle.
-- **Page `/minijeux`** (onglet « Jouer », raccourci sur l'accueil et sur la page Jouer) : l'état du jour de chaque mode et les éclats gagnés au Memory.
-- **Devine le champion** (`/minijeux/champion/<mode>`) : 57 champions (un nom porté par une unité « Champion » ET par une Légende), le même pour tous les joueurs, qui change à **minuit heure de Paris**. Il n'est jamais le même que la veille. Trois modes, chacun avec son propre champion :
-  - **Classique** : tableau des essais, avec une case par colonne : domaines (de la Légende), région, sortie (set de la première Légende), énergie (version la moins chère), Might (version la plus forte), nombre de cartes. Vert = juste, orange = en partie, rouge = faux, ↑/↓ = la réponse est plus haute ou plus basse (ou sortie plus tard ou plus tôt).
-  - **Capacité** : le texte de la Légende, avec le nom du champion masqué (« ??? »).
-  - **Illustration** : une illustration du champion (Légende ou unité), zoomée ×5 au départ, puis −0,5 à chaque erreur.
-  - Recherche avec suggestions (sans accents ni apostrophes : « khazix » trouve Kha'Zix), « N joueurs ont trouvé aujourd'hui », champion de la veille.
-- **Memory** (`/minijeux/memory`) : 8 paires (16 cases) tirées de **ma collection** (complétée par le catalogue s'il manque des cartes ; ni runes, ni tokens, ni terrains). Les parties sont illimitées.
-- **Gains** (dans `serveur-api/minijeux/regles-minijeux.ts`) : Classique 30 💎 au 1er essai, −2 par essai, 10 au minimum ; Capacité et Illustration 15, −1 par essai, 5 au minimum. Memory : 10 💎 en 12 coups ou moins, 6 en 16, 3 au-delà, **plafond de 30 💎 par jour**. Au maximum, cela fait 90 💎 par jour (un booster coûte 200).
+- **Demande** : « on peut ajouter des minijeux ? », puis « memory, je veux un loldle » (« le même jeu que loldle.net »), avec des éclats plafonnés. Après un premier test : « absolument comme le Loldle », avec le mode Emoji et « tous les champions de LoL » (« je rentre Xin Zhao, ça me dit Noxus, Demacia, Ionia »).
+- **Ce qu'on reprend de Loldle** : les **règles** (un champion par jour, colonnes colorées, modes). On ne reprend ni le nom, ni l'apparence, ni les textes du site Loldle : la page garde le style du site.
+- **Page `/minijeux`** : accessible depuis l'onglet « Jouer », par un raccourci sur l'accueil et sur la page Jouer. Elle montre l'état du jour de chaque mode et les éclats gagnés au Memory.
+- **Devine le champion** (`/minijeux/champion/<mode>`) : on peut proposer **n'importe lequel des 173 champions de LoL**. Le champion du jour est le même pour tous les joueurs. Il change à **minuit heure de Paris** et n'est jamais celui de la veille. Quatre modes, chacun avec son propre champion :
+  - **Classique** (parmi les 173) : une ligne par essai, colonnes Genre, Poste(s), Espèce(s), Ressource, Portée, Région(s), Année. Vert = juste, orange = en partie (au moins une valeur en commun), rouge = faux. Pour l'année, ↑ = le champion du jour est sorti plus tard, ↓ = plus tôt.
+  - **Emoji** (parmi les 173) : 5 emojis par champion. Un seul est visible au départ, et un de plus apparaît à chaque erreur.
+  - **Capacité** (parmi les 57 champions qui ont une Légende Riftbound) : le texte de la Légende, avec le nom masqué (« ??? »).
+  - **Illustration** (parmi les mêmes 57) : une illustration Riftbound du champion, zoomée ×5 au départ, puis −0,5 à chaque erreur.
+  - Autour du jeu : recherche avec suggestions et icônes (sans accents ni apostrophes : « khazix » trouve Kha'Zix), « N joueurs ont trouvé aujourd'hui », champion de la veille.
+- **Table des champions** (`serveur-api/minijeux/champions-lol.ts`) :
+  - C'est une table fixe, sans rapport avec les cartes, qui n'est pas en base.
+  - Le nom français, la ressource et la portée viennent du Data Dragon de Riot (16.22.1).
+  - Le genre, les postes, les espèces, les régions, l'année et les emojis sont **écrits à la main** : s'il y a une erreur, on corrige la ligne du champion. **Locke** (sorti en 2026) a des valeurs provisoires à vérifier.
+  - Un test vérifie que la table est complète, sans doublon et avec 5 emojis par champion.
+- **Icônes** : elles viennent du CDN officiel `ddragon.leagueoflegends.com`, ajouté à la CSP (`img-src`, dans `serveur-api/entetes-securite.ts` et `application-web/fichiers-statiques/_headers`). Si une icône ne se charge pas, la page affiche l'initiale du champion.
+- **Memory** (`/minijeux/memory`) :
+  - 8 paires (16 cases) tirées de **ma collection**, complétée par le catalogue s'il manque des cartes.
+  - Ni runes, ni tokens, ni terrains.
+  - Les parties sont illimitées.
+- **Gains** (dans `serveur-api/minijeux/regles-minijeux.ts`) :
+  - Classique : 30 💎 au 1er essai, −2 par essai, 10 au minimum.
+  - Emoji, Capacité et Illustration : 15 💎, −1 par essai, 5 au minimum.
+  - Memory : 10 💎 en 12 coups ou moins, 6 en 16, 3 au-delà, avec un **plafond de 30 💎 par jour**.
+  - Au maximum, un joueur gagne 105 💎 par jour (un booster coûte 200).
 - **Anti-triche** (le dépôt est public) :
   - Le champion du jour est tiré par `crypto.getRandomValues` à la première visite du jour, puis figé en base (`defis_du_jour`). Une graine calculée à partir de la date donnerait la réponse.
-  - Le navigateur ne reçoit jamais la réponse avant de l'avoir trouvée : il envoie un champion, et le serveur compare.
+  - Le navigateur ne reçoit jamais la réponse avant de l'avoir trouvée : il envoie un champion, et le serveur compare. En mode Emoji, seuls les emojis déjà révélés sont envoyés.
   - L'illustration passe par le serveur (`GET /api/minijeux/devinette/illustration/image`), sans quoi son adresse trahirait la carte. Le serveur ne télécharge que l'adresse du CDN Riot venue du catalogue, ce qui exclut le SSRF.
   - La grille du Memory reste sur le serveur : une carte n'est envoyée qu'une fois retournée, et le serveur compte les coups.
-  - Gains crédités dans le même lot D1 que le coup gagnant, une seule fois (`gain_credite`), avec contrôle de concurrence sur le nombre d'essais et de coups (des réponses simultanées ne sont créditées qu'une fois).
-  - Limite de 60 parties de Memory par heure (`memory:compte:<id>`). Les essais sont naturellement limités à 57 par mode et par jour (un champion déjà proposé est refusé sans écriture).
-- **API** (`serveur-api/minijeux/routes-minijeux.ts`, connexion obligatoire) : `GET /api/minijeux` (résumé du jour), `GET /api/minijeux/champions`, `GET /api/minijeux/devinette/:mode`, `POST /api/minijeux/devinette/:mode/essai {champion}`, `GET /api/minijeux/devinette/illustration/image`, `POST /api/minijeux/memory`, `POST /api/minijeux/memory/:id/retourner {position}`.
-- **Base** : migration 0019 (`defis_du_jour`, `devinettes`, `parties_memory`), avec seulement des cardCode. Ménage à la connexion : parties de Memory et essais de plus de 7 jours.
+  - Les gains sont crédités dans le même lot D1 que le coup gagnant, une seule fois (`gain_credite`). Le nombre d'essais et de coups sert de contrôle de concurrence, donc des réponses simultanées ne sont créditées qu'une fois.
+  - Limite de 60 parties de Memory par heure (`memory:compte:<id>`). Les essais sont limités par nature à 173 par mode et par jour, car un champion déjà proposé est refusé sans écriture.
+- **API** (`serveur-api/minijeux/routes-minijeux.ts`, connexion obligatoire) :
+  - `GET /api/minijeux` : résumé du jour.
+  - `GET /api/minijeux/champions` : les 173 champions, avec leur icône.
+  - `GET /api/minijeux/devinette/:mode` et `POST /api/minijeux/devinette/:mode/essai {champion}` (identifiant Data Dragon, par exemple `XinZhao`).
+  - `GET /api/minijeux/devinette/illustration/image`.
+  - `POST /api/minijeux/memory` et `POST /api/minijeux/memory/:id/retourner {position}`.
+- **Base** : migration 0019 (`defis_du_jour`, `devinettes`, `parties_memory`). Elle ne contient que des cardCode et des identifiants de champions. Ménage à la connexion : les parties de Memory et les essais de plus de 7 jours sont supprimés.
 - **Vérifications** :
-  - 317 tests, dont 11 nouveaux : champions, comparaisons, gains, minuit à Paris (heure d'hiver et d'été), réponse jamais dévoilée, bonnes réponses simultanées créditées une fois, tirage figé et différent de la veille, grille sans rune, plafond du Memory, cases déjà retournées, partie d'un autre joueur.
-  - Vrai moteur local (migration 0019 appliquée) : Classique trouvé en 23 essais (+10), Capacité en 53 (+5), Memory en 13 coups (+6), illustration servie en WebP.
-  - Captures dans Chrome headless (PC et téléphone) : pages des mini-jeux, tableau coloré, recherche, Memory, aucune erreur dans la console.
+  - 319 tests, dont 13 nouveaux : table des champions, comparaisons, emojis, gains, minuit à Paris (heure d'hiver et d'été), réponse jamais dévoilée, bonnes réponses simultanées créditées une fois, tirage figé et différent de la veille, grille sans rune, plafond du Memory, cases déjà retournées, partie d'un autre joueur.
+  - Vrai moteur local (migration 0019 appliquée) : parties complètes, éclats crédités, illustration servie en WebP.
+  - Captures dans Chrome headless (PC et téléphone) : tableau façon Loldle avec icônes, mode Emoji, Memory, sans erreur dans la console.
 
 ## 5. Démarche DevSecOps
 
@@ -503,7 +523,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **2026-11-10 — Taux /2, ♥ sur les boosters, bulle de discussion, photo de profil (§4duodecies).** Migration 0013. 6 nouveaux tests.
 - **2026-11-10 — Boosters 10 max / 20 min, aperçu, annulation, wishlist, tri (§4undecies).** Migrations 0011 et 0012. 11 nouveaux tests.
 - **2026-11-10 — Profils des joueurs (§4decies).** Avatar (illustration d'une carte possédée), bio de 200 caractères, vitrine de 6 cartes, statistiques, page `/profil/<pseudo>`, avatars dans la navigation et le marché. Migration 0010. 9 tests.
-- **2026-11-13 — Mini-jeux (§4tervicies).** « Devine le champion » (classique, capacité, illustration ; un champion par jour) et Memory avec les cartes de sa collection, qui rapportent des éclats (Memory plafonné à 30 par jour). Migration 0019. 11 nouveaux tests (317 au total).
+- **2026-11-13 — Mini-jeux (§4tervicies).** « Devine le champion », sur les règles de Loldle : les 173 champions de LoL, 4 modes (classique, emoji, capacité, illustration), un champion par jour. Memory avec les cartes de sa collection. Les deux rapportent des éclats (Memory plafonné à 30 par jour). Migration 0019. 13 nouveaux tests (319 au total).
 - **2026-11-12 — Fabrication ×10, barre du récapitulatif toujours en bas (§4duovicies).** Fabriquer une carte coûte 40 × sa valeur de recyclage (au lieu de 4 ×). Barre « Ouvrir un autre » collée en bas de l'écran même avec peu de cartes (colonne flex + `margin-top: auto`, toujours sticky quand la liste défile).
 - **2026-11-12 — Booster à 200 éclats (§4duovicies).** Au lieu de 100.
 - **2026-11-12 — Recyclage sélectif, Rares à 5 éclats (§4duovicies).** Choix par catégorie, avec ou sans les foils, carte par carte. 1 nouveau test (306 au total).

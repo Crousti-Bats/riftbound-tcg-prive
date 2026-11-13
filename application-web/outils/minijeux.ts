@@ -1,7 +1,8 @@
 /** Mini-jeux côté navigateur : types des réponses de /api/minijeux et libellés en français. */
 
 export const MODES = [
-  { code: "classique", libelle: "Classique", icone: "?", texte: "Chaque essai te dit ce qui est juste : domaines, région, sortie, coût…" },
+  { code: "classique", libelle: "Classique", icone: "?", texte: "Chaque essai te dit ce qui est juste : genre, poste, espèce, région, année…" },
+  { code: "emoji", libelle: "Emoji", icone: "☺", texte: "Devine le champion à partir d'emojis : un de plus à chaque erreur." },
   { code: "capacite", libelle: "Capacité", icone: "✎", texte: "Retrouve le champion à partir du texte de sa Légende." },
   { code: "illustration", libelle: "Illustration", icone: "◐", texte: "Une illustration très zoomée, qui se dévoile à chaque erreur." },
 ] as const;
@@ -20,12 +21,13 @@ export interface Colonne<V> {
   sens?: "plus" | "moins" | null;
 }
 export interface Comparaison {
-  domaines: Colonne<string[]>;
+  genre: Colonne<string>;
+  postes: Colonne<string[]>;
+  especes: Colonne<string[]>;
+  ressource: Colonne<string>;
+  portee: Colonne<string[]>;
   regions: Colonne<string[]>;
-  sortie: Colonne<string>;
-  energie: Colonne<number | null>;
-  might: Colonne<number | null>;
-  cartes: Colonne<number>;
+  annee: Colonne<number>;
 }
 
 export interface EtatDevinette {
@@ -37,8 +39,9 @@ export interface EtatDevinette {
   gainPossible: number;
   trouvesAujourdhui: number;
   hier: ChampionVue | null;
-  indice: { texte: string } | { centre: { x: number; y: number }; zoom: number } | null;
-  reponse: (ChampionVue & { carte: { code: string; nom: string; image: string } }) | null;
+  indice: { texte: string } | { emojis: string[]; total: number } | { centre: { x: number; y: number }; zoom: number } | null;
+  /** carte : la carte Riftbound montrée en indice (modes capacité et illustration). */
+  reponse: (ChampionVue & { carte: { code: string; nom: string; image: string } | null }) | null;
 }
 
 export interface ResumeMiniJeux {
@@ -64,28 +67,10 @@ export interface CoupMemory {
   solde?: number;
 }
 
-const REGIONS: Record<string, string> = {
-  "Bandle City": "Bandle",
-  "Mount Targon": "Targon",
-  "Shadow Isles": "Îles Obscures",
-  "The Void": "Le Néant",
-};
-export const libelleRegion = (r: string) => REGIONS[r] ?? r;
-
-const SETS: Record<string, string> = {
-  ogn: "Origins",
-  ogs: "Proving Grounds",
-  sfd: "Spiritforged",
-  unl: "Unleashed",
-  ven: "Vendetta",
-  rad: "Radiance",
-};
-export const libelleSet = (code: string) => SETS[code] ?? code.toUpperCase();
-
 /** Recherche tolérante : sans accents, sans apostrophes ni espaces (« khazix » trouve Kha'Zix). */
 export const normaliser = (texte: string) =>
   texte
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/gi, "")
     .toLowerCase();

@@ -1,15 +1,17 @@
-/** Mini-jeux : « Devine le champion » (classique, capacité, illustration) et Memory, avec leurs gains en éclats. */
+/** Mini-jeux : « Devine le champion » (classique, emoji, capacité, illustration) et Memory, avec leurs gains en éclats. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { amorcerCataloguePourTest, viderCacheMemoire } from "../catalogue/source-cartes";
 import type { CarteCatalogue, Catalogue } from "../catalogue/types-catalogue";
+import { CHAMPIONS_LOL, championLol, championLolDuNom } from "../minijeux/champions-lol";
 import {
   centreDuZoom,
+  championsRiftbound,
   comparer,
+  emojisVisibles,
   gainDevinette,
   gainMemory,
   jourDeParis,
   jourPrecedent,
-  listerChampions,
   texteMasque,
   zoomIllustration,
 } from "../minijeux/regles-minijeux";
@@ -38,27 +40,24 @@ function carte(p: Partial<CarteCatalogue> & Pick<CarteCatalogue, "code" | "nom" 
   };
 }
 
-const legende = (code: string, set: string, champion: string, domaines: string[], texte: string) =>
-  carte({ code, set, nom: `Légende ${champion}`, type: "Legend", tags: [champion], domaines, texte });
-const unite = (code: string, set: string, champion: string, regions: string[], energie: number, force: number) =>
-  carte({ code, set, nom: champion, etiquettes: ["Champion"], tags: [champion, ...regions], energie, force });
+const legende = (code: string, set: string, champion: string, texte: string) =>
+  carte({ code, set, nom: `Légende ${champion}`, type: "Legend", tags: [champion], texte });
+const unite = (code: string, set: string, champion: string) => carte({ code, set, nom: champion, etiquettes: ["Champion"], tags: [champion] });
 
-/** 4 champions (dont Master Yi avec 2 Légendes) et 10 cartes ordinaires pour le Memory. */
+/** 4 champions Riftbound (dont Master Yi avec 2 Légendes) et 10 cartes ordinaires pour le Memory. */
 function catalogueMiniJeux(): Catalogue {
   const cartes: CarteCatalogue[] = [
-    legende("ogn-255-298", "ogn", "Ahri", ["Calm", "Mind"], "Quand Ahri attaque, pioche 1."),
-    unite("ogn-066-298", "ogn", "Ahri", ["Ionia"], 5, 4),
-    unite("ogn-067-298", "ogn", "Ahri", ["Ionia"], 3, 3),
-    carte({ code: "ogn-068-298", set: "ogn", nom: "Charme", type: "Spell", tags: ["Ahri"] }),
-    legende("ogn-251-298", "ogn", "Jinx", ["Fury", "Chaos"], "Défausse 1 : pioche 2."),
-    unite("ogn-030-298", "ogn", "Jinx", ["Zaun"], 3, 4),
-    legende("unl-191-219", "unl", "Master Yi", ["Calm", "Body"], "Master Yi frappe deux fois."),
-    legende("ogs-019-024", "ogs", "Master Yi", ["Calm", "Body"], "Alpha."),
-    unite("ogs-005-024", "ogs", "Master Yi", ["Ionia"], 5, 7),
-    legende("sfd-193-221", "sfd", "Jax", ["Calm", "Body"], "Jax se défend."),
-    unite("sfd-050-221", "sfd", "Jax", [], 5, 4),
-    // Unité champion sans Légende : n'est pas un champion du jeu.
-    unite("ogn-099-298", "ogn", "Graves", ["Bilgewater"], 4, 4),
+    legende("ogn-255-298", "ogn", "Ahri", "Quand Ahri attaque, pioche 1."),
+    unite("ogn-066-298", "ogn", "Ahri"),
+    legende("ogn-251-298", "ogn", "Jinx", "Défausse 1 : pioche 2."),
+    unite("ogn-030-298", "ogn", "Jinx"),
+    legende("unl-191-219", "unl", "Master Yi", "Master Yi frappe deux fois."),
+    legende("ogs-019-024", "ogs", "Master Yi", "Alpha."),
+    unite("ogs-005-024", "ogs", "Master Yi"),
+    legende("sfd-193-221", "sfd", "Jax", "Jax se défend."),
+    unite("sfd-050-221", "sfd", "Jax"),
+    // Unité champion sans Légende : pas de mode capacité ni illustration pour lui.
+    unite("ogn-099-298", "ogn", "Graves"),
     ...Array.from({ length: 10 }, (_, i) => carte({ code: `ogn-1${i}0-298`, set: "ogn", nom: `Carte ${i}` })),
     carte({ code: "ogn-rune0", set: "ogn", nom: "Rune", type: "Rune", rarete: "Common" }),
   ];
@@ -84,43 +83,71 @@ const solde = (env: Env, id: number) => (env.bd.prepare("SELECT eclats FROM comp
 const aujourdhui = () => jourDeParis(Date.now());
 const fixerDefi = (env: Env, mode: string, reponse: string, jour = aujourdhui()) =>
   env.bd.prepare("INSERT OR REPLACE INTO defis_du_jour (jour, mode, reponse) VALUES (?, ?, ?)").run(jour, mode, reponse);
+const lol = (id: string) => {
+  const ch = championLol(id);
+  if (!ch) throw new Error(`champion ${id} absent de la table`);
+  return ch;
+};
 
 describe("Règles des mini-jeux", () => {
-  it("champions : un nom porté par une unité Champion ET une Légende, identifié par sa première Légende", () => {
-    const champions = listerChampions(catalogue);
-    expect(champions.map((c) => c.nom)).toEqual(["Ahri", "Jax", "Jinx", "Master Yi"]);
-    const ahri = champions.find((c) => c.nom === "Ahri");
-    expect(ahri).toMatchObject({ id: "ogn-255-298", regions: ["Ionia"], sortie: "ogn", energie: 3, might: 4, cartes: 4 });
-    // Master Yi : la Légende de Proving Grounds (ogs) sort avant celle d'Unleashed.
-    expect(champions.find((c) => c.nom === "Master Yi")).toMatchObject({ id: "ogs-019-024", sortie: "ogs" });
-    expect(champions.find((c) => c.nom === "Jax")?.regions).toEqual([]);
+  it("table des champions LoL : complète, sans doublon, 5 emojis chacun", () => {
+    expect(CHAMPIONS_LOL.length).toBeGreaterThanOrEqual(170);
+    expect(new Set(CHAMPIONS_LOL.map((c) => c.id)).size).toBe(CHAMPIONS_LOL.length);
+    for (const c of CHAMPIONS_LOL) {
+      expect(c.emojis, c.id).toHaveLength(5);
+      expect(c.postes.length, c.id).toBeGreaterThan(0);
+      expect(c.regions.length, c.id).toBeGreaterThan(0);
+      expect(c.annee, c.id).toBeGreaterThanOrEqual(2009);
+      expect(["Masculin", "Féminin", "Autre"], c.id).toContain(c.genre);
+    }
+    expect(lol("XinZhao")).toMatchObject({ nom: "Xin Zhao", regions: ["Demacia", "Ionia", "Noxus"], postes: ["Jungle"], annee: 2010 });
+    expect(lol("XinZhao").image).toMatch(/^https:\/\/ddragon\.leagueoflegends\.com\/cdn\/[\d.]+\/img\/champion\/XinZhao\.png$/);
+    // Noms anglais des cartes Riftbound → fiche LoL.
+    expect(["Kai'Sa", "Master Yi", "K'Sante", "Renata Glasc", "Jarvan IV", "Dr. Mundo"].map((n) => championLolDuNom(n)?.id)).toEqual([
+      "Kaisa",
+      "MasterYi",
+      "KSante",
+      "Renata",
+      "JarvanIV",
+      "DrMundo",
+    ]);
   });
 
-  it("comparaison : vert, orange, rouge et flèches", () => {
-    const [ahri, jax, jinx, yi] = listerChampions(catalogue);
-    if (!ahri || !jax || !jinx || !yi) throw new Error("catalogue");
-    const c = comparer(jinx, ahri);
-    expect(c.domaines.etat).toBe("faux");
-    expect(c.regions.etat).toBe("faux");
-    expect(c.sortie).toMatchObject({ etat: "juste", sens: null });
-    expect(c.energie).toMatchObject({ valeur: 3, etat: "juste" });
-    expect(c.cartes).toMatchObject({ valeur: 2, etat: "faux", sens: "plus" });
-    const d = comparer(yi, jax);
-    expect(d.domaines.etat).toBe("juste");
-    expect(d.sortie).toMatchObject({ etat: "faux", sens: "plus" }); // Jax sort après (Spiritforged)
-    expect(d.might).toMatchObject({ valeur: 7, sens: "moins" });
-    expect(comparer(jax, ahri).domaines.etat).toBe("partiel"); // Calm en commun
-    expect(comparer(ahri, ahri)).toMatchObject({ regions: { etat: "juste" }, might: { etat: "juste" } });
+  it("champions Riftbound : ceux qui ont une Légende, reliés à leur fiche LoL", () => {
+    const champions = championsRiftbound(catalogue);
+    expect(champions.map((c) => c.lol.id)).toEqual(["Ahri", "Jax", "Jinx", "MasterYi"]);
+    const yi = champions.find((c) => c.lol.id === "MasterYi");
+    expect(yi?.legendes.map((l) => l.code)).toEqual(["ogs-019-024", "unl-191-219"]);
+    expect(yi?.illustrations.map((l) => l.code)).toContain("ogs-005-024");
   });
 
-  it("gains, zoom, texte masqué et jours (minuit à Paris)", () => {
+  it("comparaison façon Loldle : vert, orange, rouge et flèche sur l'année", () => {
+    const c = comparer(lol("Garen"), lol("XinZhao"));
+    expect(c.genre.etat).toBe("juste");
+    expect(c.postes.etat).toBe("faux");
+    expect(c.especes.etat).toBe("juste");
+    expect(c.ressource.etat).toBe("faux");
+    expect(c.portee.etat).toBe("juste");
+    expect(c.regions).toMatchObject({ valeur: ["Demacia"], etat: "partiel" });
+    expect(c.annee).toMatchObject({ valeur: 2010, etat: "juste", sens: null });
+    expect(comparer(lol("Ahri"), lol("XinZhao")).annee).toMatchObject({ etat: "faux", sens: "moins" });
+    expect(comparer(lol("Alistar"), lol("XinZhao")).annee).toMatchObject({ sens: "plus" });
+    expect(comparer(lol("Jayce"), lol("Ahri")).portee.etat).toBe("partiel"); // Mêlée et Distance
+  });
+
+  it("gains, emojis, zoom, texte masqué et jours (minuit à Paris)", () => {
     expect([1, 2, 5, 11, 50].map((n) => gainDevinette("classique", n))).toEqual([30, 28, 22, 10, 10]);
-    expect([1, 3, 20].map((n) => gainDevinette("capacite", n))).toEqual([15, 13, 5]);
+    expect([1, 3, 20].map((n) => gainDevinette("emoji", n))).toEqual([15, 13, 5]);
     expect([8, 12, 13, 16, 17, 40].map(gainMemory)).toEqual([10, 10, 6, 6, 3, 3]);
+    const xin = lol("XinZhao");
+    expect(emojisVisibles(xin, 0, false)).toHaveLength(1);
+    expect(emojisVisibles(xin, 3, false)).toHaveLength(4);
+    expect(emojisVisibles(xin, 30, false)).toHaveLength(5);
+    expect(emojisVisibles(xin, 0, true)).toHaveLength(5);
     expect([0, 2, 8, 20].map((e) => zoomIllustration(e, false))).toEqual([5, 4, 1, 1]);
     expect(zoomIllustration(0, true)).toBe(1);
     expect(centreDuZoom("2026-11-13", "ogn-255-298")).toEqual(centreDuZoom("2026-11-13", "ogn-255-298"));
-    const yi = listerChampions(catalogue).find((c) => c.nom === "Master Yi");
+    const yi = championsRiftbound(catalogue).find((c) => c.lol.id === "MasterYi");
     if (!yi?.legendes[1]) throw new Error("catalogue");
     expect(texteMasque(yi.legendes[1], yi)).toBe("??? frappe deux fois.");
     expect(jourDeParis(Date.parse("2026-11-12T23:30:00Z"))).toBe("2026-11-13"); // heure d'hiver : UTC+1
@@ -130,63 +157,75 @@ describe("Règles des mini-jeux", () => {
 });
 
 describe("API « Devine le champion »", () => {
-  it("compare chaque essai, refuse les doublons, crédite le gain une seule fois", async () => {
+  it("classique : n'importe quel champion de LoL, comparé colonne par colonne ; gain crédité une seule fois", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
     const id = idDe(env, "Alice");
-    fixerDefi(env, "classique", "ogn-255-298"); // Ahri
+    fixerDefi(env, "classique", "XinZhao");
+    const essayer = (champion: string) => env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion } });
+
+    const liste = (await env.appeler("GET", "/api/minijeux/champions", { cookie })).json.champions as Array<{ id: string }>;
+    expect(liste.length).toBe(CHAMPIONS_LOL.length);
 
     const avant = await env.appeler("GET", "/api/minijeux/devinette/classique", { cookie });
-    expect(avant.statut).toBe(200);
-    expect(avant.json).toMatchObject({ essais: [], trouve: false, gainPossible: 30, reponse: null });
+    expect(avant.json).toMatchObject({ essais: [], trouve: false, gainPossible: 30, reponse: null, indice: null });
 
-    const rate = await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "ogn-251-298" } });
+    const rate = await essayer("Garen");
     expect(rate.statut).toBe(200);
     expect(rate.json).toMatchObject({ juste: false, gain: 0, solde: 0, etat: { gainPossible: 28 } });
     const etat = rate.json.etat as { essais: Array<{ champion: { nom: string }; comparaison: { regions: { etat: string } } }> };
-    expect(etat.essais[0]).toMatchObject({ champion: { nom: "Jinx" }, comparaison: { regions: { etat: "faux" } } });
+    expect(etat.essais[0]).toMatchObject({ champion: { nom: "Garen" }, comparaison: { regions: { etat: "partiel" } } });
 
-    expect((await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "ogn-251-298" } })).json).toEqual({
-      erreur: "deja_propose",
-    });
-    expect((await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "ogn-099-298" } })).statut).toBe(400);
-    // Une autre Légende du même champion n'est pas un identifiant de champion : seul l'id de la liste est accepté.
-    expect((await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "unl-191-219" } })).statut).toBe(400);
+    expect((await essayer("Garen")).json).toEqual({ erreur: "deja_propose" });
+    expect((await essayer("Inconnu")).json).toEqual({ erreur: "champion_inconnu" });
+    expect((await essayer("xin-zhao")).statut).toBe(400);
 
-    const juste = await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "ogn-255-298" } });
-    expect(juste.json).toMatchObject({ juste: true, gain: 28, solde: 28, etat: { trouve: true, reponse: { nom: "Ahri" }, trouvesAujourdhui: 1 } });
+    const juste = await essayer("XinZhao");
+    expect(juste.json).toMatchObject({ juste: true, gain: 28, solde: 28, etat: { trouve: true, reponse: { nom: "Xin Zhao", carte: null }, trouvesAujourdhui: 1 } });
     expect(solde(env, id)).toBe(28);
-    const encore = await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "sfd-193-221" } });
-    expect(encore.json).toEqual({ erreur: "deja_trouve" });
+    expect((await essayer("Ahri")).json).toEqual({ erreur: "deja_trouve" });
     expect(solde(env, id)).toBe(28);
 
     const resume = await env.appeler("GET", "/api/minijeux", { cookie });
-    expect(resume.json).toMatchObject({ devinette: { classique: { essais: 2, trouve: true, gain: 28 }, capacite: { essais: 0, trouve: false } } });
+    expect(resume.json).toMatchObject({ devinette: { classique: { essais: 2, trouve: true, gain: 28 }, emoji: { essais: 0, trouve: false } } });
+  });
+
+  it("emoji : un emoji de plus à chaque erreur, tous une fois trouvé", async () => {
+    const env = creerEnvironnementDeTest();
+    const cookie = await env.inscrire("Alice", "motdepasse");
+    fixerDefi(env, "emoji", "XinZhao");
+    const debut = await env.appeler("GET", "/api/minijeux/devinette/emoji", { cookie });
+    expect(debut.json.indice).toEqual({ emojis: lol("XinZhao").emojis.slice(0, 1), total: 5 });
+    expect(debut.texte).not.toMatch(/XinZhao|Xin Zhao/);
+    const r = await env.appeler("POST", "/api/minijeux/devinette/emoji/essai", { cookie, corps: { champion: "Ahri" } });
+    expect((r.json.etat as { indice: { emojis: string[] } }).indice.emojis).toHaveLength(2);
+    const ok = await env.appeler("POST", "/api/minijeux/devinette/emoji/essai", { cookie, corps: { champion: "XinZhao" } });
+    expect(ok.json).toMatchObject({ juste: true, gain: 14, etat: { indice: { emojis: lol("XinZhao").emojis } } });
   });
 
   it("des bonnes réponses envoyées en même temps ne sont créditées qu'une fois", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
-    fixerDefi(env, "capacite", "ogn-251-298"); // Jinx
+    fixerDefi(env, "capacite", "ogn-251-298"); // Légende de Jinx
     const reponses = await Promise.all(
-      Array.from({ length: 5 }, () => env.appeler("POST", "/api/minijeux/devinette/capacite/essai", { cookie, corps: { champion: "ogn-251-298" } })),
+      Array.from({ length: 5 }, () => env.appeler("POST", "/api/minijeux/devinette/capacite/essai", { cookie, corps: { champion: "Jinx" } })),
     );
     expect(reponses.filter((r) => r.statut === 200)).toHaveLength(1);
     expect(solde(env, idDe(env, "Alice"))).toBe(15);
   });
 
-  it("ne dévoile jamais la réponse avant qu'elle soit trouvée (texte masqué, illustration servie par le serveur)", async () => {
+  it("capacité et illustration : la réponse n'est jamais dévoilée avant d'être trouvée", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
     fixerDefi(env, "capacite", "unl-191-219");
     fixerDefi(env, "illustration", "ogs-005-024");
     const capacite = await env.appeler("GET", "/api/minijeux/devinette/capacite", { cookie });
     expect(capacite.json.indice).toEqual({ texte: "??? frappe deux fois." });
-    expect(capacite.texte).not.toMatch(/unl-191-219|Master Yi/);
+    expect(capacite.texte).not.toMatch(/unl-191-219|Master Yi|Maître Yi|MasterYi/);
 
     const illustration = await env.appeler("GET", "/api/minijeux/devinette/illustration", { cookie });
     expect(illustration.json.indice).toMatchObject({ zoom: 5 });
-    expect(illustration.texte).not.toMatch(/ogs-005-024|ogs-019-024|Master Yi/);
+    expect(illustration.texte).not.toMatch(/ogs-005-024|ogs-019-024|Master Yi|Maître Yi|MasterYi/);
 
     const appels: string[] = [];
     vi.stubGlobal("fetch", async (url: string) => {
@@ -197,36 +236,40 @@ describe("API « Devine le champion »", () => {
     expect(image.statut).toBe(200);
     expect(appels).toEqual(["https://cmsassets.rgpub.io/ogs-005-024.png?w=744&fm=webp"]);
 
-    // Chaque erreur dézoome l'illustration.
-    const r = await env.appeler("POST", "/api/minijeux/devinette/illustration/essai", { cookie, corps: { champion: "ogn-255-298" } });
-    expect(r.json).toMatchObject({ etat: { indice: { zoom: 4.5 } } });
-    const ok = await env.appeler("POST", "/api/minijeux/devinette/illustration/essai", { cookie, corps: { champion: "ogs-019-024" } });
-    expect(ok.json).toMatchObject({ juste: true, gain: 14, etat: { reponse: { nom: "Master Yi", carte: { code: "ogs-005-024" } }, indice: { zoom: 1 } } });
+    // Chaque erreur dézoome l'illustration ; on peut proposer un champion qui n'est pas dans Riftbound.
+    const r = await env.appeler("POST", "/api/minijeux/devinette/illustration/essai", { cookie, corps: { champion: "Zyra" } });
+    expect(r.json).toMatchObject({ juste: false, etat: { indice: { zoom: 4.5 } } });
+    const ok = await env.appeler("POST", "/api/minijeux/devinette/illustration/essai", { cookie, corps: { champion: "MasterYi" } });
+    expect(ok.json).toMatchObject({ juste: true, gain: 14, etat: { reponse: { nom: "Maître Yi", carte: { code: "ogs-005-024" } }, indice: { zoom: 1 } } });
   });
 
   it("tire le défi du jour au hasard, le fige, et ne reprend pas le champion de la veille", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
-    // 4 champions, celui d'hier est exclu : sur 20 tirages, jamais Ahri.
+    const tire = (mode: string) =>
+      (env.bd.prepare("SELECT reponse FROM defis_du_jour WHERE jour = ? AND mode = ?").get(aujourdhui(), mode) as { reponse: string }).reponse;
     for (let i = 0; i < 20; i++) {
       env.bd.prepare("DELETE FROM defis_du_jour").run();
-      fixerDefi(env, "classique", "ogn-255-298", jourPrecedent(aujourdhui()));
+      fixerDefi(env, "classique", "Ahri", jourPrecedent(aujourdhui()));
+      fixerDefi(env, "capacite", "ogn-255-298", jourPrecedent(aujourdhui())); // Ahri hier aussi
       expect((await env.appeler("GET", "/api/minijeux/devinette/classique", { cookie })).statut).toBe(200);
-      const tire = env.bd.prepare("SELECT reponse FROM defis_du_jour WHERE jour = ? AND mode = 'classique'").get(aujourdhui()) as { reponse: string };
-      expect(["ogn-251-298", "ogs-019-024", "sfd-193-221"]).toContain(tire.reponse);
+      expect((await env.appeler("GET", "/api/minijeux/devinette/capacite", { cookie })).statut).toBe(200);
+      const classique = tire("classique");
+      expect(championLol(classique)).toBeDefined();
+      expect(classique).not.toBe("Ahri");
+      expect(["ogn-251-298", "ogs-019-024", "unl-191-219", "sfd-193-221"]).toContain(tire("capacite"));
       await env.appeler("GET", "/api/minijeux/devinette/classique", { cookie });
-      expect(env.bd.prepare("SELECT reponse FROM defis_du_jour WHERE jour = ? AND mode = 'classique'").get(aujourdhui())).toEqual(tire);
+      expect(tire("classique")).toBe(classique);
     }
-    const hier = (await env.appeler("GET", "/api/minijeux/devinette/classique", { cookie })).json.hier;
-    expect(hier).toMatchObject({ nom: "Ahri" });
+    expect((await env.appeler("GET", "/api/minijeux/devinette/classique", { cookie })).json.hier).toMatchObject({ nom: "Ahri" });
   });
 
-  it("refuse les visiteurs et les modes inconnus", async () => {
+  it("refuse les visiteurs, les modes inconnus et les champs en trop", async () => {
     const env = creerEnvironnementDeTest();
     expect((await env.appeler("GET", "/api/minijeux/devinette/classique")).statut).toBe(401);
     const cookie = await env.inscrire("Alice", "motdepasse");
-    expect((await env.appeler("GET", "/api/minijeux/devinette/emoji", { cookie })).statut).toBe(400);
-    expect((await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "ogn-255-298", gain: 999 } })).statut).toBe(400);
+    expect((await env.appeler("GET", "/api/minijeux/devinette/citation", { cookie })).statut).toBe(400);
+    expect((await env.appeler("POST", "/api/minijeux/devinette/classique/essai", { cookie, corps: { champion: "Ahri", gain: 999 } })).statut).toBe(400);
   });
 });
 

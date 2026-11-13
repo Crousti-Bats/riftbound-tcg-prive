@@ -3,7 +3,6 @@
  * Le navigateur n'a jamais la réponse avant de l'avoir trouvée : il envoie un champion, le serveur compare.
  */
 import { type CSSProperties, type FormEvent, useEffect, useMemo, useState } from "react";
-import { AvatarJoueur } from "../composants/avatar-joueur";
 import { ImageCarte } from "../composants/image-carte";
 import { appelerApi } from "../outils/appels-api";
 import { formaterEclats, publierSolde } from "../outils/eclats";
@@ -12,8 +11,6 @@ import {
   type Colonne,
   type Comparaison,
   type EtatDevinette,
-  libelleRegion,
-  libelleSet,
   type Mode,
   MODES,
   normaliser,
@@ -22,7 +19,14 @@ import {
 import { naviguer } from "../outils/navigation";
 import "./mini-jeux.css";
 
-const avatar = (ch: ChampionVue) => <AvatarJoueur pseudo={ch.nom} avatar={{ image: ch.image, orientation: "portrait" }} />;
+/** Icône carrée du champion (Data Dragon de Riot) ; l'initiale si elle ne se charge pas. */
+function Icone({ champion, grande }: { champion: ChampionVue; grande?: boolean }) {
+  const [erreur, setErreur] = useState(false);
+  const classe = grande ? "mj-icone mj-icone-grande" : "mj-icone";
+  if (erreur) return <span className={`${classe} mj-icone-vide`}>{champion.nom.slice(0, 1)}</span>;
+  return <img className={classe} src={champion.image} alt="" loading="lazy" onError={() => setErreur(true)} />;
+}
+const avatar = (ch: ChampionVue) => <Icone champion={ch} />;
 
 export function PageDevineChampion({ mode }: { mode: Mode }) {
   const [etat, setEtat] = useState<EtatDevinette | null>(null);
@@ -138,7 +142,11 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
 
           {etat.trouve && etat.reponse ? (
             <section className="carte mj-victoire">
-              <ImageCarte image={etat.reponse.carte.image} largeur={300} alt={etat.reponse.carte.nom} className="mj-victoire-carte" />
+              {etat.reponse.carte ? (
+                <ImageCarte image={etat.reponse.carte.image} largeur={300} alt={etat.reponse.carte.nom} className="mj-victoire-carte" />
+              ) : (
+                <Icone champion={etat.reponse} grande />
+              )}
               <div className="pile-serree">
                 <span className="surtitre">Bravo !</span>
                 <h2>C'était {etat.reponse.nom}</h2>
@@ -207,6 +215,17 @@ function Indice({ etat }: { etat: EtatDevinette }) {
     return <p className="mj-consigne">Propose un champion : les cases te diront ce qu'il a en commun avec celui du jour.</p>;
   }
   if ("texte" in indice) return <blockquote className="mj-capacite">{indice.texte}</blockquote>;
+  if ("emojis" in indice) {
+    return (
+      <div className="mj-emojis" aria-label={`${indice.emojis.length} emoji(s) sur ${indice.total}`}>
+        {Array.from({ length: indice.total }, (_, i) => (
+          <span key={i} className={i < indice.emojis.length ? "mj-emoji" : "mj-emoji cache"}>
+            {indice.emojis[i] ?? "?"}
+          </span>
+        ))}
+      </div>
+    );
+  }
   if (etat.trouve && etat.reponse) return null; // la carte entière est montrée dans l'encart de victoire
   return (
     <div className="mj-illustration">
@@ -234,12 +253,13 @@ function TableauEssais({ essais }: { essais: EtatDevinette["essais"] }) {
   if (essais.length === 0) return null;
   const lignes = [...essais].reverse();
   const cases = (c: Comparaison) => [
-    { colonne: c.domaines, texte: c.domaines.valeur.join(" · ") },
-    { colonne: c.regions, texte: c.regions.valeur.map(libelleRegion).join(", ") || "Aucune" },
-    { colonne: c.sortie, texte: libelleSet(c.sortie.valeur) },
-    { colonne: c.energie, texte: String(c.energie.valeur ?? "—") },
-    { colonne: c.might, texte: String(c.might.valeur ?? "—") },
-    { colonne: c.cartes, texte: String(c.cartes.valeur) },
+    { colonne: c.genre, texte: c.genre.valeur },
+    { colonne: c.postes, texte: c.postes.valeur.join(", ") },
+    { colonne: c.especes, texte: c.especes.valeur.join(", ") },
+    { colonne: c.ressource, texte: c.ressource.valeur },
+    { colonne: c.portee, texte: c.portee.valeur.join(", ") },
+    { colonne: c.regions, texte: c.regions.valeur.join(", ") },
+    { colonne: c.annee, texte: String(c.annee.valeur) },
   ];
   return (
     <section className="carte pile-serree">
@@ -248,12 +268,13 @@ function TableauEssais({ essais }: { essais: EtatDevinette["essais"] }) {
           <thead>
             <tr>
               <th>Champion</th>
-              <th>Domaines</th>
-              <th>Région</th>
-              <th title="Set de sa première Légende">Sortie</th>
-              <th title="Coût de sa version la moins chère">Énergie</th>
-              <th title="Might de sa version la plus forte">Might</th>
-              <th title="Nombre de cartes à son nom">Cartes</th>
+              <th>Genre</th>
+              <th>Poste(s)</th>
+              <th>Espèce(s)</th>
+              <th>Ressource</th>
+              <th>Portée</th>
+              <th>Région(s)</th>
+              <th>Année</th>
             </tr>
           </thead>
           <tbody>
@@ -270,8 +291,8 @@ function TableauEssais({ essais }: { essais: EtatDevinette["essais"] }) {
         </table>
       </div>
       <p className="aide mj-legende">
-        <span className="mj-puce mj-juste" /> juste <span className="mj-puce mj-partiel" /> en partie <span className="mj-puce mj-faux" /> faux · ↑ la
-        réponse est plus haute (ou sortie plus tard), ↓ plus basse (ou sortie plus tôt).
+        <span className="mj-puce mj-juste" /> juste <span className="mj-puce mj-partiel" /> en partie <span className="mj-puce mj-faux" /> faux · ↑ le
+        champion du jour est sorti plus tard, ↓ plus tôt.
       </p>
     </section>
   );
