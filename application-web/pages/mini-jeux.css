@@ -1,0 +1,117 @@
+/* ---------- Mini-jeux : page d'accueil des jeux ---------- */
+.mj-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.mj-mode {
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: var(--rayon-petit); text-decoration: none; color: var(--texte);
+  background: var(--fond-champ); border: 1px solid var(--bordure); transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.mj-mode:hover { transform: translateY(-2px); border-color: var(--bordure-or); }
+.mj-mode.trouve { border-color: rgba(76, 175, 122, 0.5); }
+.mj-mode-icone {
+  display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; font-weight: 800;
+  color: var(--accent-texte); background: linear-gradient(135deg, var(--accent-vif), var(--orange));
+}
+.mj-mode.trouve .mj-mode-icone { background: var(--succes); color: #fff; }
+.mj-mode-texte { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mj-mode-texte span { color: var(--texte-doux); font-size: 0.85rem; }
+.mj-mode-texte .mj-mode-gain { color: var(--accent-vif); font-weight: 650; margin-top: 4px; }
+
+/* ---------- Devine le champion ---------- */
+.mj-indice { align-items: center; text-align: center; }
+.mj-consigne { margin: 0; font-weight: 600; }
+.mj-capacite {
+  margin: 0; max-width: 560px; padding: 14px 18px; border-left: 3px solid var(--accent); border-radius: var(--rayon-petit);
+  background: var(--fond-champ); font-style: italic; white-space: pre-line; text-align: left;
+}
+.mj-illustration {
+  position: relative; width: min(320px, 100%); aspect-ratio: 744 / 1039; overflow: hidden; border-radius: var(--rayon-petit);
+  border: 1px solid var(--bordure-or); background: var(--fond-champ);
+}
+.mj-illustration img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease, transform-origin 0.6s ease; }
+
+.mj-icone { width: 34px; height: 34px; border-radius: 6px; flex: none; object-fit: cover; box-shadow: 0 0 0 1px var(--bordure-or); }
+.mj-icone-grande { width: 120px; height: 120px; border-radius: 12px; box-shadow: 0 0 0 2px var(--bordure-or), 0 8px 24px rgba(0, 0, 0, 0.45); }
+.mj-icone-vide { display: inline-grid; place-items: center; font-weight: 800; color: var(--accent-texte); background: var(--accent); }
+.mj-tableau td.mj-champion .mj-icone { vertical-align: middle; margin-right: 8px; }
+.mj-hier .mj-icone, .mj-essais .mj-icone { width: 28px; height: 28px; }
+
+.mj-emojis { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.mj-emoji {
+  display: grid; place-items: center; width: 56px; height: 56px; font-size: 2rem; border-radius: var(--rayon-petit);
+  background: var(--fond-champ); border: 1px solid var(--bordure-or); animation: mj-apparait 0.35s ease both;
+}
+.mj-emoji.cache { color: var(--texte-doux); font-size: 1.3rem; font-weight: 800; border-style: dashed; border-color: var(--bordure-forte); animation: none; }
+@keyframes mj-apparait { from { transform: scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.mj-recherche { position: relative; display: flex; flex-direction: column; gap: 8px; max-width: 520px; width: 100%; margin: 0 auto; }
+.mj-suggestions {
+  list-style: none; margin: 0; padding: 4px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--fond-eleve); border: 1px solid var(--bordure-forte); border-radius: var(--rayon-petit); box-shadow: var(--ombre);
+}
+.mj-suggestion {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: transparent; color: var(--texte);
+  box-shadow: none; border: none; min-height: 44px; padding: 6px 10px;
+}
+.mj-suggestion:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); box-shadow: none; filter: none; }
+
+.mj-tableau th, .mj-tableau td { text-align: center; }
+.mj-tableau td.mj-case { border: 2px solid var(--fond-carte); font-weight: 650; animation: mj-retourne 0.45s ease both; animation-delay: calc(var(--i, 0) * 0.12s); }
+.mj-tableau tbody tr:not(:first-child) td.mj-case { animation: none; }
+.mj-tableau tbody tr:hover td { background: unset; }
+.mj-tableau td.mj-champion { text-align: left; background: var(--fond-champ); }
+.mj-juste { background: rgba(76, 175, 122, 0.85) !important; color: #fff; }
+.mj-partiel { background: rgba(232, 121, 42, 0.85) !important; color: #fff; }
+.mj-faux { background: rgba(224, 86, 91, 0.75) !important; color: #fff; }
+@keyframes mj-retourne { from { transform: rotateX(90deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.mj-legende { margin: 0; }
+.mj-puce { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-left: 6px; }
+
+.mj-essais { list-style: none; margin: 0 auto; padding: 0; display: flex; flex-direction: column; gap: 6px; max-width: 520px; width: 100%; }
+.mj-essais li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--rayon-petit); font-weight: 650; }
+.mj-essais li span[aria-label] { margin-left: auto; }
+
+.mj-victoire { display: flex; gap: 20px; align-items: center; border-color: rgba(76, 175, 122, 0.5); }
+.mj-victoire-carte { width: 150px; border-radius: 8px; flex: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
+.mj-victoire p { margin: 0; }
+.mj-hier { display: flex; align-items: center; gap: 8px; justify-content: center; }
+
+/* ---------- Memory ---------- */
+.mj-score { display: flex; gap: 20px; margin: 0; }
+.mj-fin-memory { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; border-color: rgba(76, 175, 122, 0.5); }
+.mj-fin-memory h2 { margin: 0; }
+.mj-grille { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 560px; width: 100%; margin: 0 auto; }
+.mj-carte {
+  padding: 0; min-height: 0; aspect-ratio: 744 / 1039; background: none; border: none; box-shadow: none; perspective: 800px;
+}
+.mj-carte:hover:not(:disabled) { filter: none; box-shadow: none; }
+.mj-carte-interieur {
+  position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.4s ease;
+}
+.mj-carte.retournee .mj-carte-interieur { transform: rotateY(180deg); }
+.mj-carte-dos, .mj-carte-face {
+  position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; border-radius: 8px;
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+}
+.mj-carte-dos {
+  background: radial-gradient(circle at 50% 40%, rgba(232, 121, 42, 0.25), transparent 60%), var(--fond-eleve);
+  border: 1px solid var(--bordure-or);
+}
+.mj-carte:hover .mj-carte-dos { border-color: var(--accent-vif); }
+.mj-carte-dos img { width: 55%; opacity: 0.85; }
+.mj-carte-face { transform: rotateY(180deg); background: var(--fond-champ); }
+.mj-carte-face img { width: 100%; height: 100%; object-fit: cover; }
+.mj-carte.trouvee .mj-carte-face { box-shadow: 0 0 0 2px var(--succes), 0 0 16px rgba(76, 175, 122, 0.5); }
+
+@media (max-width: 600px) {
+  .mj-victoire { flex-direction: column; text-align: center; }
+  .mj-victoire .barre-actions { justify-content: center; }
+  .mj-grille { gap: 6px; }
+  .mj-tableau th, .mj-tableau td { padding: 6px 5px; font-size: 0.76rem; white-space: normal; }
+  .mj-tableau td.mj-champion { min-width: 96px; }
+  .mj-tableau td.mj-champion .mj-icone { width: 26px; height: 26px; margin-right: 4px; }
+  .mj-emoji { width: 48px; height: 48px; font-size: 1.7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mj-carte-interieur, .mj-illustration img { transition: none; }
+  .mj-tableau td.mj-case { animation: none; }
+}
+.encart-minijeux { margin-top: 20px; }
