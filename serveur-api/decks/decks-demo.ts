@@ -1,5 +1,5 @@
 /**
- * Decks de démo PRÊTÉS à tous les joueurs (demandé le 2026-11-10) pour tester la table de jeu en production :
+ * Decks de démo PRÊTÉS à tous les joueurs pour tester la table de jeu en production :
  * jouables sans posséder les cartes, non modifiables, visibles par tout le monde (aucune ligne en base).
  * Construits avec les vraies cartes autour de deux champions du produit d'initiation (Proving Grounds), avec une
  * courbe de coûts équilibrée : ce ne sont pas les listes officielles. Pour les retirer : vider DECKS_DEMO.

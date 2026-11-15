@@ -1,5 +1,5 @@
 /**
- * Aperçu d'un booster avant de l'ouvrir (demandé le 2026-11-10) :
+ * Aperçu d'un booster avant de l'ouvrir :
  * - « Les plus rares » : les catégories Rare+ que ce set peut donner (Ultime → Epic), avec leur chance par booster ;
  * - « Il te manque » : les cartes de ce booster que le joueur n'a pas encore, les plus rares d'abord.
  *

@@ -1,4 +1,4 @@
--- Migration 0016 : parties de la table de jeu (demandé le 2026-11-10).
+-- Migration 0016 : parties de la table de jeu.
 -- Le salon (qui joue, avec quel deck, où en est la partie) est ici ; l'état de la table (cartes, zones, journal)
 -- vit dans un Durable Object « SalleDeJeu » nommé d'après le code de la partie.
 CREATE TABLE parties (

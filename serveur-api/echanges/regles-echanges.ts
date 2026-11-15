@@ -1,5 +1,5 @@
 /**
- * Règles des échanges (décidées par l'utilisateur le 2026-11-09) :
+ * Règles des échanges :
  * - plusieurs cartes contre plusieurs cartes ;
  * - dons autorisés (un des deux côtés peut être vide, mais pas les deux) ;
  * - on peut parcourir toute la collection des autres joueurs ;

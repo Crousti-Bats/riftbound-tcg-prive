@@ -1,7 +1,7 @@
 /**
  * Routes /api/marche : annonces « Qui a ? / Qui veut ? », salon commun et messages privés.
  *
- * Règles (décidées par l'utilisateur le 2026-11-10) :
+ * Règles :
  * - une annonce reste sur le tableau du marché jusqu'à ce que son auteur la retire (30 jours maximum),
  *   et elle est aussi publiée dans le salon avec la carte à côté ;
  * - « Qui veut ? » : on ne peut proposer qu'une carte qu'on possède ; l'annonce disparaît si on ne l'a plus ;
