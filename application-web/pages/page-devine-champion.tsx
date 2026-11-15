@@ -1,8 +1,8 @@
 /**
- * « Devine le champion » : un champion par jour et par mode (classique, capacité, illustration).
+ * « Devine le champion » : un champion par jour et par mode (classique, emoji, capacité, illustration).
  * Le navigateur n'a jamais la réponse avant de l'avoir trouvée : il envoie un champion, le serveur compare.
  */
-import { type CSSProperties, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, type FormEvent, type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { ImageCarte } from "../composants/image-carte";
 import { appelerApi } from "../outils/appels-api";
 import { formaterEclats, publierSolde } from "../outils/eclats";
@@ -15,18 +15,18 @@ import {
   MODES,
   normaliser,
   type ResumeMiniJeux,
+  useCompteARebours,
 } from "../outils/minijeux";
 import { naviguer } from "../outils/navigation";
 import "./mini-jeux.css";
 
 /** Icône carrée du champion (Data Dragon de Riot) ; l'initiale si elle ne se charge pas. */
-function Icone({ champion, grande }: { champion: ChampionVue; grande?: boolean }) {
+function Icone({ champion, taille = "normale" }: { champion: ChampionVue; taille?: "normale" | "tableau" | "grande" }) {
   const [erreur, setErreur] = useState(false);
-  const classe = grande ? "mj-icone mj-icone-grande" : "mj-icone";
+  const classe = `mj-icone mj-icone-${taille}`;
   if (erreur) return <span className={`${classe} mj-icone-vide`}>{champion.nom.slice(0, 1)}</span>;
   return <img className={classe} src={champion.image} alt="" loading="lazy" onError={() => setErreur(true)} />;
 }
-const avatar = (ch: ChampionVue) => <Icone champion={ch} />;
 
 export function PageDevineChampion({ mode }: { mode: Mode }) {
   const [etat, setEtat] = useState<EtatDevinette | null>(null);
@@ -34,7 +34,9 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
   const [resume, setResume] = useState<ResumeMiniJeux | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
+  const [selection, setSelection] = useState(0);
   const [envoi, setEnvoi] = useState(false);
+  const prochain = useCompteARebours();
 
   useEffect(() => {
     appelerApi<{ champions: ChampionVue[] }>("GET", "/minijeux/champions").then((r) => setChampions(r.champions), (e: Error) => setErreur(e.message));
@@ -73,6 +75,7 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
       });
       setEtat(r.etat);
       setRecherche("");
+      setSelection(0);
       if (r.juste) {
         publierSolde(r.solde);
         appelerApi<ResumeMiniJeux>("GET", "/minijeux").then(setResume, () => undefined);
@@ -86,20 +89,32 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
 
   function valider(e: FormEvent) {
     e.preventDefault();
-    const premier = suggestions[0];
-    if (premier) void proposer(premier);
+    const choisi = suggestions[Math.min(selection, suggestions.length - 1)];
+    if (choisi) void proposer(choisi);
+  }
+
+  function clavier(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelection((n) => Math.min(n + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelection((n) => Math.max(n - 1, 0));
+    } else if (e.key === "Escape") {
+      setRecherche("");
+    }
   }
 
   const infosMode = MODES.find((m) => m.code === mode) ?? MODES[0];
   const autresATrouver = MODES.filter((m) => m.code !== mode && resume && !resume.devinette[m.code].trouve);
 
   return (
-    <main className="conteneur pile">
-      <header className="entete">
+    <main className="conteneur pile mj-page">
+      <header className="mj-entete">
         <div>
           <a
             href="/minijeux"
-            className="aide"
+            className="mj-retour"
             onClick={(e) => {
               e.preventDefault();
               naviguer("/minijeux");
@@ -109,20 +124,31 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
           </a>
           <h1>Devine le champion</h1>
         </div>
+        <span className="mj-pastille">⏳ Prochain champion dans {prochain}</span>
       </header>
 
-      <nav className="onglets" aria-label="Modes de jeu">
-        {MODES.map((m) => (
-          <button
-            key={m.code}
-            className={m.code === mode ? "onglet actif" : "onglet"}
-            aria-current={m.code === mode ? "page" : undefined}
-            onClick={() => naviguer(`/minijeux/champion/${m.code}`, { remplacer: true })}
-          >
-            {resume?.devinette[m.code].trouve ? "✓ " : ""}
-            {m.libelle}
-          </button>
-        ))}
+      <nav className="mj-onglets" aria-label="Modes de jeu">
+        {MODES.map((m) => {
+          const trouve = resume?.devinette[m.code].trouve;
+          return (
+            <button
+              key={m.code}
+              className={`mj-onglet${m.code === mode ? " actif" : ""}${trouve ? " trouve" : ""}`}
+              aria-current={m.code === mode ? "page" : undefined}
+              onClick={() => naviguer(`/minijeux/champion/${m.code}`, { remplacer: true })}
+            >
+              <span className="mj-onglet-icone" aria-hidden="true">
+                {m.icone}
+              </span>
+              <span>{m.libelle}</span>
+              {trouve && (
+                <span className="mj-onglet-ok" aria-label="trouvé">
+                  ✓
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
 
       {erreur && <p className="message-erreur">{erreur}</p>}
@@ -130,78 +156,106 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
 
       {etat && (
         <>
-          <section className="carte pile-serree mj-indice">
-            <p className="aide">{infosMode.texte}</p>
-            <Indice etat={etat} />
-            <p className="aide">
-              {etat.trouvesAujourdhui === 0
-                ? "Personne n'a encore trouvé aujourd'hui."
-                : `${etat.trouvesAujourdhui} joueur${etat.trouvesAujourdhui > 1 ? "s ont" : " a"} trouvé aujourd'hui.`}
-            </p>
-          </section>
+          {!etat.trouve && (
+            <section className="mj-panneau">
+              <span className="mj-panneau-titre">
+                {infosMode.icone} {infosMode.libelle}
+              </span>
+              <p className="mj-panneau-consigne">{infosMode.texte}</p>
+              <Indice etat={etat} />
+              <div className="mj-pastilles">
+                <span className="mj-pastille">
+                  🎯 {etat.essais.length} essai{etat.essais.length > 1 ? "s" : ""}
+                </span>
+                <span className="mj-pastille mj-pastille-or">💎 +{etat.gainPossible} si tu trouves maintenant</span>
+                <span className="mj-pastille">
+                  👥 {etat.trouvesAujourdhui} joueur{etat.trouvesAujourdhui > 1 ? "s ont" : " a"} trouvé
+                </span>
+              </div>
+            </section>
+          )}
 
           {etat.trouve && etat.reponse ? (
-            <section className="carte mj-victoire">
-              {etat.reponse.splash ? (
-                <img src={etat.reponse.splash} alt={`Splash art de ${etat.reponse.nom}`} className="mj-victoire-splash" />
-              ) : etat.reponse.carte ? (
-                <ImageCarte image={etat.reponse.carte.image} largeur={300} alt={etat.reponse.carte.nom} className="mj-victoire-carte" />
-              ) : (
-                <Icone champion={etat.reponse} grande />
-              )}
-              <div className="pile-serree">
-                <span className="surtitre">Bravo !</span>
-                <h2>C'était {etat.reponse.nom}</h2>
-                <p>
-                  Trouvé en {etat.essais.length} essai{etat.essais.length > 1 ? "s" : ""} : <strong>+{formaterEclats(etat.gain)}</strong>
-                </p>
-                <p className="aide">Un nouveau champion t'attend demain à minuit.</p>
-                {autresATrouver.length > 0 && (
-                  <div className="barre-actions">
-                    {autresATrouver.map((m) => (
-                      <button key={m.code} className="secondaire" onClick={() => naviguer(`/minijeux/champion/${m.code}`, { remplacer: true })}>
-                        Mode {m.libelle} →
-                      </button>
-                    ))}
-                  </div>
+            <section className="mj-victoire">
+              {etat.reponse.splash && <div className="mj-victoire-fond" aria-hidden="true" style={{ backgroundImage: `url(${etat.reponse.splash})` }} />}
+              <div className="mj-victoire-contenu">
+                {etat.reponse.splash ? (
+                  <img src={etat.reponse.splash} alt={`Splash art de ${etat.reponse.nom}`} className="mj-victoire-splash" />
+                ) : etat.reponse.carte ? (
+                  <ImageCarte image={etat.reponse.carte.image} largeur={300} alt={etat.reponse.carte.nom} className="mj-victoire-carte" />
+                ) : (
+                  <Icone champion={etat.reponse} taille="grande" />
                 )}
+                <div className="mj-victoire-texte">
+                  <span className="mj-victoire-bravo">Bravo !</span>
+                  <h2>C'était {etat.reponse.nom}</h2>
+                  {mode === "emoji" && etat.indice && "emojis" in etat.indice && <p className="mj-victoire-emojis">{etat.indice.emojis.join(" ")}</p>}
+                  <div className="mj-pastilles">
+                    <span className="mj-pastille">
+                      🎯 Trouvé en {etat.essais.length} essai{etat.essais.length > 1 ? "s" : ""}
+                    </span>
+                    <span className="mj-pastille mj-pastille-or">+{formaterEclats(etat.gain)}</span>
+                  </div>
+                  <p className="aide">Prochain champion dans {prochain}.</p>
+                  {autresATrouver.length > 0 && (
+                    <div className="barre-actions">
+                      {autresATrouver.map((m) => (
+                        <button key={m.code} className="secondaire" onClick={() => naviguer(`/minijeux/champion/${m.code}`, { remplacer: true })}>
+                          {m.icone} Mode {m.libelle} →
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           ) : (
             <form className="mj-recherche" onSubmit={valider}>
-              <input
-                type="search"
-                value={recherche}
-                onChange={(e) => setRecherche(e.target.value)}
-                placeholder="Tape le nom d'un champion…"
-                aria-label="Nom du champion"
-                autoComplete="off"
-                disabled={envoi || !champions}
-              />
-              <span className="aide">
-                Bonne réponse maintenant : <strong>+{formaterEclats(etat.gainPossible)}</strong>
-              </span>
+              <div className="mj-champ-recherche">
+                <span aria-hidden="true">🔍</span>
+                <input
+                  type="search"
+                  value={recherche}
+                  onChange={(e) => {
+                    setRecherche(e.target.value);
+                    setSelection(0);
+                  }}
+                  onKeyDown={clavier}
+                  placeholder="Tape le nom d'un champion…"
+                  aria-label="Nom du champion"
+                  autoComplete="off"
+                  disabled={envoi || !champions}
+                />
+              </div>
               {suggestions.length > 0 && (
                 <ul className="mj-suggestions" role="listbox" aria-label="Champions">
-                  {suggestions.map((ch) => (
+                  {suggestions.map((ch, i) => (
                     <li key={ch.id}>
-                      <button type="button" className="mj-suggestion" onClick={() => void proposer(ch)} disabled={envoi}>
-                        {avatar(ch)}
+                      <button
+                        type="button"
+                        className={i === selection ? "mj-suggestion choisie" : "mj-suggestion"}
+                        onClick={() => void proposer(ch)}
+                        onMouseEnter={() => setSelection(i)}
+                        disabled={envoi}
+                        role="option"
+                        aria-selected={i === selection}
+                      >
+                        <Icone champion={ch} />
                         {ch.nom}
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
-              {recherche && suggestions.length === 0 && <p className="aide">Aucun champion de ce nom (ou déjà proposé).</p>}
+              {recherche && suggestions.length === 0 && <p className="mj-aucun">Aucun champion de ce nom (ou déjà proposé).</p>}
             </form>
           )}
 
           {mode === "classique" ? <TableauEssais essais={etat.essais} /> : <ListeEssais essais={etat.essais} />}
 
           {etat.hier && (
-            <p className="aide mj-hier">
-              Le champion d'hier : {avatar(etat.hier)} <strong>{etat.hier.nom}</strong>
+            <p className="mj-hier">
+              Le champion d'hier : <Icone champion={etat.hier} /> <strong>{etat.hier.nom}</strong>
             </p>
           )}
         </>
@@ -212,10 +266,7 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
 
 function Indice({ etat }: { etat: EtatDevinette }) {
   const indice = etat.indice;
-  if (!indice) {
-    if (etat.trouve) return null;
-    return <p className="mj-consigne">Propose un champion : les cases te diront ce qu'il a en commun avec celui du jour.</p>;
-  }
+  if (!indice) return <p className="mj-consigne">Propose un champion : chaque case te dira ce qu'il a en commun avec celui du jour.</p>;
   if ("texte" in indice) return <blockquote className="mj-capacite">{indice.texte}</blockquote>;
   if ("emojis" in indice) {
     return (
@@ -228,28 +279,28 @@ function Indice({ etat }: { etat: EtatDevinette }) {
       </div>
     );
   }
-  if (etat.trouve && etat.reponse) return null; // la carte entière est montrée dans l'encart de victoire
   return (
     <div className="mj-illustration">
       <img
         src={`/api/minijeux/devinette/illustration/image?jour=${etat.jour}`}
-        alt="Illustration à deviner"
+        alt="Splash art à deviner"
         style={{ transform: `scale(${indice.zoom})`, transformOrigin: `${indice.centre.x}% ${indice.centre.y}%` }}
       />
+      <span className="mj-zoom">×{indice.zoom}</span>
     </div>
   );
 }
 
-const fleche = (sens: Colonne<unknown>["sens"]) => (sens === "plus" ? " ↑" : sens === "moins" ? " ↓" : "");
-
 function Case({ colonne, texte, i }: { colonne: Colonne<unknown>; texte: string; i: number }) {
+  const sens = colonne.sens === "plus" ? " mj-plus" : colonne.sens === "moins" ? " mj-moins" : "";
   return (
-    <td className={`mj-case mj-${colonne.etat}`} style={{ "--i": i } as CSSProperties}>
-      {texte}
-      {fleche(colonne.sens)}
+    <td className={`mj-case mj-${colonne.etat}${sens}`} style={{ "--i": i } as CSSProperties}>
+      <span>{texte}</span>
     </td>
   );
 }
+
+const COLONNES = ["Genre", "Poste(s)", "Espèce(s)", "Ressource", "Portée", "Région(s)", "Année"];
 
 function TableauEssais({ essais }: { essais: EtatDevinette["essais"] }) {
   if (essais.length === 0) return null;
@@ -264,27 +315,23 @@ function TableauEssais({ essais }: { essais: EtatDevinette["essais"] }) {
     { colonne: c.annee, texte: String(c.annee.valeur) },
   ];
   return (
-    <section className="carte pile-serree">
+    <section className="mj-grille-essais">
       <div className="tableau-defilant">
         <table className="mj-tableau">
           <thead>
             <tr>
               <th>Champion</th>
-              <th>Genre</th>
-              <th>Poste(s)</th>
-              <th>Espèce(s)</th>
-              <th>Ressource</th>
-              <th>Portée</th>
-              <th>Région(s)</th>
-              <th>Année</th>
+              {COLONNES.map((c) => (
+                <th key={c}>{c}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {lignes.map((e) => (
               <tr key={e.champion.id}>
-                <td className={e.juste ? "mj-case mj-juste mj-champion" : "mj-case mj-champion"}>
-                  {avatar(e.champion)}
-                  {e.champion.nom}
+                <td className={e.juste ? "mj-case-champion juste" : "mj-case-champion"} title={e.champion.nom}>
+                  <Icone champion={e.champion} taille="tableau" />
+                  <span>{e.champion.nom}</span>
                 </td>
                 {e.comparaison && cases(e.comparaison).map((x, i) => <Case key={i} colonne={x.colonne} texte={x.texte} i={i + 1} />)}
               </tr>
@@ -292,9 +339,9 @@ function TableauEssais({ essais }: { essais: EtatDevinette["essais"] }) {
           </tbody>
         </table>
       </div>
-      <p className="aide mj-legende">
-        <span className="mj-puce mj-juste" /> juste <span className="mj-puce mj-partiel" /> en partie <span className="mj-puce mj-faux" /> faux · ↑ le
-        champion du jour est sorti plus tard, ↓ plus tôt.
+      <p className="mj-legende">
+        <span className="mj-puce mj-juste" /> juste <span className="mj-puce mj-partiel" /> en partie <span className="mj-puce mj-faux" /> faux
+        <span className="mj-legende-sep">·</span>▲ le champion du jour est sorti plus tard, ▼ plus tôt
       </p>
     </section>
   );
@@ -305,10 +352,12 @@ function ListeEssais({ essais }: { essais: EtatDevinette["essais"] }) {
   return (
     <ul className="mj-essais">
       {[...essais].reverse().map((e) => (
-        <li key={e.champion.id} className={e.juste ? "mj-juste" : "mj-faux"}>
-          {avatar(e.champion)}
-          {e.champion.nom}
-          <span aria-label={e.juste ? "juste" : "faux"}>{e.juste ? "✓" : "✗"}</span>
+        <li key={e.champion.id} className={e.juste ? "mj-essai juste" : "mj-essai"}>
+          <Icone champion={e.champion} />
+          <span>{e.champion.nom}</span>
+          <span className="mj-essai-marque" aria-label={e.juste ? "juste" : "faux"}>
+            {e.juste ? "✓" : "✗"}
+          </span>
         </li>
       ))}
     </ul>

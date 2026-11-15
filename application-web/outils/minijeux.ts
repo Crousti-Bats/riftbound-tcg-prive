@@ -1,11 +1,42 @@
-/** Mini-jeux côté navigateur : types des réponses de /api/minijeux et libellés en français. */
+/** Mini-jeux côté navigateur : types des réponses de /api/minijeux, libellés en français et compte à rebours. */
+import { useEffect, useState } from "react";
 
+/** decor : champion dont le splash art habille la tuile du mode (pure décoration, sans lien avec la réponse du jour). */
 export const MODES = [
-  { code: "classique", libelle: "Classique", icone: "?", texte: "Chaque essai te dit ce qui est juste : genre, poste, espèce, région, année…" },
-  { code: "emoji", libelle: "Emoji", icone: "☺", texte: "Devine le champion à partir d'emojis : un de plus à chaque erreur." },
-  { code: "capacite", libelle: "Capacité", icone: "✎", texte: "Retrouve le champion à partir du texte de sa Légende." },
-  { code: "illustration", libelle: "Illustration", icone: "◐", texte: "Le splash art officiel du champion, très zoomé, qui se dévoile à chaque erreur." },
+  { code: "classique", libelle: "Classique", icone: "🧩", decor: "Garen", texte: "Chaque essai te dit ce qui est juste : genre, poste, espèce, région, année…" },
+  { code: "emoji", libelle: "Emoji", icone: "😀", decor: "Teemo", texte: "Devine le champion à partir d'emojis : un de plus à chaque erreur." },
+  { code: "capacite", libelle: "Capacité", icone: "📜", decor: "Ryze", texte: "Retrouve le champion à partir du texte de sa Légende Riftbound." },
+  { code: "illustration", libelle: "Illustration", icone: "🖼️", decor: "Lux", texte: "Le splash art officiel du champion, très zoomé, qui se dévoile à chaque erreur." },
 ] as const;
+
+/** Splash art officiel (Data Dragon), pour la décoration des pages. */
+export const splashDecor = (id: string) => `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${id}_0.jpg`;
+
+const FORMAT_PARIS = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+
+/** Temps restant avant minuit à Paris, quand le champion du jour change. */
+export function msAvantMinuitParis(maintenant = Date.now()): number {
+  const parties = FORMAT_PARIS.formatToParts(new Date(maintenant));
+  const valeur = (type: string) => Number(parties.find((p) => p.type === type)?.value ?? 0);
+  const ecoule = (valeur("hour") * 3600 + valeur("minute") * 60 + valeur("second")) * 1000 + (maintenant % 1000);
+  return Math.max(0, 86_400_000 - ecoule);
+}
+
+export const formaterChrono = (ms: number) => {
+  const s = Math.floor(ms / 1000);
+  const deux = (n: number) => String(n).padStart(2, "0");
+  return `${deux(Math.floor(s / 3600))}:${deux(Math.floor((s % 3600) / 60))}:${deux(s % 60)}`;
+};
+
+/** « 05:12:33 » avant le prochain champion, mis à jour chaque seconde. */
+export function useCompteARebours(): string {
+  const [ms, setMs] = useState(() => msAvantMinuitParis());
+  useEffect(() => {
+    const minuteur = window.setInterval(() => setMs(msAvantMinuitParis()), 1000);
+    return () => window.clearInterval(minuteur);
+  }, []);
+  return formaterChrono(ms);
+}
 export type Mode = (typeof MODES)[number]["code"];
 
 export interface ChampionVue {

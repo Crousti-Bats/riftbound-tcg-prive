@@ -425,6 +425,10 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
   - Le genre, les espèces, les régions et les emojis sont **écrits à la main** : s'il y a une erreur, on corrige la ligne du champion.
   - Un test vérifie que la table est complète, sans doublon et avec 5 emojis par champion.
 - **Icônes** : elles viennent du CDN officiel `ddragon.leagueoflegends.com`, ajouté à la CSP (`img-src`, dans `serveur-api/entetes-securite.ts` et `application-web/fichiers-statiques/_headers`). Si une icône ne se charge pas, la page affiche l'initiale du champion.
+- **Habillage** (demandé le 2026-11-15 : « améliorer le visu des jeux ») :
+  - Accueil : bandeau avec un splash art, pastilles du jour (trouvés, éclats gagnés, compte à rebours jusqu'à minuit) et une tuile par mode avec un splash art en fond (décor fixe, sans lien avec la réponse du jour).
+  - Devine le champion : onglets avec icônes et ✓, panneau d'indice encadré, recherche au clavier (↑ ↓ Entrée), tableau en tuiles colorées qui se retournent, flèche de l'année en filigrane, écran de victoire avec le splash art.
+  - Memory : tableau de bord (coups, paires, chronomètre, jauge des éclats du jour), plateau, dos de carte travaillé, étoiles en fin de partie (★★★ ≤ 12 coups, ★★ ≤ 16, ★ au-delà).
 - **Memory** (`/minijeux/memory`) :
   - 8 paires (16 cases) tirées de **ma collection**, complétée par le catalogue s'il manque des cartes.
   - Ni runes, ni tokens, ni terrains.
