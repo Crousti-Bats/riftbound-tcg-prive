@@ -1,4 +1,4 @@
--- Migration 0019 : mini-jeux (demandé le 2026-11-13) : « Devine le champion » (4 modes) et Memory.
+-- Migration 0019 : mini-jeux : « Devine le champion » (4 modes) et Memory.
 -- Comme partout : aucune donnée de carte, seulement des cardCode (et des identifiants de champions LoL). Les gains en éclats sont crédités dans le même lot D1
 -- que la partie, et une seule fois (colonnes gain_credite).
 

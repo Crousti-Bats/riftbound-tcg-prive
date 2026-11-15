@@ -1,5 +1,5 @@
 /**
- * Règles des mini-jeux (demandé le 2026-11-13), sans accès à la base.
+ * Règles des mini-jeux, sans accès à la base.
  *
  * « Devine le champion », sur le modèle des jeux « -dle » : chaque jour, un champion à trouver dans quatre modes.
  * On peut proposer n'importe lequel des champions de League of Legends (table champions-lol.ts).

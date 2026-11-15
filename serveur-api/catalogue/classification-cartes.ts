@@ -45,7 +45,7 @@ const schemaCarteSource = z.object({
 });
 
 /**
- * Cartes rangées à la main dans les Special Alt (décision de l'utilisateur le 2026-11-10) : la source les numérote
+ * Cartes rangées à la main dans les Special Alt : la source les numérote
  * comme des Overnumbered (numéro au-delà du total du set), mais ce sont des Special. Clé : set, puis numéro.
  * Radiance 177 à 183/167 : Ekko Revolutionary, K'Sante Courageous, Aphelios Exalted, Ezreal Dashing,
  * Yone Blademaster, Kayn Unleashed, Sett Kingpin.

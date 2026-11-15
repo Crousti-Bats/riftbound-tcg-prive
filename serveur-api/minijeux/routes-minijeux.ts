@@ -1,5 +1,5 @@
 /**
- * Routes /api/minijeux (demandé le 2026-11-13) : « Devine le champion » (3 modes par jour) et Memory.
+ * Routes /api/minijeux : « Devine le champion » (4 modes par jour) et Memory.
  * Réservées aux joueurs connectés. Tout ce qui compte est décidé par le serveur :
  * - le défi du jour est tiré avec crypto.getRandomValues, puis figé en base (le dépôt est public : une graine calculable
  *   à partir de la date donnerait la réponse) ;

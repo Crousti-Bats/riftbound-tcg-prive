@@ -1,5 +1,5 @@
 /**
- * Discussion dans une bulle en bas à droite de l'écran (demandé le 2026-11-10, à la place des onglets du marché).
+ * Discussion dans une bulle en bas à droite de l'écran (à la place des onglets du marché).
  * Fermée : un rond avec le nombre de messages non lus (salon + privés). Ouverte : un panneau avec deux onglets,
  * Salon et Messages privés (liste des conversations, puis la conversation). Sur téléphone, le panneau prend l'écran.
  */

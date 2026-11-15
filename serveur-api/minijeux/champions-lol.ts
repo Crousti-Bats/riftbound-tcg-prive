@@ -1,6 +1,6 @@
 /**
- * Les champions de League of Legends pour « Devine le champion » (demandé le 2026-11-13 : « avec tous les champions de
- * LoL on puisse les deviner »). Ce ne sont pas des données de cartes Riftbound : c'est une table fixe, écrite à la main.
+ * Les champions de League of Legends pour « Devine le champion ».
+ * Ce ne sont pas des données de cartes Riftbound : c'est une table fixe, écrite à la main.
  * - Nom français, ressource et portée : Data Dragon de Riot (version VERSION_DDRAGON).
  * - Postes et année de sortie : Meraki Analytics (données du jeu, relevées le 2026-11-15), sauf Locke et Zaahen
  *   (absents de Meraki : valeurs provisoires).
