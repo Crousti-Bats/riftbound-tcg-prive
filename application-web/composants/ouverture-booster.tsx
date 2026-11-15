@@ -48,10 +48,27 @@ interface Props {
   surChangerSet: (code: string) => void;
   /** Le carrousel s'ouvre : le parent change les illustrations des sets qui en ont plusieurs. */
   surOuvrirCarrousel: () => void;
+  /** « Ouvrir plusieurs » depuis le booster encore scellé : le parent passe à l'ouverture multiple. */
+  surOuvrirPlusieurs?: (nombre: number) => void;
   surFermer: () => void;
 }
 
-export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, boosters, surChangerSet, surOuvrirCarrousel, surFermer }: Props) {
+/** Choix proposés sous le booster scellé (le dernier est « Tout », dans la limite de 20 par ouverture). */
+const CHOIX_PLUSIEURS = [3, 5, 10];
+const OUVERTURE_MAX = 20;
+
+export function OuvertureBooster({
+  set,
+  nomSet,
+  illustration,
+  ouvrir,
+  restants,
+  boosters,
+  surChangerSet,
+  surOuvrirCarrousel,
+  surOuvrirPlusieurs,
+  surFermer,
+}: Props) {
   const racine = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene | null>(null);
   const appelOuvrir = useRef(ouvrir);
@@ -148,6 +165,9 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
     scene.current?.recommencer(illustration);
   }
 
+  const toutOuvrir = Math.min(restants, OUVERTURE_MAX);
+  const choixPlusieurs = toutOuvrir >= 2 ? [...CHOIX_PLUSIEURS.filter((n) => n < toutOuvrir), toutOuvrir] : [];
+
   const rares = recap?.filter((c) => REVELATION[categorieRevelation(c)].rang >= 2).length ?? 0;
 
   return (
@@ -189,6 +209,19 @@ export function OuvertureBooster({ set, nomSet, illustration, ouvrir, restants, 
           )}
         </div>
       </header>
+
+      {scelle && !recap && !carrousel && surOuvrirPlusieurs && choixPlusieurs.length > 0 && (
+        <div className="ob-plusieurs" role="group" aria-label="Ouvrir plusieurs boosters d'un coup">
+          <span>Ou ouvre-en plusieurs d'un coup</span>
+          <div>
+            {choixPlusieurs.map((n) => (
+              <button key={n} type="button" className="ob-bouton-pilule ob-pilule-petite" onClick={() => surOuvrirPlusieurs(n)}>
+                {n === toutOuvrir ? `Tout (${n})` : `×${n}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {erreur && (
         <p className="ob-erreur" role="alert">

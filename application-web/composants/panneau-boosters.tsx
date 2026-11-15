@@ -306,6 +306,10 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
               boosters={choixBoosters}
               surChangerSet={setSet}
               surOuvrirCarrousel={changerToutesLesIllustrations}
+              surOuvrirPlusieurs={(n) => {
+                setEnOuverture(false);
+                setMultiple(n);
+              }}
               surFermer={fermer}
             />,
             document.body,
