@@ -372,7 +372,7 @@
   .ob-carrousel, .ob-carrousel-piste { animation: none; scroll-behavior: auto; }
 }
 
-/* « Ouvrir plusieurs » sous le booster encore scellé (demandé le 2026-11-15). */
+/* « Ouvrir plusieurs » sous le booster encore scellé. */
 .ob-plusieurs {
   position: absolute; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); translate: -50% 0; z-index: 6;
   display: flex; flex-direction: column; align-items: center; gap: 8px; width: max-content; max-width: calc(100% - 24px);

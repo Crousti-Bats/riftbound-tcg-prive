@@ -1,5 +1,5 @@
 /**
- * Ouvrir plusieurs boosters d'un coup (demandé le 2026-11-15) : les paquets apparaissent, tremblent et éclatent
+ * Ouvrir plusieurs boosters d'un coup : les paquets apparaissent, tremblent et éclatent
  * pendant que le serveur tire les cartes, puis un récapitulatif global montre d'abord les meilleures cartes,
  * et le reste regroupé (« ×3 »). Les cartes sont tirées par le serveur, en une seule requête.
  */

@@ -3,7 +3,7 @@
  * On ne garde que les cardCode (jamais les données de carte) : l'enrichissement pour l'affichage
  * se fait ensuite par recherche dans le catalogue.
  *
- * Décisions (doc §4, tranchées avec l'utilisateur) :
+ * Décisions (doc §4) :
  * - Les Légendes (type Legend, rareté Rare) et les Terrains (type Battlefield, rareté Uncommon)
  *   entrent dans leurs pools de rareté normaux.
  * - On exclut les Runes et Tokens des pools de rareté (ils ont leur propre slot).

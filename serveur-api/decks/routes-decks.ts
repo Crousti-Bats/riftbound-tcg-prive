@@ -1,5 +1,5 @@
 /**
- * Routes /api/decks : les decks du joueur connecté, construits avec les cartes de SA collection (demandé le 2026-11-10).
+ * Routes /api/decks : les decks du joueur connecté, construits avec les cartes de SA collection.
  * La base ne garde que des cardCode et des quantités (JSON). Les règles du jeu et la possession sont vérifiées à
  * chaque lecture et enregistrement (regles-deck.ts) : un deck incomplet peut être enregistré, il est simplement
  * signalé « non valide ». L'export texte sert à jouer sur TCG Arena (ou Rift Atlas, riftbound.gg…).

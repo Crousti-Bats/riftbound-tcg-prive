@@ -33,7 +33,7 @@ routesBoosters.onError((err, c) => {
   return c.json({ erreur: "boosters_indisponibles" }, 503);
 });
 
-/** Boosters ouverts d'un coup au maximum (« Ouvrir plusieurs », demandé le 2026-11-15). */
+/** Boosters ouverts d'un coup au maximum (« Ouvrir plusieurs »). */
 export const OUVERTURE_MAX = 20;
 const schemaOuverture = z.strictObject({
   set: z.string().regex(/^[a-z]{2,5}$/),
