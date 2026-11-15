@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ApercuBooster } from "./apercu-booster";
 import { OuvertureBooster } from "./ouverture-booster";
+import { OuvertureMultiple } from "./ouverture-multiple";
 import { appelerApi } from "../outils/appels-api";
 import { type CarteOuverte, formaterDuree } from "../outils/libelles-cartes";
 import { formaterEclats, publierSolde, usePrixBooster, useSoldeEclats } from "../outils/eclats";
@@ -19,6 +20,10 @@ interface EtatBoosters {
   stock: Stock;
   sets: Array<{ code: string; nom: string }>;
 }
+
+/** « Ouvrir plusieurs » : choix proposés, et maximum par ouverture (le même que le serveur). */
+const CHOIX_PLUSIEURS = [3, 5, 10];
+const OUVERTURE_MAX = 20;
 
 /** Sets qui ont un fond et des illustrations de booster dans /ouverture/ (booster-<set>-1.webp, -2…). */
 const ILLUSTRATIONS_PAR_SET: Record<string, number> = { ogn: 3, sfd: 1, unl: 3, ven: 2, rad: 1 };
@@ -39,12 +44,15 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
   const [prochaineA, setProchaineA] = useState<number | null>(null);
   const [maintenant, setMaintenant] = useState(() => Date.now());
   const [enOuverture, setEnOuverture] = useState(false);
+  // Ouverture de plusieurs boosters d'un coup : le nombre choisi (null : fermée).
+  const [multiple, setMultiple] = useState<number | null>(null);
   // Illustration affichée pour chaque set : elle change à chaque fois qu'on revient sur le set.
   const [illustrations, setIllustrations] = useState<Record<string, number>>({});
   // Relue par l'aperçu à chaque fermeture de l'ouverture (de nouvelles cartes ont pu être obtenues).
   const [versionCollection, setVersionCollection] = useState(0);
   const fermer = useCallback(() => {
     setEnOuverture(false);
+    setMultiple(null);
     setVersionCollection((v) => v + 1);
   }, []);
   const rechargement = useRef(false);
@@ -103,6 +111,17 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
     [set],
   );
 
+  const ouvrirPlusieurs = useCallback(
+    (nombre: number) =>
+      appelerApi<{ boosters: CarteOuverte[][]; stock: Stock }>("POST", "/boosters/ouvrir", { set, nombre }).then((r) => {
+        setEtat((prev) => (prev ? { ...prev, stock: r.stock } : prev));
+        setProchaineA(dateProchain(r.stock));
+        void rechargerWishlist().catch(() => undefined);
+        return r.boosters;
+      }),
+    [set],
+  );
+
   const solde = useSoldeEclats();
   const prixBooster = usePrixBooster();
   const [achat, setAchat] = useState(false);
@@ -147,6 +166,10 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
     setIllustrations(suivantes);
   }
   const peutOuvrir = Boolean(set) && total >= 1;
+  // « Ouvrir plusieurs » : 3, 5, 10, et « Tout » (dans la limite de 20 par ouverture).
+  const toutOuvrir = Math.min(total, OUVERTURE_MAX);
+  const choixPlusieurs = CHOIX_PLUSIEURS.filter((n) => n < toutOuvrir);
+  const imagesPaquets = Array.from({ length: ILLUSTRATIONS_PAR_SET[visuel] ?? 1 }, (_, i) => `/ouverture/booster-${visuel}-${i + 1}.webp`);
 
   return (
     <>
@@ -216,6 +239,19 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
                 <button className="bouton-principal" onClick={() => setEnOuverture(true)} disabled={!peutOuvrir}>
                   {total < 1 ? "Plus de booster pour l'instant" : `Ouvrir un booster ${nomSet}`}
                 </button>
+                {set && toutOuvrir >= 2 && (
+                  <div className="ouvrir-plusieurs" role="group" aria-label="Ouvrir plusieurs boosters d'un coup">
+                    <span>Ouvrir plusieurs :</span>
+                    {choixPlusieurs.map((n) => (
+                      <button key={n} type="button" className="secondaire petit" onClick={() => setMultiple(n)}>
+                        ×{n}
+                      </button>
+                    ))}
+                    <button type="button" className="secondaire petit" onClick={() => setMultiple(toutOuvrir)}>
+                      Tout ({toutOuvrir})
+                    </button>
+                  </div>
+                )}
               </>
             )}
             {erreur && <p className="message-erreur">{erreur}</p>}
@@ -243,6 +279,20 @@ export function PanneauBoosters({ pseudo }: { pseudo: string }) {
 
         {/* Rendu à la racine du document : le bandeau crée son propre empilement (isolation), qui laisserait
             la barre de navigation passer par-dessus l'ouverture et cacher ses boutons. */}
+        {multiple !== null &&
+          set &&
+          createPortal(
+            <OuvertureMultiple
+              set={set}
+              nomSet={nomSet}
+              nombre={multiple}
+              imagesPaquets={imagesPaquets}
+              ouvrir={ouvrirPlusieurs}
+              restants={total}
+              surFermer={fermer}
+            />,
+            document.body,
+          )}
         {enOuverture &&
           set &&
           createPortal(

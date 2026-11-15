@@ -2,7 +2,7 @@
 
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
-**Dernière mise à jour :** 2026-11-12
+**Dernière mise à jour :** 2026-11-15
 **Étape en cours :** 10 — Durcissement sécurité (en cours : revue faite, 6 correctifs livrés en PR, voir §4octies)
 **Prochaine étape :** fin de l'étape 10 : merger la PR des correctifs, décider de la modération des messages privés et de Cloudflare Access sur `/admin`, puis rapport PDF de l'étape 10.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
@@ -323,6 +323,12 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Vérifications** : 230 tests (2 nouveaux : ordre de consommation, offerts au-delà du plafond).
 - **Bouton « Passer l'animation » retiré** (à la demande de l'utilisateur, 2026-11-10). Restent « Passer aux rares » et « Tout révéler » pendant la révélation, et le réglage « Animations coupées ». La méthode `passer()` du moteur (`outils/ouverture-scene.ts`) est gardée mais n'est plus appelée.
 - **Correctif téléphone (récapitulatif d'ouverture)** : le bouton « Ouvrir un autre / N restants » gardait ses deux textes sur une ligne et débordait (surtout avec une police système agrandie sur Android), ce qui faisait défiler tout le récapitulatif de côté. Sur téléphone, le nombre restant passe sous le titre et le texte peut revenir à la ligne ; côte à côte seulement au-dessus de 760 px. `.ob-recap` n'a plus de défilement horizontal. Vérifié dans Edge headless à 320 et 360 px avec une police de 20 px.
+- **Ouvrir plusieurs boosters d'un coup** (demandé le 2026-11-15 : « ouvrir plusieurs packs en même temps ») :
+  - Sur l'accueil, sous « Ouvrir un booster », des boutons **×3, ×5, ×10 et « Tout (N) »**. Ils ne sont proposés que s'il reste assez de boosters, et on en ouvre au plus 20 à la fois.
+  - Une animation courte montre les paquets en éventail, qui tremblent puis éclatent pendant que le serveur tire les cartes. Elle est sautée avec la préférence « Animations coupées ».
+  - Un récapitulatif global suit, avec le bilan par rareté (« Epic ×2, Rare ×9 »), puis **tes meilleures cartes** (Rare et mieux) en grand, puis **le reste** regroupé en petites vignettes « ×N ». Un bouton « Ouvrir encore N » permet de recommencer.
+  - **Serveur** : `POST /api/boosters/ouvrir {set, nombre}` (1 à 20, 1 par défaut). Les boosters sont débités en une seule mise à jour protégée (stock normal d'abord, puis offerts, sous concurrence optimiste) ; s'il n'en reste pas assez, la réponse est 409 `pas_assez_de_boosters` et rien n'est écrit. Les cartes sont ajoutées en **4 requêtes au plus, quel que soit le nombre de boosters** (`json_each` : quantités groupées, wishlist, une ligne d'ouverture par booster, cartes remarquables), car D1 limite le nombre de requêtes par appel. La réponse donne `cartes` (toutes) et `boosters` (booster par booster).
+  - **Vérifications** : 2 nouveaux tests (5 boosters avec 3 du stock normal et 2 offerts, 70 cartes, 5 lignes d'ouverture, refus s'il n'en reste pas assez, bornes 1 à 20 ; ouvertures multiples simultanées : une seule passe). Captures Chrome sur PC et sur téléphone. Le composant ne lance qu'un seul appel par ouverture, même si React rejoue l'effet en développement : un second appel aurait consommé d'autres boosters.
 
 ## 4quindecies. Récapitulatif : les rares en premier (demandé le 2026-11-10)
 
@@ -479,6 +485,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **2026-11-10 — Boosters 10 max / 20 min, aperçu, annulation, wishlist, tri (§4undecies).** Migrations 0011 et 0012. 11 nouveaux tests.
 - **2026-11-10 — Profils des joueurs (§4decies).** Avatar (illustration d'une carte possédée), bio de 200 caractères, vitrine de 6 cartes, statistiques, page `/profil/<pseudo>`, avatars dans la navigation et le marché. Migration 0010. 9 tests.
 - **2026-11-12 — Fabrication ×10, barre du récapitulatif toujours en bas (§4duovicies).** Fabriquer une carte coûte 40 × sa valeur de recyclage (au lieu de 4 ×). Barre « Ouvrir un autre » collée en bas de l'écran même avec peu de cartes (colonne flex + `margin-top: auto`, toujours sticky quand la liste défile).
+- **2026-11-15 — Ouvrir plusieurs boosters d'un coup (§4quattuordecies).** ×3, ×5, ×10 ou tout (20 au plus), animation des paquets, récapitulatif global. Serveur : `nombre` dans `POST /api/boosters/ouvrir`, au plus 4 requêtes D1 par ouverture.
 - **2026-11-12 — Booster à 200 éclats (§4duovicies).** Au lieu de 100.
 - **2026-11-12 — Recyclage sélectif, Rares à 5 éclats (§4duovicies).** Choix par catégorie, avec ou sans les foils, carte par carte. 1 nouveau test (306 au total).
 - **2026-11-12 — Éclats et tri par nombre d'exemplaires (§4duovicies).** Recyclage des doublons (1 gardé + ceux des decks, foil ×2), achat de booster à 100 éclats, fabrication d'une carte à 4 × sa valeur. Migration 0018. Tri « plus rares d'abord » par défaut partout (PR #47). 8 nouveaux tests (305 au total).

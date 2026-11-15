@@ -293,6 +293,10 @@ td.details { white-space: normal; max-width: 320px; color: var(--texte-doux); fo
 
 .bouton-principal { min-height: 54px; padding: 14px 30px; font-size: 1.05rem; border-radius: 12px; letter-spacing: 0.01em; }
 .bouton-principal:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 28px rgba(232, 160, 60, 0.35); }
+/* « Ouvrir plusieurs » : sous le bouton principal, une rangée de petits boutons ×3, ×5, ×10, Tout (N). */
+.ouvrir-plusieurs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.ouvrir-plusieurs > span { color: var(--texte-doux); font-size: 0.85rem; font-weight: 600; margin-right: 2px; }
+.ouvrir-plusieurs button { min-width: 52px; font-variant-numeric: tabular-nums; }
 
 .hero-paquet {
   position: relative; padding: 0; min-height: 0; border: none; background: none; box-shadow: none; border-radius: 12px;

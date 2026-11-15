@@ -33,7 +33,12 @@ routesBoosters.onError((err, c) => {
   return c.json({ erreur: "boosters_indisponibles" }, 503);
 });
 
-const schemaOuverture = z.strictObject({ set: z.string().regex(/^[a-z]{2,5}$/) });
+/** Boosters ouverts d'un coup au maximum (« Ouvrir plusieurs », demandé le 2026-11-15). */
+export const OUVERTURE_MAX = 20;
+const schemaOuverture = z.strictObject({
+  set: z.string().regex(/^[a-z]{2,5}$/),
+  nombre: z.number().int().min(1).max(OUVERTURE_MAX).optional(),
+});
 
 interface LigneStock {
   stock_boosters: number;
@@ -160,6 +165,7 @@ routesBoosters.post("/ouvrir", async (c) => {
   const lecture = await lireCorps(c, schemaOuverture);
   if (!lecture.ok) return lecture.reponse;
   const { set } = lecture.donnees;
+  const nombre = lecture.donnees.nombre ?? 1;
 
   const catalogue = await obtenirCatalogue();
   const infoSet = catalogue.sets.find((s) => s.code === set);
@@ -172,84 +178,112 @@ routesBoosters.post("/ouvrir", async (c) => {
   const maintenant = Date.now();
   const etat = regenerer(ligne?.stock_boosters ?? 0, ligne?.boosters_tick ?? maintenant, maintenant);
   const offerts = ligne?.boosters_bonus ?? 0;
-  if (etat.stock < 1 && offerts < 1) {
+  if (etat.stock + offerts < 1) {
     return c.json({ erreur: "aucun_booster", prochainDansMs: prochainDansMs(etat, maintenant) }, 409);
   }
+  if (etat.stock + offerts < nombre) {
+    return c.json({ erreur: "pas_assez_de_boosters", disponibles: etat.stock + offerts }, 409);
+  }
+
+  // Le stock normal passe en premier (le minuteur repart aussitôt) ; les boosters offerts ensuite.
+  const parStockNormal = Math.min(nombre, etat.stock);
+  const parOfferts = nombre - parStockNormal;
+  const nouvelEtat = { stock: etat.stock - parStockNormal, tick: etat.tick };
 
   // Décrément protégé (concurrence optimiste) : on n'écrit que si la ligne n'a pas bougé depuis la lecture.
-  // Ainsi deux ouvertures simultanées ne peuvent pas consommer un seul booster deux fois.
-  // Le stock normal passe en premier (le minuteur repart aussitôt) ; les boosters offerts ensuite.
-  const parStockNormal = etat.stock >= 1;
-  const decrement = await (parStockNormal
-    ? base
-        .prepare(
-          "UPDATE comptes SET stock_boosters = ?, boosters_tick = ? WHERE id = ? AND stock_boosters = ? AND boosters_tick = ?",
-        )
-        .bind(etat.stock - 1, etat.tick, compte.id, ligne?.stock_boosters ?? 0, ligne?.boosters_tick ?? maintenant)
-    : base
-        .prepare("UPDATE comptes SET boosters_bonus = ? WHERE id = ? AND boosters_bonus = ?")
-        .bind(offerts - 1, compte.id, offerts)
-  ).run();
+  // Ainsi deux ouvertures simultanées ne peuvent pas consommer les mêmes boosters deux fois.
+  const decrement = await base
+    .prepare(
+      `UPDATE comptes SET stock_boosters = ?, boosters_tick = ?, boosters_bonus = ?
+       WHERE id = ? AND stock_boosters = ? AND boosters_tick = ? AND boosters_bonus = ?`,
+    )
+    .bind(
+      nouvelEtat.stock,
+      nouvelEtat.tick,
+      offerts - parOfferts,
+      compte.id,
+      ligne?.stock_boosters ?? 0,
+      ligne?.boosters_tick ?? maintenant,
+      offerts,
+    )
+    .run();
   if (decrement.meta.changes !== 1) {
     // Une autre ouverture a modifié le stock entre-temps : on demande de réessayer (aucune carte n'a été ajoutée).
     return c.json({ erreur: "conflit_ouverture" }, 409);
   }
 
   // Le décrément est acquis : on tire les cartes et on les ajoute à la collection de façon atomique.
+  // Quel que soit le nombre de boosters, le lot fait au plus 4 requêtes (json_each) : D1 limite le nombre de
+  // requêtes par appel, et 20 boosters de 14 cartes en feraient 280 une par une.
   const pools = construirePools(catalogue);
-  const tirees = tirerBooster(pools, set, aleatoireCrypto());
+  const alea = aleatoireCrypto();
+  const boosters = Array.from({ length: nombre }, () => tirerBooster(pools, set, alea));
+  const tirees = boosters.flat();
 
-  const requetes = tirees.map((t) =>
+  const quantites = new Map<string, [string, 0 | 1, number]>();
+  for (const t of tirees) {
+    const cle = `${t.code}|${t.foil ? 1 : 0}`;
+    const ligneQuantite = quantites.get(cle) ?? [t.code, t.foil ? 1 : 0, 0];
+    ligneQuantite[2] += 1;
+    quantites.set(cle, ligneQuantite);
+  }
+  const requetes = [
     base
       .prepare(
-        `INSERT INTO collection (compte_id, card_code, est_foil, quantite) VALUES (?, ?, ?, 1)
-         ON CONFLICT (compte_id, card_code, est_foil) DO UPDATE SET quantite = quantite + 1`,
+        // « WHERE true » : sans lui, SQLite confond le ON de l'upsert avec une jointure (INSERT … SELECT … ON CONFLICT).
+        `INSERT INTO collection (compte_id, card_code, est_foil, quantite)
+         SELECT ?1, json_extract(value, '$[0]'), json_extract(value, '$[1]'), json_extract(value, '$[2]') FROM json_each(?2) WHERE true
+         ON CONFLICT (compte_id, card_code, est_foil) DO UPDATE SET quantite = quantite + excluded.quantite`,
       )
-      .bind(compte.id, t.code, t.foil ? 1 : 0),
-  );
-  // Les cartes obtenues quittent ma wishlist (une seule requête pour tout le booster).
-  const codesTires = [...new Set(tirees.map((t) => t.code))];
-  requetes.push(
+      .bind(compte.id, JSON.stringify([...quantites.values()])),
+    // Les cartes obtenues quittent ma wishlist (une seule requête pour tous les boosters).
     base
       .prepare("DELETE FROM wishlist WHERE compte_id = ? AND card_code IN (SELECT value FROM json_each(?))")
-      .bind(compte.id, JSON.stringify(codesTires)),
-  );
-  requetes.push(
+      .bind(compte.id, JSON.stringify([...new Set(tirees.map((t) => t.code))])),
+    // Une ligne par booster ouvert (statistiques du profil et du monitoring).
     base
-      .prepare("INSERT INTO ouvertures_boosters (compte_id, set_code, horodatage) VALUES (?, ?, ?)")
-      .bind(compte.id, set, maintenant),
-  );
+      .prepare("INSERT INTO ouvertures_boosters (compte_id, set_code, horodatage) SELECT ?1, ?2, ?3 FROM json_each(?4)")
+      .bind(compte.id, set, maintenant, JSON.stringify(boosters.map((_, i) => i))),
+  ];
   // Cartes remarquables (Epic et au-delà) : tracées pour le monitoring admin, dans le même lot atomique.
   const parCode = new Map(catalogue.cartes.map((carte) => [carte.code, carte]));
-  for (const t of tirees) {
+  const remarquables = tirees.filter((t) => {
     const carte = parCode.get(t.code);
-    if (carte && estRemarquable(carte)) {
-      requetes.push(
-        base
-          .prepare("INSERT INTO tirages_remarquables (compte_id, card_code, est_foil, horodatage) VALUES (?, ?, ?, ?)")
-          .bind(compte.id, t.code, t.foil ? 1 : 0, maintenant),
-      );
-    }
+    return carte && estRemarquable(carte);
+  });
+  if (remarquables.length) {
+    requetes.push(
+      base
+        .prepare(
+          `INSERT INTO tirages_remarquables (compte_id, card_code, est_foil, horodatage)
+           SELECT ?1, json_extract(value, '$[0]'), json_extract(value, '$[1]'), ?2 FROM json_each(?3)`,
+        )
+        .bind(compte.id, maintenant, JSON.stringify(remarquables.map((t) => [t.code, t.foil ? 1 : 0]))),
+    );
   }
   await base.batch(requetes);
 
   // Enrichissement pour l'affichage (données de carte issues du catalogue, jamais de la base).
   // La fiche de carte du site lit tous les champs (domaines, texte, énergie…) : on renvoie la carte complète,
   // exactement comme le catalogue et la collection, plus le foil et le slot du tirage.
-  const cartes = tirees.flatMap((t) => {
-    const carte = parCode.get(t.code);
-    return carte ? [{ ...carte, foil: t.foil, slot: t.slot }] : [];
-  });
+  const enrichir = (booster: typeof tirees) =>
+    booster.flatMap((t) => {
+      const carte = parCode.get(t.code);
+      return carte ? [{ ...carte, foil: t.foil, slot: t.slot }] : [];
+    });
+  const parBooster = boosters.map(enrichir);
 
-  const nouvelEtat = parStockNormal ? { stock: etat.stock - 1, tick: etat.tick } : etat;
   return c.json({
     set,
-    cartes,
+    /** Les cartes de tous les boosters, à la suite (un seul booster : ses 14 cartes). */
+    cartes: parBooster.flat(),
+    /** Les cartes booster par booster. */
+    boosters: parBooster,
     stock: {
       actuel: nouvelEtat.stock,
       max: STOCK_MAX,
       prochainDansMs: prochainDansMs(nouvelEtat, maintenant),
-      offerts: parStockNormal ? offerts : offerts - 1,
+      offerts: offerts - parOfferts,
     },
   });
 });

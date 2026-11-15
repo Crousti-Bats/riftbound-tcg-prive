@@ -13,8 +13,9 @@ import { definirSon, sonActif } from "../outils/ouverture-sons";
 
 const CLE_SANS_ANIMATION = "riftbound-ouverture-sans-animation";
 
-/** Préférence « Animations coupées », retenue dans ce navigateur (stockage indisponible : animations actives). */
-function lireSansAnimation(): boolean {
+/** Préférence « Animations coupées », retenue dans ce navigateur (stockage indisponible : animations actives).
+ *  Aussi lue par l'ouverture de plusieurs boosters. */
+export function lireSansAnimation(): boolean {
   try {
     return localStorage.getItem(CLE_SANS_ANIMATION) === "1";
   } catch {
