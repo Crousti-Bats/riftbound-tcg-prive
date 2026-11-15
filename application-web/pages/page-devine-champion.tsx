@@ -142,7 +142,9 @@ export function PageDevineChampion({ mode }: { mode: Mode }) {
 
           {etat.trouve && etat.reponse ? (
             <section className="carte mj-victoire">
-              {etat.reponse.carte ? (
+              {etat.reponse.splash ? (
+                <img src={etat.reponse.splash} alt={`Splash art de ${etat.reponse.nom}`} className="mj-victoire-splash" />
+              ) : etat.reponse.carte ? (
                 <ImageCarte image={etat.reponse.carte.image} largeur={300} alt={etat.reponse.carte.nom} className="mj-victoire-carte" />
               ) : (
                 <Icone champion={etat.reponse} grande />

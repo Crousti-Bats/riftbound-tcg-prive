@@ -7,8 +7,8 @@
  *   portée, régions, année de sortie) : vert, orange, rouge, flèches ;
  * - emoji : des emojis qui décrivent le champion, un de plus à chaque erreur ;
  * - capacite : le texte de la Légende Riftbound du champion, nom masqué ;
- * - illustration : une illustration Riftbound du champion, très zoomée, qui se dézoome à chaque erreur.
- * Pour les deux derniers modes, la réponse est un champion qui a une Légende Riftbound (57 dans les données actuelles).
+ * - illustration : le splash art officiel du champion, très zoomé, qui se dézoome à chaque erreur.
+ * Pour le mode « capacite », la réponse est un champion qui a une Légende Riftbound (57 dans les données actuelles).
  */
 import { SETS_CONNUS } from "../catalogue/classification-cartes";
 import type { CarteCatalogue, Catalogue } from "../catalogue/types-catalogue";
@@ -17,7 +17,7 @@ import { type ChampionLol, championLolDuNom } from "./champions-lol";
 export const MODES = ["classique", "emoji", "capacite", "illustration"] as const;
 export type Mode = (typeof MODES)[number];
 
-/** Un champion présent dans les cartes Riftbound (modes « capacite » et « illustration »). */
+/** Un champion présent dans les cartes Riftbound (mode « capacite », et grille du Memory). */
 export interface ChampionRiftbound {
   lol: ChampionLol;
   legendes: CarteCatalogue[];

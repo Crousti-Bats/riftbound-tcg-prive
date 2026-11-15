@@ -3,7 +3,7 @@
  * Réservées aux joueurs connectés. Tout ce qui compte est décidé par le serveur :
  * - le défi du jour est tiré avec crypto.getRandomValues, puis figé en base (le dépôt est public : une graine calculable
  *   à partir de la date donnerait la réponse) ;
- * - l'illustration du jour passe par le serveur, pour que son adresse ne trahisse pas la carte ;
+ * - le splash art du jour passe par le serveur, pour que son adresse (qui contient le nom) ne trahisse pas la réponse ;
  * - la grille du Memory reste sur le serveur, une carte n'est envoyée que quand on la retourne ;
  * - les gains en éclats sont crédités dans le même lot D1 que le coup gagnant, une seule fois (gain_credite).
  */
@@ -11,13 +11,12 @@ import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
 import { aleatoireCrypto, type Aleatoire } from "../boosters/aleatoire";
-import { PREFIXE_IMAGES } from "../catalogue/classification-cartes";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
 import type { CarteCatalogue, Catalogue } from "../catalogue/types-catalogue";
 import { lireCorps } from "../lecture-requete";
 import { compterTentative, REGLES } from "../securite/limitation-tentatives";
 import type { ContexteApi } from "../types-application";
-import { CHAMPIONS_LOL, type ChampionLol, championLol } from "./champions-lol";
+import { CHAMPIONS_LOL, type ChampionLol, championLol, splashArt } from "./champions-lol";
 import {
   centreDuZoom,
   championDeLaCarte,
@@ -58,7 +57,7 @@ const vignette = (ch: ChampionLol) => ({ id: ch.id, nom: ch.nom, image: ch.image
 
 interface Defi {
   champion: ChampionLol;
-  /** Carte Riftbound montrée en indice (modes « capacite » et « illustration »). */
+  /** Carte Riftbound montrée en indice (mode « capacite »). */
   carte: CarteCatalogue | null;
 }
 
@@ -66,22 +65,20 @@ const aUnTexte = (l: CarteCatalogue) => (l.texte ?? "").trim().length > 0;
 
 /**
  * Tire la réponse d'un mode (jamais le champion de la veille). Ce qui est enregistré : l'identifiant du champion LoL
- * (classique, emoji) ou le cardCode de la carte Riftbound montrée (capacité, illustration).
+ * (classique, emoji, illustration) ou le cardCode de la Légende Riftbound montrée (capacité).
  */
 function choisirReponse(catalogue: Catalogue, mode: Mode, exclu: string | null, alea: Aleatoire): string | null {
-  if (mode === "classique" || mode === "emoji") return tirer(CHAMPIONS_LOL.filter((ch) => ch.id !== exclu), alea)?.id ?? null;
-  const candidats = championsRiftbound(catalogue).filter((ch) => {
-    if (ch.lol.id === exclu) return false;
-    return mode === "capacite" ? ch.legendes.some(aUnTexte) : ch.illustrations.length > 0;
-  });
-  const champion = tirer(candidats, alea);
-  if (!champion) return null;
-  return (mode === "capacite" ? tirer(champion.legendes.filter(aUnTexte), alea) : tirer(champion.illustrations, alea))?.code ?? null;
+  if (mode !== "capacite") return tirer(CHAMPIONS_LOL.filter((ch) => ch.id !== exclu), alea)?.id ?? null;
+  const champion = tirer(
+    championsRiftbound(catalogue).filter((ch) => ch.lol.id !== exclu && ch.legendes.some(aUnTexte)),
+    alea,
+  );
+  return champion ? (tirer(champion.legendes.filter(aUnTexte), alea)?.code ?? null) : null;
 }
 
 /** Ce que désigne une réponse enregistrée (null si elle n'existe plus dans les données). */
 function lireReponse(catalogue: Catalogue, mode: Mode, reponse: string): Defi | null {
-  if (mode === "classique" || mode === "emoji") {
+  if (mode !== "capacite") {
     const champion = championLol(reponse);
     return champion ? { champion, carte: null } : null;
   }
@@ -129,7 +126,7 @@ function indiceDu(mode: Mode, defi: Defi, jour: string, erreurs: number, trouve:
     const champion = championsRiftbound(catalogue).find((ch) => ch.lol.id === defi.champion.id);
     return { texte: champion ? texteMasque(defi.carte, champion) : "" };
   }
-  if (mode === "illustration" && defi.carte) return { centre: centreDuZoom(jour, defi.carte.code), zoom: zoomIllustration(erreurs, trouve) };
+  if (mode === "illustration") return { centre: centreDuZoom(jour, defi.champion.id), zoom: zoomIllustration(erreurs, trouve) };
   return null;
 }
 
@@ -165,7 +162,11 @@ async function etatDevinette(base: D1Database, catalogue: Catalogue, compteId: n
     hier: championHier ? vignette(championHier) : null,
     indice: indiceDu(mode, defi, jour, erreurs, trouve, catalogue),
     reponse: trouve
-      ? { ...vignette(defi.champion), carte: defi.carte ? { code: defi.carte.code, nom: defi.carte.nom, image: defi.carte.image } : null }
+      ? {
+          ...vignette(defi.champion),
+          carte: defi.carte ? { code: defi.carte.code, nom: defi.carte.nom, image: defi.carte.image } : null,
+          splash: mode === "illustration" ? splashArt(defi.champion.id) : null,
+        }
       : null,
   };
 }
@@ -203,9 +204,9 @@ routesMiniJeux.get("/champions", async (c) => {
 routesMiniJeux.get("/devinette/illustration/image", async (c) => {
   const catalogue = await obtenirCatalogue();
   const defi = await defiDuJour(c.env.BASE_DE_DONNEES, catalogue, jourDeParis(Date.now()), "illustration");
-  if (!defi?.carte || !defi.carte.image.startsWith(PREFIXE_IMAGES)) return c.json({ erreur: "defi_indisponible" }, 503);
-  // Adresse fixe du CDN officiel, venue du catalogue (jamais du client) : pas de SSRF possible.
-  const image = await fetch(`${defi.carte.image}?w=744&fm=webp`).catch(() => null);
+  if (!defi) return c.json({ erreur: "defi_indisponible" }, 503);
+  // Adresse du CDN officiel construite à partir de la table des champions (jamais du client) : pas de SSRF possible.
+  const image = await fetch(splashArt(defi.champion.id)).catch(() => null);
   const type = image?.headers.get("Content-Type") ?? "";
   if (!image?.ok || !type.startsWith("image/")) return c.json({ erreur: "image_indisponible" }, 502);
   return new Response(image.body, { headers: { "Content-Type": type, "Cache-Control": "private, max-age=3600" } });

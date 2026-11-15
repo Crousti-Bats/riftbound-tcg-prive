@@ -214,33 +214,37 @@ describe("API « Devine le champion »", () => {
     expect(solde(env, idDe(env, "Alice"))).toBe(15);
   });
 
-  it("capacité et illustration : la réponse n'est jamais dévoilée avant d'être trouvée", async () => {
+  it("capacité et illustration (splash art officiel) : la réponse n'est jamais dévoilée avant d'être trouvée", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
     fixerDefi(env, "capacite", "unl-191-219");
-    fixerDefi(env, "illustration", "ogs-005-024");
+    fixerDefi(env, "illustration", "XinZhao");
     const capacite = await env.appeler("GET", "/api/minijeux/devinette/capacite", { cookie });
     expect(capacite.json.indice).toEqual({ texte: "??? frappe deux fois." });
     expect(capacite.texte).not.toMatch(/unl-191-219|Master Yi|Maître Yi|MasterYi/);
 
     const illustration = await env.appeler("GET", "/api/minijeux/devinette/illustration", { cookie });
     expect(illustration.json.indice).toMatchObject({ zoom: 5 });
-    expect(illustration.texte).not.toMatch(/ogs-005-024|ogs-019-024|Master Yi|Maître Yi|MasterYi/);
+    expect(illustration.texte).not.toMatch(/XinZhao|Xin Zhao|splash/);
 
     const appels: string[] = [];
     vi.stubGlobal("fetch", async (url: string) => {
       appels.push(url);
-      return new Response(new Uint8Array([1, 2, 3]), { headers: { "Content-Type": "image/webp" } });
+      return new Response(new Uint8Array([1, 2, 3]), { headers: { "Content-Type": "image/jpeg" } });
     });
     const image = await env.appeler("GET", "/api/minijeux/devinette/illustration/image", { cookie });
     expect(image.statut).toBe(200);
-    expect(appels).toEqual(["https://cmsassets.rgpub.io/ogs-005-024.png?w=744&fm=webp"]);
+    expect(appels).toEqual(["https://ddragon.leagueoflegends.com/cdn/img/champion/splash/XinZhao_0.jpg"]);
 
-    // Chaque erreur dézoome l'illustration ; on peut proposer un champion qui n'est pas dans Riftbound.
+    // Chaque erreur dézoome le splash art ; la réponse peut être n'importe quel champion de LoL.
     const r = await env.appeler("POST", "/api/minijeux/devinette/illustration/essai", { cookie, corps: { champion: "Zyra" } });
     expect(r.json).toMatchObject({ juste: false, etat: { indice: { zoom: 4.5 } } });
-    const ok = await env.appeler("POST", "/api/minijeux/devinette/illustration/essai", { cookie, corps: { champion: "MasterYi" } });
-    expect(ok.json).toMatchObject({ juste: true, gain: 14, etat: { reponse: { nom: "Maître Yi", carte: { code: "ogs-005-024" } }, indice: { zoom: 1 } } });
+    const ok = await env.appeler("POST", "/api/minijeux/devinette/illustration/essai", { cookie, corps: { champion: "XinZhao" } });
+    expect(ok.json).toMatchObject({
+      juste: true,
+      gain: 14,
+      etat: { reponse: { nom: "Xin Zhao", carte: null, splash: "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/XinZhao_0.jpg" }, indice: { zoom: 1 } },
+    });
   });
 
   it("tire le défi du jour au hasard, le fige, et ne reprend pas le champion de la veille", async () => {

@@ -416,12 +416,13 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
   - **Classique** (parmi les 173) : une ligne par essai, colonnes Genre, Poste(s), Espèce(s), Ressource, Portée, Région(s), Année. Vert = juste, orange = en partie (au moins une valeur en commun), rouge = faux. Pour l'année, ↑ = le champion du jour est sorti plus tard, ↓ = plus tôt.
   - **Emoji** (parmi les 173) : 5 emojis par champion. Un seul est visible au départ, et un de plus apparaît à chaque erreur.
   - **Capacité** (parmi les 57 champions qui ont une Légende Riftbound) : le texte de la Légende, avec le nom masqué (« ??? »).
-  - **Illustration** (parmi les mêmes 57) : une illustration Riftbound du champion, zoomée ×5 au départ, puis −0,5 à chaque erreur.
+  - **Illustration** (parmi les 173) : le **splash art officiel** du champion (skin de base, CDN Data Dragon), zoomé ×5 au départ, puis −0,5 à chaque erreur. Il est montré en entier une fois trouvé (demandé le 2026-11-15 : « base-toi sur les vrais »).
   - Autour du jeu : recherche avec suggestions et icônes (sans accents ni apostrophes : « khazix » trouve Kha'Zix), « N joueurs ont trouvé aujourd'hui », champion de la veille.
 - **Table des champions** (`serveur-api/minijeux/champions-lol.ts`) :
   - C'est une table fixe, sans rapport avec les cartes, qui n'est pas en base.
   - Le nom français, la ressource et la portée viennent du Data Dragon de Riot (16.22.1).
-  - Le genre, les postes, les espèces, les régions, l'année et les emojis sont **écrits à la main** : s'il y a une erreur, on corrige la ligne du champion. **Locke** (sorti en 2026) a des valeurs provisoires à vérifier.
+  - Les **postes** et l'**année** viennent de **Meraki Analytics** (données du jeu, relevées le 2026-11-15). Le 2026-11-15, l'utilisateur a signalé que les postes écrits de mémoire étaient faux : 34 champions ont été corrigés. **Locke** et **Zaahen** sont absents de Meraki, leurs valeurs sont provisoires.
+  - Le genre, les espèces, les régions et les emojis sont **écrits à la main** : s'il y a une erreur, on corrige la ligne du champion.
   - Un test vérifie que la table est complète, sans doublon et avec 5 emojis par champion.
 - **Icônes** : elles viennent du CDN officiel `ddragon.leagueoflegends.com`, ajouté à la CSP (`img-src`, dans `serveur-api/entetes-securite.ts` et `application-web/fichiers-statiques/_headers`). Si une icône ne se charge pas, la page affiche l'initiale du champion.
 - **Memory** (`/minijeux/memory`) :
@@ -436,7 +437,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Anti-triche** (le dépôt est public) :
   - Le champion du jour est tiré par `crypto.getRandomValues` à la première visite du jour, puis figé en base (`defis_du_jour`). Une graine calculée à partir de la date donnerait la réponse.
   - Le navigateur ne reçoit jamais la réponse avant de l'avoir trouvée : il envoie un champion, et le serveur compare. En mode Emoji, seuls les emojis déjà révélés sont envoyés.
-  - L'illustration passe par le serveur (`GET /api/minijeux/devinette/illustration/image`), sans quoi son adresse trahirait la carte. Le serveur ne télécharge que l'adresse du CDN Riot venue du catalogue, ce qui exclut le SSRF.
+  - Le splash art passe par le serveur (`GET /api/minijeux/devinette/illustration/image`), sans quoi son adresse, qui contient le nom du champion, donnerait la réponse. Le serveur construit lui-même l'adresse du CDN Data Dragon à partir de la table des champions, ce qui exclut le SSRF.
   - La grille du Memory reste sur le serveur : une carte n'est envoyée qu'une fois retournée, et le serveur compte les coups.
   - Les gains sont crédités dans le même lot D1 que le coup gagnant, une seule fois (`gain_credite`). Le nombre d'essais et de coups sert de contrôle de concurrence, donc des réponses simultanées ne sont créditées qu'une fois.
   - Limite de 60 parties de Memory par heure (`memory:compte:<id>`). Les essais sont limités par nature à 173 par mode et par jour, car un champion déjà proposé est refusé sans écriture.

@@ -4,7 +4,7 @@ export const MODES = [
   { code: "classique", libelle: "Classique", icone: "?", texte: "Chaque essai te dit ce qui est juste : genre, poste, espèce, région, année…" },
   { code: "emoji", libelle: "Emoji", icone: "☺", texte: "Devine le champion à partir d'emojis : un de plus à chaque erreur." },
   { code: "capacite", libelle: "Capacité", icone: "✎", texte: "Retrouve le champion à partir du texte de sa Légende." },
-  { code: "illustration", libelle: "Illustration", icone: "◐", texte: "Une illustration très zoomée, qui se dévoile à chaque erreur." },
+  { code: "illustration", libelle: "Illustration", icone: "◐", texte: "Le splash art officiel du champion, très zoomé, qui se dévoile à chaque erreur." },
 ] as const;
 export type Mode = (typeof MODES)[number]["code"];
 
@@ -40,8 +40,8 @@ export interface EtatDevinette {
   trouvesAujourdhui: number;
   hier: ChampionVue | null;
   indice: { texte: string } | { emojis: string[]; total: number } | { centre: { x: number; y: number }; zoom: number } | null;
-  /** carte : la carte Riftbound montrée en indice (modes capacité et illustration). */
-  reponse: (ChampionVue & { carte: { code: string; nom: string; image: string } | null }) | null;
+  /** carte : la Légende Riftbound montrée en indice (mode capacité) ; splash : le splash art (mode illustration). */
+  reponse: (ChampionVue & { carte: { code: string; nom: string; image: string } | null; splash: string | null }) | null;
 }
 
 export interface ResumeMiniJeux {
