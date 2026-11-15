@@ -3,7 +3,7 @@
  *
  * Règles :
  * - avatar = illustration d'une carte que l'on possède au moment du choix ; il reste si on l'échange ensuite ;
- * - vitrine = 6 cartes possédées au maximum, dans l'ordre choisi ; une carte qui n'est plus possédée
+ * - vitrine = 18 cartes possédées au maximum (3 lignes ; 6 avant le 2026-11-15), dans l'ordre choisi ; une carte qui n'est plus possédée
  *   disparaît d'elle-même de la vitrine (filtrée à la lecture) ;
  * - bio = texte brut de 200 caractères (affiché par React, jamais interprété comme du HTML).
  *
@@ -26,7 +26,7 @@ export const routesProfils = new Hono<ContexteApi>();
 
 routesProfils.use("*", exigerConnexion);
 
-export const TAILLE_VITRINE = 6;
+export const TAILLE_VITRINE = 18;
 export const LONGUEUR_BIO = 200;
 
 const schemaCode = z.string().regex(/^[a-z0-9-]{3,40}$/);

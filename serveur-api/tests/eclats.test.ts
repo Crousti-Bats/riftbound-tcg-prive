@@ -24,15 +24,19 @@ const solde = (env: Env, id: number) => (env.bd.prepare("SELECT eclats FROM comp
 describe("Règles des éclats", () => {
   const carte = (rarete: string, variante: string, type = "Unit") => ({ rarete, variante, type }) as never;
 
-  it("valeurs : la variante prime, foil ×2, runes et tokens sans valeur ; fabrication ×40", () => {
+  it("valeurs : la variante prime, foil ×2, runes recyclables, tokens sans valeur ; fabrication ×40", () => {
     expect(valeurRecyclage(carte("Common", "base"), false)).toBe(1);
     expect(valeurRecyclage(carte("Rare", "base"), true)).toBe(10);
     expect(coutFabrication(carte("Rare", "base"))).toBe(200);
     expect(valeurRecyclage(carte("Showcase", "alt"), false)).toBe(80);
-    expect(valeurRecyclage(carte("Common", "base", "Rune"), false)).toBe(0);
+    expect(valeurRecyclage(carte("Common", "base", "Rune"), false)).toBe(1);
+    expect(valeurRecyclage(carte("Common", "base", "Rune"), true)).toBe(2);
+    expect(valeurRecyclage(carte("Common", "rune_alt", "Rune"), false)).toBe(40);
+    expect(valeurRecyclage(carte("Showcase", "base", "Rune"), false)).toBe(40); // rune alt d'Origins
     expect(valeurRecyclage(carte("Common", "token", "Token"), false)).toBe(0);
     expect(coutFabrication(carte("Epic", "base"))).toBe(1600);
-    expect(coutFabrication(carte("Common", "base", "Rune"))).toBeNull();
+    expect(coutFabrication(carte("Common", "base", "Rune"))).toBe(40);
+    expect(coutFabrication(carte("Common", "token", "Token"))).toBeNull();
   });
 
   it("doublons : les normales partent d'abord, la foil est gardée", () => {
@@ -52,22 +56,24 @@ describe("API /api/eclats", () => {
     ajouter(env, id, "ogn-r0", 0, 1);
     ajouter(env, id, "ogn-r0", 1, 1); // 1 doublon : la normale part (5), la foil reste
     ajouter(env, id, "ogn-e0", 0, 4); // deck en utilise 3 → 1 doublon × 40
-    ajouter(env, id, "ogn-rune0", 0, 9); // rune : jamais recyclée
+    ajouter(env, id, "ogn-rune0", 0, 9); // rune : 1 éclat, on en garde 1
+    ajouter(env, id, "sfd-tok0", 0, 4); // token : jamais recyclé
     env.bd
       .prepare("INSERT INTO decks (compte_id, nom, contenu, cree_le, modifie_le) VALUES (?, 'D', ?, 0, 0)")
       .run(id, JSON.stringify({ legende: null, champion: null, principal: [{ code: "ogn-e0", n: 3 }], runes: [], terrains: [] }));
 
     const apercu = (await env.appeler("GET", "/api/eclats", { cookie })).json as { doublons: { exemplaires: number; eclats: number } };
-    expect(apercu.doublons).toMatchObject({ exemplaires: 6, eclats: 49 });
+    expect(apercu.doublons).toMatchObject({ exemplaires: 14, eclats: 57 });
 
     const r = await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: {} });
     expect(r.statut).toBe(200);
-    expect(r.json).toMatchObject({ gain: 49, exemplaires: 6, solde: 49 });
+    expect(r.json).toMatchObject({ gain: 57, exemplaires: 14, solde: 57 });
     expect(quantite(env, id, "ogn-c0", 0)).toBe(1);
     expect(quantite(env, id, "ogn-r0", 0)).toBe(0);
     expect(quantite(env, id, "ogn-r0", 1)).toBe(1);
     expect(quantite(env, id, "ogn-e0", 0)).toBe(3);
-    expect(quantite(env, id, "ogn-rune0", 0)).toBe(9);
+    expect(quantite(env, id, "ogn-rune0", 0)).toBe(1);
+    expect(quantite(env, id, "sfd-tok0", 0)).toBe(4);
 
     // Plus rien à recycler.
     expect((await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: {} })).statut).toBe(409);
@@ -86,8 +92,8 @@ describe("API /api/eclats", () => {
     // Il n'en reste qu'un : refusé.
     expect((await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { code: "ogn-r1", n: 1 } })).statut).toBe(409);
     expect(quantite(env, id, "ogn-r1", 0)).toBe(1);
-    // Rune ou carte inconnue : refusé.
-    expect((await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { code: "ogn-rune0" } })).statut).toBe(400);
+    // Token ou carte inconnue : refusé.
+    expect((await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: { code: "sfd-tok0" } })).statut).toBe(400);
   });
 
   it("recycle seulement la sélection : certaines cartes, avec ou sans les foils", async () => {
@@ -152,7 +158,7 @@ describe("API /api/eclats", () => {
     const refus = await env.appeler("POST", "/api/eclats/fabriquer", { cookie, corps: { code: "ogn-e1" } });
     expect(refus.json).toMatchObject({ erreur: "eclats_insuffisants" });
     expect(quantite(env, id, "ogn-e1", 0)).toBe(1);
-    expect((await env.appeler("POST", "/api/eclats/fabriquer", { cookie, corps: { code: "ogn-rune0" } })).statut).toBe(400);
+    expect((await env.appeler("POST", "/api/eclats/fabriquer", { cookie, corps: { code: "sfd-tok0" } })).statut).toBe(400);
   });
 
   it("fiche : exemplaires protégés et valeurs ; connexion obligatoire", async () => {

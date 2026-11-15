@@ -15,11 +15,15 @@ export const MULTIPLICATEUR_FOIL = 2;
 export const MULTIPLICATEUR_FABRICATION = 40;
 
 /** Catégories de recyclage, de la moins à la plus précieuse (on peut recycler seulement certaines d'entre elles). */
-export const CATEGORIES_ECLATS = ["commune", "peu-commune", "rare", "epique", "alt", "overnumbered", "signee", "special"] as const;
+export const CATEGORIES_ECLATS = ["rune", "commune", "peu-commune", "rare", "epique", "rune-alt", "alt", "overnumbered", "signee", "special"] as const;
 export type CategorieEclats = (typeof CATEGORIES_ECLATS)[number];
 
 /** Éclats rapportés par un exemplaire normal de chaque catégorie (Special et Ultime ensemble). */
 export const VALEUR_CATEGORIE: Record<CategorieEclats, number> = {
+  /** Runes recyclables depuis le 2026-11-15 : une rune normale vaut une Commune. */
+  rune: 1,
+  /** Rune alt : 8 % des boosters (environ 1 sur 12, comme les Alt Art), valeur d'une Épique. */
+  "rune-alt": 40,
   commune: 1,
   "peu-commune": 3,
   rare: 5,
@@ -47,15 +51,20 @@ const CATEGORIE_RARETE: Partial<Record<string, CategorieEclats>> = {
 
 type CarteEclats = Pick<CarteCatalogue, "rarete" | "variante" | "type">;
 
-/** Runes et tokens : ni recyclables, ni fabricables. */
-function estRuneOuToken(carte: CarteEclats): boolean {
-  const type = carte.type.toLowerCase();
-  return ["rune", "rune_alt", "token"].includes(carte.variante) || type === "rune" || type === "token";
+/** Tokens : ni recyclables, ni fabricables (les runes le sont depuis le 2026-11-15). */
+function estToken(carte: CarteEclats): boolean {
+  return carte.variante === "token" || carte.type.toLowerCase() === "token";
+}
+
+function estRune(carte: CarteEclats): boolean {
+  return ["rune", "rune_alt"].includes(carte.variante) || carte.type.toLowerCase() === "rune";
 }
 
 /** Catégorie de recyclage d'une carte (la variante prime sur la rareté), ou null si elle n'est pas recyclable. */
 export function categorieEclats(carte: CarteEclats): CategorieEclats | null {
-  if (estRuneOuToken(carte)) return null;
+  if (estToken(carte)) return null;
+  // Rune alt : variante rune_alt ou alt, ou rareté Showcase (selon les sets, voir classification-cartes.ts).
+  if (estRune(carte)) return carte.variante === "rune_alt" || carte.variante === "alt" || carte.rarete === "Showcase" ? "rune-alt" : "rune";
   return CATEGORIE_VARIANTE[carte.variante] ?? CATEGORIE_RARETE[carte.rarete] ?? null;
 }
 

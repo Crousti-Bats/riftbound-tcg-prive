@@ -1,7 +1,7 @@
 /** Types et outils des profils de joueurs (avatar, bio, vitrine). */
 import type { Carte } from "./libelles-cartes";
 
-export const TAILLE_VITRINE = 6;
+export const TAILLE_VITRINE = 18;
 export const LONGUEUR_BIO = 200;
 
 /** Avatar tel que renvoyé à côté d'un message ou d'une annonce : juste l'image. */
