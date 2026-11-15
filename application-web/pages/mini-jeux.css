@@ -1,0 +1,344 @@
+/* ============================================================
+   Mini-jeux : accueil, « Devine le champion », Memory
+   ============================================================ */
+
+/* ---------- Commun ---------- */
+.mj-page { --mj-juste: #3aa56a; --mj-partiel: #e08a2c; --mj-faux: #c4474e; }
+.mj-pastilles { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.mj-pastille {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 650;
+  color: var(--texte); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--bordure-forte); white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.mj-pastille-or { color: var(--accent-vif); background: rgba(212, 173, 98, 0.12); border-color: var(--bordure-or); }
+.mj-entete { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.mj-entete h1 { margin: 2px 0 0; }
+.mj-retour { color: var(--texte-doux); font-size: 0.85rem; text-decoration: none; }
+.mj-retour:hover { color: var(--accent-vif); }
+
+/* Jauge (éclats du jour) */
+.mj-jauge {
+  position: relative; height: 26px; border-radius: 999px; overflow: hidden; min-width: 180px;
+  background: var(--fond-champ); border: 1px solid var(--bordure-forte);
+}
+.mj-jauge-remplie {
+  position: absolute; inset: 0 auto 0 0; border-radius: 999px; transition: width 0.6s ease;
+  background: linear-gradient(90deg, var(--accent-sombre), var(--accent-vif));
+}
+.mj-jauge-texte { position: relative; display: grid; place-items: center; height: 100%; font-size: 0.8rem; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+
+/* ---------- Accueil des mini-jeux ---------- */
+.mj-hero {
+  position: relative; overflow: hidden; border-radius: var(--rayon); border: 1px solid var(--bordure-or);
+  min-height: 240px; display: flex; align-items: center; box-shadow: var(--ombre);
+}
+.mj-hero-fond {
+  position: absolute; inset: 0; background-size: cover; background-position: 70% 25%; transform: scale(1.04);
+}
+.mj-hero::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(7, 11, 20, 0.97) 0%, rgba(7, 11, 20, 0.86) 45%, rgba(7, 11, 20, 0.35) 100%);
+}
+.mj-hero-contenu { position: relative; z-index: 1; padding: 32px; max-width: 640px; display: flex; flex-direction: column; gap: 10px; }
+.mj-hero-contenu h1 { font-size: 2.6rem; margin: 0; }
+.mj-hero-contenu p { margin: 0; color: #c9d2e3; }
+.mj-hero .mj-pastilles { justify-content: flex-start; margin-top: 6px; }
+
+.titre-section.mj-titre { margin: 8px 0 -6px; }
+.mj-tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.mj-tuile {
+  position: relative; overflow: hidden; isolation: isolate; display: flex; flex-direction: column; gap: 6px; min-height: 230px;
+  padding: 20px; border-radius: var(--rayon); text-decoration: none; color: var(--texte);
+  border: 1px solid var(--bordure); box-shadow: var(--ombre); transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.mj-tuile::before {
+  content: ""; position: absolute; inset: 0; z-index: -2; background: var(--decor) center 20% / cover; transition: transform 0.4s ease;
+}
+.mj-tuile::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 16, 30, 0.55) 0%, rgba(10, 16, 30, 0.92) 55%, rgba(10, 16, 30, 0.98) 100%);
+}
+.mj-tuile:hover { transform: translateY(-4px); border-color: var(--bordure-or); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); }
+.mj-tuile:hover::before { transform: scale(1.06); }
+.mj-tuile.trouve { border-color: rgba(58, 165, 106, 0.6); }
+.mj-tuile-medaillon {
+  display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: auto; border-radius: 50%; font-size: 1.6rem;
+  background: radial-gradient(circle at 35% 30%, rgba(243, 207, 134, 0.35), rgba(15, 23, 39, 0.9) 70%);
+  border: 2px solid var(--accent); box-shadow: 0 0 18px rgba(212, 173, 98, 0.35);
+}
+.mj-tuile.trouve .mj-tuile-medaillon { border-color: var(--mj-juste); box-shadow: 0 0 18px rgba(58, 165, 106, 0.45); }
+.mj-tuile-titre { font-size: 1.25rem; margin-top: 18px; }
+.mj-tuile-texte { color: #b6c1d4; font-size: 0.85rem; }
+.mj-statut {
+  align-self: flex-start; margin-top: 8px; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  color: var(--accent-vif); background: rgba(212, 173, 98, 0.14); border: 1px solid var(--bordure-or);
+}
+.mj-statut-ok { color: #c9f2da; background: rgba(58, 165, 106, 0.22); border-color: rgba(58, 165, 106, 0.6); }
+
+.mj-memory-encart { display: flex; align-items: center; justify-content: space-between; gap: 24px; overflow: hidden; }
+.mj-memory-encart .mj-jauge { max-width: 320px; }
+.mj-eventail { position: relative; width: 190px; height: 150px; flex: none; margin-right: 20px; }
+.mj-dos-mini {
+  position: absolute; left: 50%; bottom: 0; width: 86px; aspect-ratio: 744 / 1039; transform-origin: 50% 110%;
+  transform: translateX(-50%) rotate(calc((var(--n) - 1) * 16deg));
+}
+
+/* ---------- Devine le champion : onglets ---------- */
+.mj-onglets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.mj-onglet {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; min-height: 0;
+  color: var(--texte-doux); background: var(--fond-carte); border: 1px solid var(--bordure); box-shadow: none;
+}
+.mj-onglet:hover:not(:disabled) { color: var(--texte); border-color: var(--bordure-or); filter: none; box-shadow: none; }
+.mj-onglet.actif {
+  color: var(--accent-vif); border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(212, 173, 98, 0.16), rgba(212, 173, 98, 0.03)), var(--fond-carte);
+  box-shadow: 0 0 0 1px var(--accent), 0 8px 22px rgba(212, 173, 98, 0.15);
+}
+.mj-onglet-icone { font-size: 1.5rem; line-height: 1; }
+.mj-onglet-ok {
+  position: absolute; top: 6px; right: 8px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  font-size: 0.75rem; color: #fff; background: var(--mj-juste);
+}
+
+/* ---------- Devine le champion : panneau d'indice ---------- */
+.mj-panneau {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 26px 20px;
+  border-radius: var(--rayon); border: 1px solid var(--bordure-or); box-shadow: var(--ombre);
+  background:
+    radial-gradient(700px 220px at 50% 0%, rgba(212, 173, 98, 0.12), transparent 70%),
+    var(--fond-carte);
+}
+.mj-panneau::before, .mj-panneau::after {
+  content: ""; position: absolute; width: 22px; height: 22px; border: 2px solid var(--accent); pointer-events: none;
+}
+.mj-panneau::before { top: 8px; left: 8px; border-right: none; border-bottom: none; border-top-left-radius: 6px; }
+.mj-panneau::after { bottom: 8px; right: 8px; border-left: none; border-top: none; border-bottom-right-radius: 6px; }
+.mj-panneau-titre { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--orange); }
+.mj-panneau-consigne { margin: -6px 0 0; color: var(--texte-doux); font-size: 0.9rem; }
+.mj-consigne { margin: 0; font-weight: 650; font-size: 1.05rem; }
+.mj-capacite {
+  margin: 0; max-width: 620px; padding: 18px 22px; border-radius: var(--rayon-petit); text-align: left; white-space: pre-line;
+  font-size: 1.02rem; line-height: 1.6; background: rgba(5, 9, 18, 0.6); border: 1px solid var(--bordure-forte);
+  border-left: 4px solid var(--accent); box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35);
+}
+.mj-illustration {
+  position: relative; width: min(620px, 100%); aspect-ratio: 1215 / 717; overflow: hidden; border-radius: 12px;
+  border: 2px solid var(--accent); background: var(--fond-champ); box-shadow: 0 0 0 4px rgba(212, 173, 98, 0.12), 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+.mj-illustration img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s ease, transform-origin 0.7s ease; }
+.mj-zoom {
+  position: absolute; right: 10px; bottom: 10px; padding: 3px 9px; border-radius: 999px; font-size: 0.8rem; font-weight: 800;
+  color: var(--accent-vif); background: rgba(7, 11, 20, 0.8); border: 1px solid var(--bordure-or);
+}
+
+.mj-emojis { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.mj-emoji {
+  display: grid; place-items: center; width: 74px; height: 74px; font-size: 2.6rem; border-radius: 14px;
+  background: radial-gradient(circle at 50% 35%, rgba(243, 207, 134, 0.18), rgba(10, 17, 32, 0.9) 70%);
+  border: 2px solid var(--accent); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); animation: mj-apparait 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.mj-emoji.cache {
+  color: var(--texte-doux); font-size: 1.6rem; font-weight: 800; background: rgba(255, 255, 255, 0.02);
+  border: 2px dashed var(--bordure-forte); box-shadow: none; animation: none;
+}
+@keyframes mj-apparait { from { transform: scale(0.4) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Devine le champion : recherche ---------- */
+.mj-recherche { position: relative; z-index: 3; max-width: 560px; width: 100%; margin: 0 auto; }
+.mj-champ-recherche { position: relative; }
+.mj-champ-recherche > span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; pointer-events: none; }
+.mj-champ-recherche input {
+  width: 100%; min-height: 56px; padding-left: 48px; font-size: 1.05rem; border-radius: 14px; border: 2px solid var(--bordure-or);
+  background: var(--fond-carte); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.mj-champ-recherche input:focus { border-color: var(--accent-vif); box-shadow: 0 0 0 4px rgba(212, 173, 98, 0.2), 0 8px 24px rgba(0, 0, 0, 0.35); }
+.mj-suggestions {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; list-style: none; margin: 0; padding: 6px; max-height: 400px; overflow-y: auto;
+  background: var(--fond-eleve); border: 1px solid var(--bordure-or); border-radius: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+}
+.mj-suggestion {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: transparent; color: var(--texte);
+  box-shadow: none; border: none; min-height: 50px; padding: 6px 10px; border-radius: 10px; font-size: 1rem;
+}
+.mj-suggestion:hover:not(:disabled), .mj-suggestion.choisie { background: rgba(212, 173, 98, 0.14); box-shadow: none; filter: none; color: var(--accent-vif); }
+.mj-aucun { margin: 8px 0 0; text-align: center; color: var(--texte-doux); font-size: 0.9rem; }
+
+/* ---------- Icônes de champions ---------- */
+.mj-icone { width: 38px; height: 38px; border-radius: 8px; flex: none; object-fit: cover; box-shadow: 0 0 0 1px var(--bordure-or); }
+.mj-icone-tableau { width: 58px; height: 58px; border-radius: 8px; box-shadow: 0 0 0 2px var(--bordure-or); }
+.mj-icone-grande { width: 140px; height: 140px; border-radius: 16px; box-shadow: 0 0 0 3px var(--accent), 0 10px 30px rgba(0, 0, 0, 0.5); }
+.mj-icone-vide { display: inline-grid; place-items: center; font-weight: 800; color: var(--accent-texte); background: var(--accent); }
+
+/* ---------- Devine le champion : tableau façon « -dle » ---------- */
+.mj-grille-essais { display: flex; flex-direction: column; gap: 10px; }
+.mj-tableau { border-collapse: separate; border-spacing: 6px; width: auto; margin: 0 auto; }
+.mj-tableau th {
+  padding: 4px 6px 8px; text-align: center; font-size: 0.72rem; color: var(--accent); letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--bordure-or);
+}
+.mj-tableau td { padding: 0; border: none; white-space: normal; }
+.mj-tableau tbody tr:hover td { background: unset; }
+.mj-case-champion { width: 72px; text-align: center; vertical-align: top; }
+.mj-case-champion > span { display: block; margin-top: 4px; font-size: 0.72rem; font-weight: 700; color: #d5dcea; line-height: 1.2; }
+.mj-case-champion.juste .mj-icone { box-shadow: 0 0 0 3px var(--mj-juste), 0 0 14px rgba(58, 165, 106, 0.6); }
+.mj-case {
+  position: relative; width: 96px; height: 72px; overflow: hidden; text-align: center; vertical-align: middle;
+  border-radius: 10px; font-weight: 750; font-size: 0.82rem; line-height: 1.2; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.35);
+  animation: mj-retourne 0.5s ease both; animation-delay: calc(var(--i, 0) * 0.14s);
+}
+.mj-case > span { position: relative; z-index: 1; display: block; padding: 4px 6px; }
+.mj-tableau tbody tr:not(:first-child) td.mj-case { animation: none; }
+.mj-case.mj-juste { background: linear-gradient(160deg, #4cc283, var(--mj-juste) 55%, #2b8352); }
+.mj-case.mj-partiel { background: linear-gradient(160deg, #f2a650, var(--mj-partiel) 55%, #b9671a); }
+.mj-case.mj-faux { background: linear-gradient(160deg, #da5d63, var(--mj-faux) 55%, #9b2f36); }
+/* Flèche de l'année : grande, en filigrane derrière la valeur. */
+.mj-case.mj-plus::before, .mj-case.mj-moins::before {
+  position: absolute; inset: 0; display: grid; place-items: center; font-size: 3rem; color: rgba(0, 0, 0, 0.2); line-height: 1;
+}
+.mj-case.mj-plus::before { content: "▲"; }
+.mj-case.mj-moins::before { content: "▼"; }
+@keyframes mj-retourne { from { transform: perspective(400px) rotateY(90deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.mj-legende { margin: 0; text-align: center; color: var(--texte-doux); font-size: 0.82rem; }
+.mj-legende-sep { margin: 0 8px; }
+.mj-puce { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin: 0 4px 0 10px; }
+.mj-puce.mj-juste { background: var(--mj-juste); }
+.mj-puce.mj-partiel { background: var(--mj-partiel); }
+.mj-puce.mj-faux { background: var(--mj-faux); }
+
+/* Essais des autres modes : une pastille par champion proposé. */
+.mj-essais { list-style: none; margin: 0 auto; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 760px; }
+.mj-essai {
+  display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; font-weight: 650; font-size: 0.9rem;
+  background: rgba(196, 71, 78, 0.18); border: 1px solid rgba(196, 71, 78, 0.55); animation: mj-apparait 0.35s ease both;
+}
+.mj-essai .mj-icone { width: 30px; height: 30px; border-radius: 50%; }
+.mj-essai-marque { color: #ff9ca1; font-weight: 800; }
+.mj-essai.juste { background: rgba(58, 165, 106, 0.22); border-color: rgba(58, 165, 106, 0.7); }
+.mj-essai.juste .mj-essai-marque { color: #8ff0b8; }
+
+/* ---------- Devine le champion : victoire ---------- */
+.mj-victoire {
+  position: relative; overflow: hidden; border-radius: var(--rayon); border: 1px solid var(--accent);
+  box-shadow: 0 0 0 1px rgba(212, 173, 98, 0.3), 0 0 40px rgba(212, 173, 98, 0.18), var(--ombre);
+  background: radial-gradient(600px 300px at 20% 0%, rgba(212, 173, 98, 0.18), transparent 70%), var(--fond-carte);
+  animation: mj-victoire 0.6s ease both;
+}
+.mj-victoire-fond { position: absolute; inset: 0; background-size: cover; background-position: center 25%; filter: blur(14px) saturate(1.2); opacity: 0.35; transform: scale(1.15); }
+.mj-victoire-contenu { position: relative; display: flex; gap: 28px; align-items: center; padding: 26px; }
+.mj-victoire-splash { width: min(380px, 100%); border-radius: 12px; flex: none; border: 2px solid var(--accent); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55); }
+.mj-victoire-carte { width: 160px; border-radius: 10px; flex: none; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55); }
+.mj-victoire-texte { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.mj-victoire-texte h2 { margin: 0; font-size: 1.7rem; }
+.mj-victoire-texte .mj-pastilles { justify-content: flex-start; }
+.mj-victoire-texte p { margin: 0; }
+.mj-victoire-bravo {
+  font-size: 2.2rem; font-weight: 900; line-height: 1; letter-spacing: 0.02em;
+  background: linear-gradient(90deg, var(--accent-vif), #fff6dd, var(--accent-vif)); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: mj-brille 2.4s linear infinite;
+}
+.mj-victoire-emojis { font-size: 1.8rem; letter-spacing: 6px; }
+@keyframes mj-victoire { from { transform: scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mj-brille { to { background-position: -200% 0; } }
+.mj-hier { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; color: var(--texte-doux); font-size: 0.9rem; }
+.mj-hier .mj-icone { width: 28px; height: 28px; }
+
+/* ---------- Memory ---------- */
+.mj-tableau-de-bord { display: grid; grid-template-columns: repeat(3, minmax(90px, 1fr)) minmax(220px, 2fr); gap: 10px; }
+.mj-stat {
+  display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: var(--rayon-petit);
+  background: var(--fond-carte); border: 1px solid var(--bordure);
+}
+.mj-stat > span { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texte-doux); }
+.mj-stat strong { font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--accent-vif); }
+.mj-stat small { font-size: 0.9rem; color: var(--texte-doux); }
+.mj-stat .mj-jauge { margin-top: 4px; }
+.mj-bareme { font-size: 0.95rem !important; }
+
+.mj-plateau {
+  position: relative; padding: 22px; border-radius: var(--rayon); border: 1px solid var(--bordure-or); box-shadow: var(--ombre);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(40, 70, 120, 0.35), transparent 70%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 10px),
+    #0a1222;
+}
+.mj-grille { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; max-width: 620px; margin: 0 auto; }
+.mj-grille.en-attente { filter: brightness(0.85); }
+.mj-carte {
+  padding: 0; min-height: 0; aspect-ratio: 744 / 1039; background: none; border: none; box-shadow: none; perspective: 900px;
+  transition: transform 0.18s ease;
+}
+.mj-carte:hover:not(:disabled):not(.retournee) { transform: translateY(-4px); filter: none; box-shadow: none; }
+.mj-carte:disabled { opacity: 1; cursor: default; }
+.mj-carte-interieur { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.45s ease; }
+.mj-carte.retournee .mj-carte-interieur { transform: rotateY(180deg); }
+.mj-dos, .mj-carte-face {
+  position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; border-radius: 9px;
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+}
+/* Dos de carte : cadre or, motif losangé, logo au centre. */
+.mj-dos {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(232, 121, 42, 0.32), transparent 45%),
+    repeating-linear-gradient(45deg, rgba(212, 173, 98, 0.07) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(-45deg, rgba(212, 173, 98, 0.07) 0 1px, transparent 1px 12px),
+    linear-gradient(160deg, #1b2a48, #0d1528);
+  border: 2px solid var(--accent-sombre); box-shadow: inset 0 0 0 4px #0d1528, inset 0 0 0 5px rgba(212, 173, 98, 0.45), 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+.mj-carte:hover:not(:disabled) .mj-dos { border-color: var(--accent-vif); }
+.mj-dos img { width: 52%; filter: drop-shadow(0 0 10px rgba(232, 121, 42, 0.7)); }
+.mj-carte-face { transform: rotateY(180deg); background: var(--fond-champ); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45); }
+.mj-carte-face img { width: 100%; height: 100%; object-fit: cover; }
+.mj-carte.trouvee .mj-carte-face { box-shadow: 0 0 0 3px var(--mj-juste), 0 0 20px rgba(58, 165, 106, 0.65); animation: mj-paire 0.5s ease; }
+@keyframes mj-paire { 40% { transform: rotateY(180deg) scale(1.08); } }
+
+.mj-plateau-voile {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; border-radius: var(--rayon);
+  background: rgba(5, 9, 18, 0.35);
+}
+.mj-plateau-message {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; max-width: 360px; padding: 26px 30px;
+  border-radius: var(--rayon); border: 1px solid var(--accent); background: rgba(15, 23, 39, 0.96);
+  box-shadow: 0 0 40px rgba(212, 173, 98, 0.2), var(--ombre); animation: mj-victoire 0.4s ease both;
+}
+.mj-plateau-message h2, .mj-plateau-message p { margin: 0; }
+.mj-etoiles { display: flex; gap: 6px; font-size: 2.6rem; line-height: 1; color: #3a4660; }
+.mj-etoiles .allumee { color: var(--accent-vif); text-shadow: 0 0 18px rgba(243, 207, 134, 0.8); animation: mj-apparait 0.5s ease both; }
+.mj-etoiles .allumee:nth-child(2) { animation-delay: 0.15s; }
+.mj-etoiles .allumee:nth-child(3) { animation-delay: 0.3s; }
+
+/* ---------- Page Jouer : accès aux mini-jeux ---------- */
+.encart-minijeux { margin-top: 20px; }
+
+/* ---------- Téléphone ---------- */
+@media (max-width: 700px) {
+  .mj-hero-contenu { padding: 22px; }
+  .mj-hero-contenu h1 { font-size: 2rem; }
+  .mj-hero::after { background: linear-gradient(180deg, rgba(7, 11, 20, 0.7), rgba(7, 11, 20, 0.95)); }
+  .mj-onglets { gap: 6px; }
+  .mj-onglet { padding: 10px 4px; font-size: 0.8rem; }
+  .mj-onglet-ok { top: 4px; right: 4px; width: 16px; height: 16px; font-size: 0.65rem; }
+  .mj-memory-encart { flex-direction: column-reverse; align-items: stretch; }
+  .mj-eventail { margin: 0 auto; height: 120px; }
+  .mj-dos-mini { width: 70px; }
+  .mj-victoire-contenu { flex-direction: column; text-align: center; padding: 20px; }
+  .mj-victoire-texte { align-items: center; }
+  .mj-victoire-texte .mj-pastilles, .mj-victoire .barre-actions { justify-content: center; }
+  .mj-tableau { border-spacing: 4px; }
+  .mj-case { width: 72px; height: 60px; font-size: 0.7rem; }
+  .mj-icone-tableau { width: 46px; height: 46px; }
+  .mj-case-champion { width: 56px; }
+  .mj-emoji { width: 56px; height: 56px; font-size: 2rem; }
+  .mj-tableau-de-bord { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mj-stat-large { grid-column: 1 / -1; }
+  .mj-stat { padding: 10px 12px; }
+  .mj-stat strong { font-size: 1.3rem; }
+  .mj-plateau { padding: 12px; }
+  .mj-grille { gap: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mj-carte-interieur, .mj-illustration img, .mj-tuile, .mj-tuile::before, .mj-carte { transition: none; }
+  .mj-case, .mj-emoji, .mj-essai, .mj-victoire, .mj-plateau-message, .mj-etoiles .allumee, .mj-carte.trouvee .mj-carte-face { animation: none; }
+  .mj-victoire-bravo { animation: none; }
+}

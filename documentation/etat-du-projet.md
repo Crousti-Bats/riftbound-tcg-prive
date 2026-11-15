@@ -2,7 +2,7 @@
 
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
-**Dernière mise à jour :** 2026-11-15
+**Dernière mise à jour :** 2026-11-13
 **Étape en cours :** 10 — Durcissement sécurité (en cours : revue faite, 6 correctifs livrés en PR, voir §4octies)
 **Prochaine étape :** fin de l'étape 10 : merger la PR des correctifs, décider de la modération des messages privés et de Cloudflare Access sur `/admin`, puis rapport PDF de l'étape 10.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
@@ -409,6 +409,56 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Vérifications** : 305 tests (8 nouveaux : valeurs, ordre normales puis foil, protection par deck, runes jamais recyclées, foil ×2, refus sous le seuil, recyclages simultanés : un seul crédité, achat et fabrication avec solde insuffisant sans écriture, tri par quantité). Vrai moteur local (migration 0018 appliquée) : 23 boosters ouverts, 132 doublons recyclés pour 275 éclats, 4 recyclages simultanés → 1 crédité et 3 refusés, achat de booster. Interface non vue en capture (pas de navigateur sans écran sur ce poste) : à vérifier à l'œil.
 - **Runes recyclables** (demandé le 2026-11-15 : « pouvoir recycler les runes ») : rune normale **1 éclat**, rune alt **40** (8 % des boosters, environ 1 sur 12 comme les Alt Art), foil ×2. Même règle que les autres cartes : on garde 1 exemplaire, et plus si un deck en utilise davantage (les runes des decks comptent). Nouvelles catégories « Runes » et « Runes alt » dans la fenêtre de recyclage. Fabrication possible au même tarif (×40 : 40 éclats la rune, 1 600 la rune alt). Les **tokens** restent ni recyclables ni fabricables.
 
+## 4tervicies. Mini-jeux : « Devine le champion » et Memory (demandé le 2026-11-13)
+
+- **Demande** : « on peut ajouter des minijeux ? », puis « memory, je veux un loldle » (« le même jeu que loldle.net »), avec des éclats plafonnés. Après un premier test : « absolument comme le Loldle », avec le mode Emoji et « tous les champions de LoL » (« je rentre Xin Zhao, ça me dit Noxus, Demacia, Ionia »).
+- **Ce qu'on reprend de Loldle** : les **règles** (un champion par jour, colonnes colorées, modes). On ne reprend ni le nom, ni l'apparence, ni les textes du site Loldle : la page garde le style du site.
+- **Page `/minijeux`** : accessible depuis l'onglet « Jouer », par un raccourci sur l'accueil et sur la page Jouer. Elle montre l'état du jour de chaque mode et les éclats gagnés au Memory.
+- **Devine le champion** (`/minijeux/champion/<mode>`) : on peut proposer **n'importe lequel des 173 champions de LoL**. Le champion du jour est le même pour tous les joueurs. Il change à **minuit heure de Paris** et n'est jamais celui de la veille. Quatre modes, chacun avec son propre champion :
+  - **Classique** (parmi les 173) : une ligne par essai, colonnes Genre, Poste(s), Espèce(s), Ressource, Portée, Région(s), Année. Vert = juste, orange = en partie (au moins une valeur en commun), rouge = faux. Pour l'année, ↑ = le champion du jour est sorti plus tard, ↓ = plus tôt.
+  - **Emoji** (parmi les 173) : 5 emojis par champion. Un seul est visible au départ, et un de plus apparaît à chaque erreur.
+  - **Capacité** (parmi les 57 champions qui ont une Légende Riftbound) : le texte de la Légende, avec le nom masqué (« ??? »).
+  - **Illustration** (parmi les 173) : le **splash art officiel** du champion (skin de base, CDN Data Dragon), zoomé ×5 au départ, puis −0,5 à chaque erreur. Il est montré en entier une fois trouvé (demandé le 2026-11-15 : « base-toi sur les vrais »).
+  - Autour du jeu : recherche avec suggestions et icônes (sans accents ni apostrophes : « khazix » trouve Kha'Zix), « N joueurs ont trouvé aujourd'hui », champion de la veille.
+- **Table des champions** (`serveur-api/minijeux/champions-lol.ts`) :
+  - C'est une table fixe, sans rapport avec les cartes, qui n'est pas en base.
+  - Le nom français, la ressource et la portée viennent du Data Dragon de Riot (16.22.1).
+  - Les **postes** et l'**année** viennent de **Meraki Analytics** (données du jeu, relevées le 2026-11-15). Le 2026-11-15, l'utilisateur a signalé que les postes écrits de mémoire étaient faux : 34 champions ont été corrigés. **Locke** et **Zaahen** sont absents de Meraki, leurs valeurs sont provisoires.
+  - Le genre, les espèces, les régions et les emojis sont **écrits à la main** : s'il y a une erreur, on corrige la ligne du champion.
+  - Un test vérifie que la table est complète, sans doublon et avec 5 emojis par champion.
+- **Icônes** : elles viennent du CDN officiel `ddragon.leagueoflegends.com`, ajouté à la CSP (`img-src`, dans `serveur-api/entetes-securite.ts` et `application-web/fichiers-statiques/_headers`). Si une icône ne se charge pas, la page affiche l'initiale du champion.
+- **Habillage** (demandé le 2026-11-15 : « améliorer le visu des jeux ») :
+  - Accueil : bandeau avec un splash art, pastilles du jour (trouvés, éclats gagnés, compte à rebours jusqu'à minuit) et une tuile par mode avec un splash art en fond (décor fixe, sans lien avec la réponse du jour).
+  - Devine le champion : onglets avec icônes et ✓, panneau d'indice encadré, recherche au clavier (↑ ↓ Entrée), tableau en tuiles colorées qui se retournent, flèche de l'année en filigrane, écran de victoire avec le splash art.
+  - Memory : tableau de bord (coups, paires, chronomètre, jauge des éclats du jour), plateau, dos de carte travaillé, étoiles en fin de partie (★★★ ≤ 12 coups, ★★ ≤ 16, ★ au-delà).
+- **Memory** (`/minijeux/memory`) :
+  - 8 paires (16 cases) tirées de **ma collection**, complétée par le catalogue s'il manque des cartes.
+  - Ni runes, ni tokens, ni terrains.
+  - Les parties sont illimitées.
+- **Gains** (dans `serveur-api/minijeux/regles-minijeux.ts`) :
+  - Classique : 30 💎 au 1er essai, −2 par essai, 10 au minimum.
+  - Emoji, Capacité et Illustration : 15 💎, −1 par essai, 5 au minimum.
+  - Memory : 10 💎 en 12 coups ou moins, 6 en 16, 3 au-delà, avec un **plafond de 30 💎 par jour**.
+  - Au maximum, un joueur gagne 105 💎 par jour (un booster coûte 200).
+- **Anti-triche** (le dépôt est public) :
+  - Le champion du jour est tiré par `crypto.getRandomValues` à la première visite du jour, puis figé en base (`defis_du_jour`). Une graine calculée à partir de la date donnerait la réponse.
+  - Le navigateur ne reçoit jamais la réponse avant de l'avoir trouvée : il envoie un champion, et le serveur compare. En mode Emoji, seuls les emojis déjà révélés sont envoyés.
+  - Le splash art passe par le serveur (`GET /api/minijeux/devinette/illustration/image`), sans quoi son adresse, qui contient le nom du champion, donnerait la réponse. Le serveur construit lui-même l'adresse du CDN Data Dragon à partir de la table des champions, ce qui exclut le SSRF.
+  - La grille du Memory reste sur le serveur : une carte n'est envoyée qu'une fois retournée, et le serveur compte les coups.
+  - Les gains sont crédités dans le même lot D1 que le coup gagnant, une seule fois (`gain_credite`). Le nombre d'essais et de coups sert de contrôle de concurrence, donc des réponses simultanées ne sont créditées qu'une fois.
+  - Limite de 60 parties de Memory par heure (`memory:compte:<id>`). Les essais sont limités par nature à 173 par mode et par jour, car un champion déjà proposé est refusé sans écriture.
+- **API** (`serveur-api/minijeux/routes-minijeux.ts`, connexion obligatoire) :
+  - `GET /api/minijeux` : résumé du jour.
+  - `GET /api/minijeux/champions` : les 173 champions, avec leur icône.
+  - `GET /api/minijeux/devinette/:mode` et `POST /api/minijeux/devinette/:mode/essai {champion}` (identifiant Data Dragon, par exemple `XinZhao`).
+  - `GET /api/minijeux/devinette/illustration/image`.
+  - `POST /api/minijeux/memory` et `POST /api/minijeux/memory/:id/retourner {position}`.
+- **Base** : migration 0019 (`defis_du_jour`, `devinettes`, `parties_memory`). Elle ne contient que des cardCode et des identifiants de champions. Ménage à la connexion : les parties de Memory et les essais de plus de 7 jours sont supprimés.
+- **Vérifications** :
+  - 319 tests, dont 13 nouveaux : table des champions, comparaisons, emojis, gains, minuit à Paris (heure d'hiver et d'été), réponse jamais dévoilée, bonnes réponses simultanées créditées une fois, tirage figé et différent de la veille, grille sans rune, plafond du Memory, cases déjà retournées, partie d'un autre joueur.
+  - Vrai moteur local (migration 0019 appliquée) : parties complètes, éclats crédités, illustration servie en WebP.
+  - Captures dans Chrome headless (PC et téléphone) : tableau façon Loldle avec icônes, mode Emoji, Memory, sans erreur dans la console.
+
 ## 5. Démarche DevSecOps
 
 - Le dépôt est **public** (choix du 2026-11-08). Sur le plan gratuit, c'est la seule façon d'avoir la protection de branche, CodeQL et la push protection. Le site reste privé grâce à l'authentification.
@@ -480,6 +530,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **2026-11-10 — Taux /2, ♥ sur les boosters, bulle de discussion, photo de profil (§4duodecies).** Migration 0013. 6 nouveaux tests.
 - **2026-11-10 — Boosters 10 max / 20 min, aperçu, annulation, wishlist, tri (§4undecies).** Migrations 0011 et 0012. 11 nouveaux tests.
 - **2026-11-10 — Profils des joueurs (§4decies).** Avatar (illustration d'une carte possédée), bio de 200 caractères, vitrine de 6 cartes, statistiques, page `/profil/<pseudo>`, avatars dans la navigation et le marché. Migration 0010. 9 tests.
+- **2026-11-13 — Mini-jeux (§4tervicies).** « Devine le champion », sur les règles de Loldle : les 173 champions de LoL, 4 modes (classique, emoji, capacité, illustration), un champion par jour. Memory avec les cartes de sa collection. Les deux rapportent des éclats (Memory plafonné à 30 par jour). Migration 0019. 13 nouveaux tests (319 au total).
 - **2026-11-12 — Fabrication ×10, barre du récapitulatif toujours en bas (§4duovicies).** Fabriquer une carte coûte 40 × sa valeur de recyclage (au lieu de 4 ×). Barre « Ouvrir un autre » collée en bas de l'écran même avec peu de cartes (colonne flex + `margin-top: auto`, toujours sticky quand la liste défile).
 - **2026-11-15 — Runes recyclables et vitrine de 18 cartes (§4duovicies, §4decies).** Rune 1 éclat, rune alt 40, tokens toujours exclus. Vitrine du profil sur 3 lignes (migration 0020). 2 tests ajoutés (307 au total sur `main`).
 - **2026-11-12 — Booster à 200 éclats (§4duovicies).** Au lieu de 100.

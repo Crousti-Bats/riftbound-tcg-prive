@@ -59,6 +59,26 @@ export function PageDecks() {
 
       {decks && <PanneauParties decks={decks} />}
 
+      <a
+        href="/minijeux"
+        className="raccourci encart-minijeux"
+        onClick={(e) => {
+          e.preventDefault();
+          naviguer("/minijeux");
+        }}
+      >
+        <span className="raccourci-icone" aria-hidden="true">
+          ?
+        </span>
+        <span className="raccourci-texte">
+          <strong>Mini-jeux</strong>
+          <span>Devine le champion du jour (3 modes) et joue au Memory pour gagner des éclats 💎.</span>
+        </span>
+        <span className="raccourci-fleche" aria-hidden="true">
+          →
+        </span>
+      </a>
+
       <h2 className="titre-section">Mes decks</h2>
       <section className="carte pile-serree">
         <p className="aide">

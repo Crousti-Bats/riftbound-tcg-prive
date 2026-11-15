@@ -35,6 +35,8 @@ export const REGLES = {
   eclatsParCompte: { maximum: 200, fenetreMs: 60 * 60_000 },
   /** Créations de parties (table de jeu) : protège le quota des Durable Objects. */
   partiesParCompte: { maximum: 30, fenetreMs: 60 * 60_000 },
+  /** Nouvelles parties de Memory (chaque coup écrit en base) : protège le quota d'écritures D1. */
+  memoryParCompte: { maximum: 60, fenetreMs: 60 * 60_000 },
 } satisfies Record<string, RegleLimitation>;
 
 export interface ResultatTentative {
