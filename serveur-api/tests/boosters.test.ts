@@ -257,6 +257,50 @@ describe("API /api/boosters", () => {
     expect(totalCollection(env.bd, "Alice")).toBe(28);
   });
 
+  it("ouvre plusieurs boosters d'un coup : stock normal puis offerts, toutes les cartes en un seul lot", async () => {
+    const env = creerEnvironnementDeTest();
+    const cookie = await env.inscrire("Alice", "motdepasse");
+    env.bd.prepare("UPDATE comptes SET stock_boosters = 3, boosters_tick = ?, boosters_bonus = 4 WHERE pseudo = ?").run(Date.now(), "Alice");
+
+    const r = await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn", nombre: 5 } });
+    expect(r.statut).toBe(200);
+    const ouverture = r.json as unknown as Ouverture & { boosters: Ouverture["cartes"][] };
+    expect(ouverture.boosters).toHaveLength(5);
+    for (const booster of ouverture.boosters) {
+      expect(booster).toHaveLength(14);
+      expect(booster.filter((c) => c.foil)).toHaveLength(1);
+    }
+    expect(ouverture.cartes).toHaveLength(70);
+    // 3 boosters du stock normal, puis 2 offerts sur 4.
+    expect(ouverture.stock).toMatchObject({ actuel: 0, offerts: 2 });
+    expect(totalCollection(env.bd, "Alice")).toBe(70);
+    const ouvertures = env.bd
+      .prepare("SELECT COUNT(*) AS n FROM ouvertures_boosters WHERE compte_id = (SELECT id FROM comptes WHERE pseudo = ?)")
+      .get("Alice") as { n: number };
+    expect(Number(ouvertures.n)).toBe(5);
+
+    // Il n'en reste que 2 : en demander 3 est refusé, et rien ne change.
+    const trop = await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn", nombre: 3 } });
+    expect(trop.statut).toBe(409);
+    expect(trop.json).toMatchObject({ erreur: "pas_assez_de_boosters", disponibles: 2 });
+    expect(totalCollection(env.bd, "Alice")).toBe(70);
+
+    // Bornes : 1 à 20.
+    expect((await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn", nombre: 0 } })).statut).toBe(400);
+    expect((await env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn", nombre: 21 } })).statut).toBe(400);
+  });
+
+  it("deux ouvertures multiples envoyées en même temps ne consomment pas les mêmes boosters", async () => {
+    const env = creerEnvironnementDeTest();
+    const cookie = await env.inscrire("Alice", "motdepasse");
+    const reponses = await Promise.all(
+      [0, 1, 2].map(() => env.appeler("POST", "/api/boosters/ouvrir", { cookie, corps: { set: "ogn", nombre: 6 } })),
+    );
+    const reussies = reponses.filter((r) => r.statut === 200);
+    expect(reussies).toHaveLength(1);
+    expect(totalCollection(env.bd, "Alice")).toBe(6 * 14);
+  });
+
   it("les cartes obtenues dans un booster quittent ma wishlist, les autres y restent", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");

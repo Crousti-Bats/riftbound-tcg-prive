@@ -25,6 +25,7 @@ const MESSAGES: Record<string, string> = {
   boosters_indisponibles: "Les boosters sont momentanément indisponibles. Réessaie dans une minute.",
   aucun_booster: "Tu n'as plus de booster. Reviens dans quelques minutes.",
   conflit_ouverture: "Ouverture déjà en cours. Réessaie dans un instant.",
+  pas_assez_de_boosters: "Tu n'as plus assez de boosters pour en ouvrir autant.",
   set_non_ouvrable: "Ce set ne peut pas être ouvert en booster.",
   joueur_introuvable: "Ce joueur n'existe pas ou son compte est désactivé.",
   echange_avec_soi: "Tu ne peux pas échanger avec toi-même.",
