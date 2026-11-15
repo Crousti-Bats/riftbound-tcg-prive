@@ -1,4 +1,4 @@
--- Migration 0013 : photo de profil personnelle (demandée le 2026-11-10).
+-- Migration 0013 : photo de profil personnelle.
 -- Image recadrée et réduite à 256 x 256 par le navigateur, vérifiée par le serveur (JPEG, PNG ou WebP, 150 Ko max),
 -- stockée en base64. Aucune donnée de carte. Si elle existe, elle remplace l'avatar « carte ».
 CREATE TABLE photos_profil (

@@ -105,7 +105,7 @@ export function ordreRevelation<T extends Pick<CarteOuverte, "slot" | "rarete" |
     .map((x) => x.carte);
 }
 
-/** Ordre du récapitulatif (demandé le 2026-11-10) : l'inverse de la révélation, les plus rares d'abord.
+/** Ordre du récapitulatif : l'inverse de la révélation, les plus rares d'abord.
  *  À rareté égale, la foil passe devant ; sinon l'ordre de révélation est gardé (tri stable). */
 export function ordreRecapitulatif<T extends Pick<CarteOuverte, "rarete" | "variante" | "foil">>(cartes: T[]): T[] {
   const rang = (c: T) => REVELATION[categorieRevelation(c)].rang;

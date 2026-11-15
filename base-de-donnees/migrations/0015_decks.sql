@@ -1,4 +1,4 @@
--- Migration 0015 : decks des joueurs (demandé le 2026-11-10).
+-- Migration 0015 : decks des joueurs.
 -- contenu : JSON { legende, champion, principal: [{code, n}], runes: [{code, n}], terrains: [code] }.
 -- Seulement des cardCode et des quantités, jamais de donnée de carte. Validé par le serveur à l'écriture
 -- (structure) et à la lecture (règles du jeu et possession : la collection peut changer après un échange).

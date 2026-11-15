@@ -1,5 +1,5 @@
 /**
- * Taux de drop et composition des boosters — SOURCE DE VÉRITÉ (doc §4, validés par l'utilisateur le 2026-11-08).
+ * Taux de drop et composition des boosters — SOURCE DE VÉRITÉ (doc §4).
  * Tout changement de taux se fait ici, nulle part ailleurs.
  */
 
@@ -28,7 +28,7 @@ export type CategorieRarePlus = "ultime" | "special" | "signee" | "overnumbered"
  * Probabilités par slot Rare+ (il y a 2 slots indépendants par booster : « 1 booster sur N » = 1/(2N) par slot).
  * 2026-11-09 : tous les taux Rare+ divisés par 2 (Epic 1/12, Alt 1/24, Over 1/144, Signée 1/480, Special et
  * Ultime 1/2000 boosters).
- * 2026-11-10 : de nouveau divisés par 2 à la demande de l'utilisateur. PAR BOOSTER : Epic 1/24, Alt Art 1/48,
+ * 2026-11-10 : de nouveau divisés par 2. PAR BOOSTER : Epic 1/24, Alt Art 1/48,
  * Overnumbered 1/288, Signée 1/960, Special et Ultime 1/4000. La différence revient aux Rares.
  * Lues dans l'ordre, de façon cumulative. Tout le reste (~97 %) va à "rare".
  * Si le pool d'une catégorie est vide pour le set ouvert, le tirage retombe sur "rare"

@@ -1,4 +1,4 @@
--- Migration 0020 : la vitrine du profil passe de 6 à 18 cartes, soit 3 lignes (demandé le 2026-11-15 : « + de lignes de vitrines »).
+-- Migration 0020 : la vitrine du profil passe de 6 à 18 cartes, soit 3 lignes.
 -- SQLite ne sait pas modifier une contrainte CHECK : on recrée la table et on recopie les vitrines existantes.
 -- Toujours aucune donnée de carte : seulement des cardCode.
 CREATE TABLE vitrine_nouvelle (

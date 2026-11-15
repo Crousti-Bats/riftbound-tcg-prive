@@ -1,5 +1,5 @@
 /**
- * Routes /api/parties : le salon de la table de jeu (demandé le 2026-11-10).
+ * Routes /api/parties : le salon de la table de jeu.
  * Je crée une partie avec un de mes decks valides → un code de 8 caractères ; un ami la rejoint avec ce code et
  * son deck ; la partie commence alors dans le Durable Object SalleDeJeu, où l'on joue par WebSocket.
  */
