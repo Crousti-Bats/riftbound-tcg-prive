@@ -54,7 +54,7 @@ const MESSAGES: Record<string, string> = {
   table_indisponible: "La table de jeu est momentanément indisponible. Réessaie dans un instant.",
   trop_de_modifications: "Trop de modifications d'affilée. Réessaie dans une heure.",
   trop_de_requetes: "Trop d'actions d'affilée. Réessaie dans une heure.",
-  non_recyclable: "Cette carte ne peut pas être recyclée (runes et tokens).",
+  non_recyclable: "Cette carte ne peut pas être recyclée (tokens).",
   pas_assez_de_doublons: "Tu n'as pas assez d'exemplaires en trop : on garde toujours 1 exemplaire, et ceux de tes decks.",
   aucun_doublon: "Aucun doublon à recycler.",
   collection_modifiee: "Ta collection a changé entre-temps (échange, booster…). Rien n'a été recyclé : réessaie.",

@@ -1,4 +1,4 @@
-/** Tests des profils : avatar (carte possédée), bio (texte brut), vitrine de 6 cartes, statistiques, modération. */
+/** Tests des profils : avatar (carte possédée), bio (texte brut), vitrine de 18 cartes, statistiques, modération. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { amorcerCataloguePourTest, viderCacheMemoire } from "../catalogue/source-cartes";
 import { catalogueDeTest } from "./outils/catalogue-de-test";
@@ -93,6 +93,18 @@ describe("Profil d'un joueur", () => {
     expect(avatar.json.avatar).toBeNull();
   });
 
+  it("vitrine de 18 cartes au plus (3 lignes), dans l'ordre choisi", async () => {
+    const { env, alice } = await deuxJoueurs();
+    const codes = [...Array.from({ length: 10 }, (_, i) => `ogn-c${i}`), ...Array.from({ length: 4 }, (_, i) => `ogn-u${i}`), ...Array.from({ length: 4 }, (_, i) => `ogn-r${i}`)];
+    for (const code of codes) donner(env, "Alice", code, 1);
+    donner(env, "Alice", "ogn-e0", 1);
+    const vitrine = codes.map((code) => ({ code, foil: false }));
+    expect((await enregistrer(env, alice, { bio: "", avatar: null, vitrine })).statut).toBe(200);
+    expect((await profil(env, alice, "Alice")).vitrine.map((v) => v.carte.code)).toEqual(codes);
+    const trop = await enregistrer(env, alice, { bio: "", avatar: null, vitrine: [...vitrine, { code: "ogn-e0", foil: false }] });
+    expect(trop.statut).toBe(400);
+  });
+
   it("refuse une carte non possédée (avatar ou vitrine, foil distinct) et une carte inconnue", async () => {
     const { env, alice } = await deuxJoueurs();
     donner(env, "Alice", "ogn-c0", 1);
@@ -103,13 +115,12 @@ describe("Profil d'un joueur", () => {
     expect(env.bd.prepare("SELECT COUNT(*) AS n FROM vitrine").get()).toEqual({ n: 0 });
   });
 
-  it("valide la vitrine (6 maximum, pas de doublon) et la bio (200 caractères, texte brut)", async () => {
+  it("valide la vitrine (pas de doublon) et la bio (200 caractères, texte brut)", async () => {
     const { env, alice } = await deuxJoueurs();
-    for (let i = 0; i < 7; i++) donner(env, "Alice", `ogn-c${i}`, 1);
-    const sept = Array.from({ length: 7 }, (_, i) => ({ code: `ogn-c${i}`, foil: false }));
-    expect((await enregistrer(env, alice, { bio: "", avatar: null, vitrine: sept })).statut).toBe(400);
-    expect((await enregistrer(env, alice, { bio: "", avatar: null, vitrine: sept.slice(0, 6) })).statut).toBe(200);
-    const doublon = [sept[0], sept[0]];
+    for (let i = 0; i < 6; i++) donner(env, "Alice", `ogn-c${i}`, 1);
+    const six = Array.from({ length: 6 }, (_, i) => ({ code: `ogn-c${i}`, foil: false }));
+    expect((await enregistrer(env, alice, { bio: "", avatar: null, vitrine: six })).statut).toBe(200);
+    const doublon = [six[0], six[0]];
     expect((await enregistrer(env, alice, { bio: "", avatar: null, vitrine: doublon })).statut).toBe(400);
 
     expect((await enregistrer(env, alice, { bio: "x".repeat(201), avatar: null, vitrine: [] })).statut).toBe(400);

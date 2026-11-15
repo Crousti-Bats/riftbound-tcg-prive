@@ -1,6 +1,6 @@
 /**
  * Profil d'un joueur (/profil/<pseudo>) : avatar, bio, vitrine de ses plus belles cartes et statistiques.
- * Sur son propre profil, bouton « Personnaliser » : bio, avatar (une carte possédée) et vitrine de 6 cartes.
+ * Sur son propre profil, bouton « Personnaliser » : bio, avatar (une carte possédée) et vitrine de 18 cartes (3 lignes).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AvatarJoueur } from "../composants/avatar-joueur";
