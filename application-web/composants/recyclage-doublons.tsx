@@ -87,7 +87,7 @@ export function RecyclageDoublons({ surFermeture, surRecyclage }: { surFermeture
         <h2>♻ Recycler mes doublons</h2>
         <p className="aide">
           On garde toujours 1 exemplaire de chaque carte, et autant que ton deck qui en utilise le plus. Les normales partent avant
-          les foils. Runes et tokens ne sont jamais recyclés.
+          les foils. Les tokens ne sont jamais recyclés.
         </p>
 
         {!etat && !erreur && <p className="aide">Chargement…</p>}

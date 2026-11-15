@@ -8,10 +8,12 @@ import type { Carte } from "./libelles-cartes";
 
 /** Catégories de recyclage (mêmes codes que le serveur), de la moins à la plus précieuse. */
 export const CATEGORIES_ECLATS = [
+  { code: "rune", libelle: "Runes" },
   { code: "commune", libelle: "Communes" },
   { code: "peu-commune", libelle: "Peu communes" },
   { code: "rare", libelle: "Rares" },
   { code: "epique", libelle: "Épiques" },
+  { code: "rune-alt", libelle: "Runes alt" },
   { code: "alt", libelle: "Alt Art" },
   { code: "overnumbered", libelle: "Overnumbered" },
   { code: "signee", libelle: "Signées" },
