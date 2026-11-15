@@ -1,7 +1,7 @@
 /**
  * Routes /api/profils : profil public d'un joueur (avatar, bio, vitrine, statistiques) et personnalisation du sien.
  *
- * Règles (décidées par l'utilisateur le 2026-11-10) :
+ * Règles :
  * - avatar = illustration d'une carte que l'on possède au moment du choix ; il reste si on l'échange ensuite ;
  * - vitrine = 6 cartes possédées au maximum, dans l'ordre choisi ; une carte qui n'est plus possédée
  *   disparaît d'elle-même de la vitrine (filtrée à la lecture) ;

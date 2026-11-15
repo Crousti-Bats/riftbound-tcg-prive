@@ -1,5 +1,5 @@
 /**
- * Routes /api/wishlist : les cartes que je recherche (demandé le 2026-11-10).
+ * Routes /api/wishlist : les cartes que je recherche.
  * Chaque carte de ma wishlist que je ne possède pas apparaît dans « Qui a ? » au marché (voir routes-marche.ts),
  * sans message dans le salon. Dès que je l'obtiens, elle n'y apparaît plus (filtrée à la lecture).
  * Seulement des cardCode en base ; 100 cartes au maximum par joueur.

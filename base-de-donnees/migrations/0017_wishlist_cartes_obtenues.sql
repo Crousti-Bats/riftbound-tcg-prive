@@ -1,4 +1,4 @@
--- Une carte obtenue quitte désormais la wishlist (échange accepté ou booster ouvert, demandé le 2026-11-10).
+-- Une carte obtenue quitte désormais la wishlist (échange accepté ou booster ouvert).
 -- Ménage unique : on retire des wishlists les cartes que leur propriétaire possède déjà (normale ou foil).
 DELETE FROM wishlist
 WHERE EXISTS (

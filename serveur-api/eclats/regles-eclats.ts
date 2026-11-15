@@ -1,5 +1,5 @@
 /**
- * Éclats : la monnaie des doublons (demandé le 2026-11-12). Fonctions pures, sans base ni réseau.
+ * Éclats : la monnaie des doublons. Fonctions pures, sans base ni réseau.
  * - On recycle une carte en trop contre des éclats ; on garde toujours 1 exemplaire, ou plus si un de mes decks
  *   en utilise davantage.
  * - Les éclats achètent un booster (ajouté aux boosters offerts) ou fabriquent une carte précise (version normale).
@@ -11,7 +11,7 @@ import type { CarteCatalogue } from "../catalogue/types-catalogue";
 export const PRIX_BOOSTER = 200;
 /** Une foil rapporte deux fois plus qu'une carte normale. */
 export const MULTIPLICATEUR_FOIL = 2;
-/** Fabriquer une carte coûte 40 fois ce que rapporte son recyclage (×4 avant le 2026-11-12, multiplié par 10 à la demande de l'utilisateur). */
+/** Fabriquer une carte coûte 40 fois ce que rapporte son recyclage (×4 avant le 2026-11-12). */
 export const MULTIPLICATEUR_FABRICATION = 40;
 
 /** Catégories de recyclage, de la moins à la plus précieuse (on peut recycler seulement certaines d'entre elles). */

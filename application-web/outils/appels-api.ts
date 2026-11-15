@@ -60,6 +60,13 @@ const MESSAGES: Record<string, string> = {
   collection_modifiee: "Ta collection a changé entre-temps (échange, booster…). Rien n'a été recyclé : réessaie.",
   eclats_insuffisants: "Pas assez d'éclats.",
   non_fabricable: "Cette carte ne peut pas être fabriquée (runes et tokens).",
+  defi_indisponible: "Le défi du jour est momentanément indisponible. Réessaie dans une minute.",
+  champion_inconnu: "Ce champion n'est pas dans la liste.",
+  deja_propose: "Tu as déjà proposé ce champion.",
+  deja_trouve: "Tu as déjà trouvé le champion du jour dans ce mode. Reviens demain !",
+  conflit_partie: "Action envoyée deux fois en même temps. Recharge la page.",
+  partie_terminee: "Cette partie est terminée.",
+  case_deja_retournee: "Cette carte est déjà retournée.",
   hors_ligne: "Pas de connexion Internet. Réessaie quand tu seras de nouveau en ligne.",
   serveur_injoignable: "Le serveur ne répond pas. Réessaie dans un instant.",
 };
