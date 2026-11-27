@@ -417,7 +417,7 @@ function EditeurProfil({
           onChange={(e) => setBio(e.target.value)}
           maxLength={LONGUEUR_BIO}
           rows={4}
-          placeholder="Ton deck préféré, la carte que tu cherches désespérément…"
+          placeholder="Ta carte préférée, celle que tu cherches désespérément…"
         />
         <p className="aide compteur-bio">
           {bio.length}/{LONGUEUR_BIO}

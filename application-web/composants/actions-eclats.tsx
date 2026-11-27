@@ -8,7 +8,6 @@ interface InfoCarte {
   solde: number;
   possede: { normale: number; foil: number };
   proteges: number;
-  utiliseeDansUnDeck: number;
   recyclables: number;
   valeur: { normale: number; foil: number };
   coutFabrication: number | null;
@@ -66,7 +65,7 @@ export function ActionsEclats({ code, surChangement }: { code: string; surChange
         {possede.normale + possede.foil > 0 &&
           (recyclables > 0
             ? ` · ${recyclables} exemplaire${recyclables > 1 ? "s" : ""} en trop`
-            : ` · rien à recycler (on garde ${info.proteges}${info.proteges > 1 ? ", utilisée dans un deck" : ""})`)}
+            : ` · rien à recycler (on garde ${info.proteges} exemplaire)`)}
       </p>
       <div className="actions-fiche">
         {recyclables > 0 && possede.normale > 0 && (

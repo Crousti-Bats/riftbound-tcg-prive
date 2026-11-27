@@ -2,7 +2,7 @@
 
 Ce fichier est la source de vérité pour reprendre le projet. Le rapport PDF de chaque étape est généré depuis ce fichier et depuis `documentation/demande-initiale.md`.
 
-**Dernière mise à jour :** 2026-11-13
+**Dernière mise à jour :** 2026-11-27
 **Étape en cours :** 10 — Durcissement sécurité (en cours : revue faite, 6 correctifs livrés en PR, voir §4octies)
 **Prochaine étape :** fin de l'étape 10 : merger la PR des correctifs, décider de la modération des messages privés et de Cloudflare Access sur `/admin`, puis rapport PDF de l'étape 10.
 **Dépôt :** https://github.com/Crousti-Bats/riftbound-tcg-prive (public, `main` protégée)
@@ -339,6 +339,8 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 
 ## 4sexdecies. Decks à partir de sa collection, export vers TCG Arena (demandé le 2026-11-10)
 
+> **Retiré le 2026-11-27** avec tout le jeu de cartes (voir §4quatervicies). Cette section n'est gardée que comme historique.
+
 - **Pourquoi** : première étape vers le jeu en ligne. Plutôt qu'un moteur de règles (énorme, et une copie du jeu de Riot), on construit ses decks avec SES cartes, puis on joue sur TCG Arena (table libre de la communauté) en collant la liste. Une table de jeu intégrée au site reste possible plus tard (Durable Objects + WebSocket).
 - **Pages** : onglet **Decks** (`/decks`, `pages/page-decks.tsx`) : liste, création (20 decks au plus). Éditeur `/decks/:id` (`pages/page-deck.tsx`) : à gauche le deck (Légende, champion, deck principal groupé par type, runes, champs de bataille, compteurs, règles non respectées, export), à droite ma collection avec les filtres habituels et « Seulement les cartes jouables avec ma Légende » (paramètre `domaines` de `GET /api/collection`). Un clic sur une carte la place dans la bonne zone (`outils/decks.ts`, testé) ; badge « utilisées / possédées ». Sauvegarde automatique 800 ms après la dernière modification. Sur téléphone : onglets « Mon deck » / « Ajouter des cartes ».
 - **Règles (Core Rules 103.x)** dans `serveur-api/decks/regles-deck.ts` (fonction pure, testée) : 1 Légende ; 1 champion choisi = unité Champion dont le nom est un **tag** de la Légende (« Ziggs » oui, « Yordle » non) ; deck principal ≥ 40 cartes champion compris ; 3 exemplaires au plus d'un même nom (variantes et champion compris) ; 3 cartes Signature au plus, du champion de la Légende ; 12 runes ; 3 champs de bataille de noms différents ; domaines de la Légende (cartes sans domaine et champs de bataille « Colorless » acceptés) ; pas de token, Légende, rune ni champ de bataille dans le deck principal. **Possession** : chaque code est limité à la quantité possédée (normale + foil). Un deck incomplet s'enregistre, il est seulement « Incomplet » ; la validation est refaite à chaque lecture (la collection change avec les échanges).
@@ -348,6 +350,8 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Vérifications** : 254 tests (17 dans `decks.test.ts`, 6 dans `outils/decks.test.ts`). Vérifié sur le vrai moteur local avec de vraies cartes (deck Ekko 40/12/3 validé, export ci-dessus) et dans Edge headless (CDP) à 1366 et 380 px : retrait → 39/40 + règle affichée + sauvegarde, ajout depuis la collection → 40/40, aucun défilement horizontal.
 
 ## 4septdecies. Table de jeu en ligne (étape 1, demandé le 2026-11-10)
+
+> **Retiré le 2026-11-27** avec tout le jeu de cartes (voir §4quatervicies). Cette section n'est gardée que comme historique.
 
 - **Objectif** : « notre propre TCG Arena ». Table **libre** à deux joueurs, en direct : le site n'applique pas les règles (les joueurs déplacent leurs cartes, comme sur une vraie table), il transmet les gestes et garde secrètes les informations cachées. Pas de moteur de règles (énorme, et une copie du jeu de Riot).
 - **Parcours** : onglet **Jouer** (`/jouer`, remplace « Decks » ; `/decks` y mène aussi) → « Créer une partie » avec un deck prêt à jouer → code de 8 caractères et lien `/table/CODE` à envoyer → l'ami ouvre le lien, choisit son deck, rejoint → la partie commence. « Reprendre » une partie en cours (5 parties ouvertes au plus par joueur). « Quitter » termine la partie pour les deux et efface la salle.
@@ -364,6 +368,8 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 
 ## 4octodecies. Tokens sur la table de jeu (demandé le 2026-11-10)
 
+> **Retiré le 2026-11-27** avec tout le jeu de cartes (voir §4quatervicies). Cette section n'est gardée que comme historique.
+
 - Retour des joueurs : « il manque les tokens ». Dans Riftbound, les tokens ne vont pas dans le deck (le constructeur de decks les refuse, à raison) : ce sont des cartes créées par d'autres cartes pendant la partie. Il manquait donc la **création de tokens sur la table**.
 - Bouton **« Créer un token »** : où (ma base, champ de bataille 1 ou 2) et combien (1 à 5), puis un **token du jeu** avec son image (les 14 des données : Recruit, Sprite, Bird, Gold, Buff, Reflection, XP Tracker, Baron Pit, Brush… un seul par nom) ou un **token libre** par son nom pour ceux absents des données (ex. **Bomb** de Radiance), affiché comme une carte dorée avec son nom.
 - Comme dans le jeu, un token qui **quitte le jeu** (défausse, main, deck, bannissement) **disparaît**, y compris détruit par l'adversaire (« Bob retire le token Bomb »). Étiquette « Token » sur la carte.
@@ -371,6 +377,8 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Vérifications** : 275 tests (2 nouveaux). Vérifié sur le moteur local : partie avec les decks de démo, tokens créés des deux côtés (WebSocket et Edge headless), visibles en direct.
 
 ## 4novodecies. Apprendre à jouer (demandé le 2026-11-10)
+
+> **Retiré le 2026-11-27** avec tout le jeu de cartes (voir §4quatervicies). Cette section n'est gardée que comme historique.
 
 - **Page `/apprendre`** (`pages/page-apprendre.tsx`), reliée depuis « Jouer » (encart « Nouveau sur Riftbound ? ») et depuis la table (lien « Règles », nouvel onglet). 11 sections avec sommaire : but (8 points, conquérir / tenir), deck, mise en place, payer (énergie = incliner, puissance = recycler), déroulé d'un tour (Réveil, Début/tenir, Canaliser 2, Pioche 1, Action, Fin/guérison), unités / sorts / équipements, bouger et conquérir, combat (affrontement, répartition des dégâts, Tank, conquête ou retour à la base), point gagnant, 14 mots-clés, et un tableau « dans le jeu → sur la table ». Illustrée avec de vraies cartes du deck de démo Annie.
 - **Sources** : guide officiel « How to Play » et Core Rules du 2026-10-09 (règles 487.5 et 487.7 pour le duel), reformulés en français.
@@ -381,6 +389,8 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 
 ## 4vicies. Tuto interactif : partie solo guidée (demandé le 2026-11-10)
 
+> **Retiré le 2026-11-27** avec tout le jeu de cartes (voir §4quatervicies). Cette section n'est gardée que comme historique.
+
 - **Page `/tutoriel`** (`pages/page-tutoriel.tsx`), reliée depuis « Jouer » (encart « Nouveau sur Riftbound ? ») et depuis « Apprendre à jouer » (en haut et en bas). Une vraie partie sur **la même table** que le jeu en ligne, contre « Garen (ordinateur) », en **21 étapes** sur 3 tours (18 depuis l'aide automatique, §4unvicies) : mulligan, canaliser, piocher, payer l'énergie (incliner), jouer une unité (elle arrive inclinée), capacité de la Légende (Dark Child redresse 2 runes en fin de tour), bouger et conquérir (+1), Legion non activé, **combat en défense** (Crackshot Corsair attaque, affrontement : on répond avec Void Seeker, payé en énergie **et en puissance** en recyclant une rune Fury), guérison, tenir (+1), conquérir le 2e champ (Ganking expliqué), jouer son champion (Annie renvoie Void Seeker en main), règle du 8e point. Fin : 3 points, puis « Continuer librement », « Recommencer » ou « Défier un ami ».
 - **Fonctionnement** : chaque étape se valide **toute seule** quand la table est dans le bon état (on joue avec les vrais gestes : clic sur la carte → Incliner, Base, Défausse…) ; « Bien joué ! » puis l'étape suivante. **« Montre-moi »** joue l'étape à ta place, geste par geste. L'ordinateur joue son tour tout seul (geste par geste, visible dans le journal) ; pendant ce temps, tes gestes sont refusés. Panneau réductible, « Recommencer » à tout moment. Sur téléphone : panneau en bas (40 % de l'écran), masqué quand une carte est ouverte.
 - **Aucun serveur** : la partie tourne dans le navigateur avec le moteur pur de la table (`serveur-api/table/moteur-table.ts`), rien n'est envoyé ni enregistré, aucun quota consommé. Pour que le client ne charge pas zod, le schéma des actions est sorti dans `serveur-api/table/schema-action.ts` (le moteur n'importe plus que des types). Le bundle client ne contient pas zod (vérifié).
@@ -389,6 +399,8 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Vérifications** : 279 tests (4 nouveaux dans `outils/tutoriel.test.ts` : mise en place identique à chaque fois, chaque étape réussie par son aide **et pas avant**, tuto complet via le contrôleur avec minuteurs simulés, gestes refusés pendant le tour adverse, « Recommencer »). Dans Edge headless (CDP) sur le serveur de dev : tuto complet de bout en bout à 1366 px et 390 px (21 étapes, 3 points, aucune erreur console, aucun défilement horizontal), et premières étapes jouées **par de vrais clics** sur les cartes (validation automatique correcte).
 
 ## 4unvicies. Aide automatique sur la table (demandé le 2026-11-10)
+
+> **Retiré le 2026-11-27** avec tout le jeu de cartes (voir §4quatervicies). Cette section n'est gardée que comme historique.
 
 - Retour : « que ce soit aidé, que tu n'aies pas à cliquer sur Incliner etc. ». Nouveau **mode « Aide automatique »**, activé par défaut sur la table en ligne et imposé dans le tuto ; case à cocher sous la main pour le couper (choix gardé dans le navigateur, `localStorage` `table-aide-auto`). Les gestes manuels restent disponibles (repliés sous « Toutes les actions (à la main) »).
 - **« Début de mon tour »** (action `debutTour`) : redresse tout, marque **1 point par champ tenu** (au moins une de mes unités, aucune adverse ; la carte du champ ne compte pas), canalise 2 runes (**3 au premier tour du second joueur**, compteur `tours`), pioche 1. Une seule ligne de journal.
@@ -414,6 +426,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **Tri** : `GET /api/collection?tri=quantite-desc|quantite-asc` (normale + foil ; à nombre égal, les plus rares d'abord). Proposé dans la collection, les sélecteurs de cartes des échanges et du profil, et le sélecteur du deck (« Plus d'exemplaires d'abord » / « Moins d'exemplaires d'abord »). Le deck gagne aussi le menu de tri par rareté.
 - **Site** : solde 💎 et bouton **« ♻ Recycler mes doublons »** en haut de Ma collection (fenêtre récapitulative : chaque carte, quantités, gain, puis « Tout recycler ») ; sur chaque fiche de carte, « Recycler 1 normale / 1 foil » et « 🔨 Fabriquer » (grisé avec le manque si le solde ne suffit pas) ; sur l'accueil, solde et **« Acheter un booster (200 💎) »** sous le stock.
 - **Vérifications** : 305 tests (8 nouveaux : valeurs, ordre normales puis foil, protection par deck, runes jamais recyclées, foil ×2, refus sous le seuil, recyclages simultanés : un seul crédité, achat et fabrication avec solde insuffisant sans écriture, tri par quantité). Vrai moteur local (migration 0018 appliquée) : 23 boosters ouverts, 132 doublons recyclés pour 275 éclats, 4 recyclages simultanés → 1 crédité et 3 refusés, achat de booster. Interface non vue en capture (pas de navigateur sans écran sur ce poste) : à vérifier à l'œil.
+- **Depuis le 2026-11-27** (retrait des decks), on garde **1 exemplaire** de chaque carte, sans exception (`EXEMPLAIRES_PROTEGES` dans `regles-eclats.ts`).
 - **Runes recyclables** (demandé le 2026-11-15 : « pouvoir recycler les runes ») : rune normale **1 éclat**, rune alt **40** (8 % des boosters, environ 1 sur 12 comme les Alt Art), foil ×2. Même règle que les autres cartes : on garde 1 exemplaire, et plus si un deck en utilise davantage (les runes des decks comptent). Nouvelles catégories « Runes » et « Runes alt » dans la fenêtre de recyclage. Fabrication possible au même tarif (×40 : 40 éclats la rune, 1 600 la rune alt). Les **tokens** restent ni recyclables ni fabricables.
 
 ## 4tervicies. Mini-jeux : « Devine le champion » et Memory (demandé le 2026-11-13)
@@ -465,6 +478,26 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
   - 319 tests, dont 13 nouveaux : table des champions, comparaisons, emojis, gains, minuit à Paris (heure d'hiver et d'été), réponse jamais dévoilée, bonnes réponses simultanées créditées une fois, tirage figé et différent de la veille, grille sans rune, plafond du Memory, cases déjà retournées, partie d'un autre joueur.
   - Vrai moteur local (migration 0019 appliquée) : parties complètes, éclats crédités, illustration servie en WebP.
   - Captures dans Chrome headless (PC et téléphone) : tableau façon Loldle avec icônes, mode Emoji, Memory, sans erreur dans la console.
+
+## 4quatervicies. Retrait du jeu de cartes (2026-11-27)
+
+- **Demande** : retirer la possibilité de jouer au jeu de cartes, decks compris. L'utilisateur a choisi de **tout supprimer, données comprises**, et de remplacer l'onglet « Jouer » par « Mini-jeux ».
+- **Retiré** :
+  - les decks (liste, éditeur, export TCG Arena, decks de démo) ;
+  - la table de jeu en ligne (salon, parties, tokens, aide automatique au paiement) ;
+  - la page « Apprendre à jouer » et le tuto interactif.
+
+  Côté code, cela représente `serveur-api/decks/`, `serveur-api/table/`, cinq pages, quatre modules `outils/` avec leurs tests, environ 250 lignes de CSS, les routes `/api/decks` et `/api/parties`, les limites `decksParCompte` et `partiesParCompte`, et le filtre `domaines` de `/api/collection`, qui ne servait qu'à l'éditeur de deck.
+- **Données supprimées** :
+  - Migration **0021** : `DROP TABLE parties` et `DROP TABLE decks`, avec leurs index.
+  - Durable Objects : le binding `SALLES` est retiré et une migration `v2-retrait-salles` (`deleted_classes: ["SalleDeJeu"]`) est ajoutée dans `cloudflare-wrangler.jsonc`. Au déploiement, Cloudflare efface les salles et leurs données. La migration `v1-salles` est gardée, car Cloudflare a besoin de l'historique.
+  - Ces suppressions sont **définitives**.
+- **Navigation** : l'onglet « Jouer » devient **« Mini-jeux »** (`/minijeux`), sur PC comme sur téléphone. Les anciennes adresses (`/jouer`, `/decks…`, `/table/…`, `/tutoriel`, `/apprendre`) redirigent vers `/minijeux`.
+- **Éclats** : les cartes utilisées dans un deck étaient protégées du recyclage. Désormais, on garde simplement 1 exemplaire de chaque carte.
+- **Vérifications** :
+  - Lint, types et build OK. 259 tests passent : les tests des decks et de la table sont partis avec leur code, et le test du recyclage a été adapté.
+  - Le déploiement à blanc (`wrangler deploy --dry-run`) accepte la configuration.
+  - Dans le moteur local (migration 0021 appliquée) : `/api/decks` répond 404, `/jouer` et `/decks/12` mènent aux mini-jeux, la barre de navigation est correcte sur PC et sur téléphone, sans erreur dans la console.
 
 ## 5. Démarche DevSecOps
 
@@ -538,6 +571,7 @@ Décisions de l'utilisateur : la photo de profil est **l'illustration d'une cart
 - **2026-11-10 — Boosters 10 max / 20 min, aperçu, annulation, wishlist, tri (§4undecies).** Migrations 0011 et 0012. 11 nouveaux tests.
 - **2026-11-10 — Profils des joueurs (§4decies).** Avatar (illustration d'une carte possédée), bio de 200 caractères, vitrine de 6 cartes, statistiques, page `/profil/<pseudo>`, avatars dans la navigation et le marché. Migration 0010. 9 tests.
 - **2026-11-13 — Mini-jeux (§4tervicies).** « Devine le champion », sur les règles de Loldle : les 173 champions de LoL, 4 modes (classique, emoji, capacité, illustration), un champion par jour. Memory avec les cartes de sa collection. Les deux rapportent des éclats (Memory plafonné à 30 par jour). Migration 0019. 13 nouveaux tests (319 au total).
+- **2026-11-27 — Retrait du jeu de cartes (§4quatervicies).** Decks, table de jeu, tuto et règles supprimés, données comprises (migration 0021, suppression des salles de jeu). L'onglet « Jouer » devient « Mini-jeux ». Éclats : 1 exemplaire toujours gardé.
 - **2026-11-12 — Fabrication ×10, barre du récapitulatif toujours en bas (§4duovicies).** Fabriquer une carte coûte 40 × sa valeur de recyclage (au lieu de 4 ×). Barre « Ouvrir un autre » collée en bas de l'écran même avec peu de cartes (colonne flex + `margin-top: auto`, toujours sticky quand la liste défile).
 - **2026-11-15 — Runes recyclables et vitrine de 18 cartes (§4duovicies, §4decies).** Rune 1 éclat, rune alt 40, tokens toujours exclus. Vitrine du profil sur 3 lignes (migration 0020). 2 tests ajoutés (307 au total sur `main`).
 - **2026-11-12 — Booster à 200 éclats (§4duovicies).** Au lieu de 100.

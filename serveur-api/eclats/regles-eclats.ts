@@ -1,7 +1,6 @@
 /**
  * Éclats : la monnaie des doublons. Fonctions pures, sans base ni réseau.
- * - On recycle une carte en trop contre des éclats ; on garde toujours 1 exemplaire, ou plus si un de mes decks
- *   en utilise davantage.
+ * - On recycle une carte en trop contre des éclats ; on garde toujours 1 exemplaire.
  * - Les éclats achètent un booster (ajouté aux boosters offerts) ou fabriquent une carte précise (version normale).
  * Tous les prix sont ici, nulle part ailleurs.
  */
@@ -86,17 +85,8 @@ export interface Possede {
   foil: number;
 }
 
-/** Exemplaires à garder : 1, ou le plus grand nombre utilisé par un de mes decks. */
-export function exemplairesProteges(usageMax: number | undefined): number {
-  return Math.max(1, usageMax ?? 0);
-}
-
-/** Usage maximal de chaque carte parmi plusieurs decks (un deck à la fois sur la table : on garde le max). */
-export function usageMaximal(decks: Iterable<ReadonlyMap<string, number>>): Map<string, number> {
-  const max = new Map<string, number>();
-  for (const deck of decks) for (const [code, n] of deck) max.set(code, Math.max(max.get(code) ?? 0, n));
-  return max;
-}
+/** Exemplaires toujours gardés de chaque carte : on ne recycle que ce qui dépasse. */
+export const EXEMPLAIRES_PROTEGES = 1;
 
 /**
  * Doublons recyclables d'une carte : tout ce qui dépasse les exemplaires protégés.
