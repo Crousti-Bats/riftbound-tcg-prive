@@ -13,8 +13,6 @@ import { z } from "zod";
 import { exigerConnexion } from "../authentification/sessions";
 import { obtenirCatalogue } from "../catalogue/source-cartes";
 import type { CarteCatalogue } from "../catalogue/types-catalogue";
-import { lireContenu } from "../decks/routes-decks";
-import { utilisationDuDeck } from "../decks/regles-deck";
 import { estErreurStockInsuffisant } from "../echanges/regles-echanges";
 import { lireCorps } from "../lecture-requete";
 import { compterTentative, REGLES } from "../securite/limitation-tentatives";
@@ -23,10 +21,9 @@ import {
   categorieEclats,
   coutFabrication,
   doublonsDe,
-  exemplairesProteges,
+  EXEMPLAIRES_PROTEGES,
   type Possede,
   PRIX_BOOSTER,
-  usageMaximal,
   valeurRecyclage,
 } from "./regles-eclats";
 
@@ -42,12 +39,11 @@ function idCompte(c: Context<ContexteApi>): number {
   return compte.id;
 }
 
-/** Solde, possession (normale / foil) et usage maximal de chaque carte dans mes decks, lus ensemble. */
+/** Solde et possession (normale / foil) de chaque carte, lus ensemble. */
 async function chargerEtat(base: D1Database, compteId: number) {
-  const [solde, collection, decks] = await base.batch([
+  const [solde, collection] = await base.batch([
     base.prepare("SELECT eclats FROM comptes WHERE id = ?").bind(compteId),
     base.prepare("SELECT card_code, est_foil, quantite FROM collection WHERE compte_id = ? AND quantite > 0").bind(compteId),
-    base.prepare("SELECT contenu FROM decks WHERE compte_id = ?").bind(compteId),
   ]);
   const possession = new Map<string, Possede>();
   for (const l of collection?.results as Array<{ card_code: string; est_foil: number; quantite: number }>) {
@@ -56,8 +52,7 @@ async function chargerEtat(base: D1Database, compteId: number) {
     else p.normale += l.quantite;
     possession.set(l.card_code, p);
   }
-  const usage = usageMaximal((decks?.results as Array<{ contenu: string }>).map((d) => utilisationDuDeck(lireContenu(d.contenu))));
-  return { solde: (solde?.results[0] as { eclats: number } | undefined)?.eclats ?? 0, possession, usage };
+  return { solde: (solde?.results[0] as { eclats: number } | undefined)?.eclats ?? 0, possession };
 }
 
 interface LigneRecyclage {
@@ -69,14 +64,13 @@ interface LigneRecyclage {
 /** Les doublons recyclables de toute ma collection (cartes inconnues du catalogue ou sans valeur : ignorées). */
 function tousLesDoublons(
   possession: ReadonlyMap<string, Possede>,
-  usage: ReadonlyMap<string, number>,
   parCode: ReadonlyMap<string, CarteCatalogue>,
 ): LigneRecyclage[] {
   const lignes: LigneRecyclage[] = [];
   for (const [code, possede] of possession) {
     const carte = parCode.get(code);
     if (!carte || valeurRecyclage(carte, false) === 0) continue;
-    const d = doublonsDe(possede, exemplairesProteges(usage.get(code)));
+    const d = doublonsDe(possede, EXEMPLAIRES_PROTEGES);
     if (d.normale > 0) lignes.push({ c: code, f: 0, n: d.normale });
     if (d.foil > 0) lignes.push({ c: code, f: 1, n: d.foil });
   }
@@ -92,10 +86,10 @@ const gainDe = (lignes: LigneRecyclage[], parCode: ReadonlyMap<string, CarteCata
 /** Mon solde et la liste de mes doublons recyclables (pour « Recycler mes doublons »), les plus précieux d'abord. */
 routesEclats.get("/", async (c) => {
   const moi = idCompte(c);
-  const [{ solde, possession, usage }, catalogue] = await Promise.all([chargerEtat(c.env.BASE_DE_DONNEES, moi), obtenirCatalogue()]);
+  const [{ solde, possession }, catalogue] = await Promise.all([chargerEtat(c.env.BASE_DE_DONNEES, moi), obtenirCatalogue()]);
   const parCode = new Map(catalogue.cartes.map((carte) => [carte.code, carte]));
   const parCarte = new Map<string, { normale: number; foil: number }>();
-  for (const l of tousLesDoublons(possession, usage, parCode)) {
+  for (const l of tousLesDoublons(possession, parCode)) {
     const d = parCarte.get(l.c) ?? { normale: 0, foil: 0 };
     if (l.f) d.foil = l.n;
     else d.normale = l.n;
@@ -132,16 +126,15 @@ routesEclats.get("/carte/:code", async (c) => {
   const moi = idCompte(c);
   const code = schemaCode.safeParse(c.req.param("code"));
   if (!code.success) return c.json({ erreur: "donnees_invalides" }, 400);
-  const [{ solde, possession, usage }, catalogue] = await Promise.all([chargerEtat(c.env.BASE_DE_DONNEES, moi), obtenirCatalogue()]);
+  const [{ solde, possession }, catalogue] = await Promise.all([chargerEtat(c.env.BASE_DE_DONNEES, moi), obtenirCatalogue()]);
   const carte = catalogue.cartes.find((x) => x.code === code.data);
   if (!carte) return c.json({ erreur: "carte_inconnue" }, 404);
   const possede = possession.get(carte.code) ?? { normale: 0, foil: 0 };
-  const proteges = exemplairesProteges(usage.get(carte.code));
+  const proteges = EXEMPLAIRES_PROTEGES;
   return c.json({
     solde,
     possede,
     proteges,
-    utiliseeDansUnDeck: usage.get(carte.code) ?? 0,
     recyclables: Math.max(0, possede.normale + possede.foil - proteges),
     valeur: { normale: valeurRecyclage(carte, false), foil: valeurRecyclage(carte, true) },
     coutFabrication: coutFabrication(carte),
@@ -171,7 +164,7 @@ routesEclats.post("/recycler", async (c) => {
     return c.json({ erreur: "trop_de_requetes" }, 429);
   }
 
-  const [{ possession, usage }, catalogue] = await Promise.all([chargerEtat(base, moi), obtenirCatalogue()]);
+  const [{ possession }, catalogue] = await Promise.all([chargerEtat(base, moi), obtenirCatalogue()]);
   const parCode = new Map(catalogue.cartes.map((carte) => [carte.code, carte]));
 
   let lignes: LigneRecyclage[];
@@ -181,12 +174,12 @@ routesEclats.post("/recycler", async (c) => {
     const possede = possession.get(demande.code) ?? { normale: 0, foil: 0 };
     const n = demande.n ?? 1;
     const disponibles = demande.foil ? possede.foil : possede.normale;
-    const recyclables = possede.normale + possede.foil - exemplairesProteges(usage.get(demande.code));
+    const recyclables = possede.normale + possede.foil - EXEMPLAIRES_PROTEGES;
     if (n > disponibles || n > recyclables) return c.json({ erreur: "pas_assez_de_doublons" }, 409);
     lignes = [{ c: demande.code, f: demande.foil ? 1 : 0, n }];
   } else {
     const choisies = demande.codes ? new Set(demande.codes) : null;
-    lignes = tousLesDoublons(possession, usage, parCode).filter(
+    lignes = tousLesDoublons(possession, parCode).filter(
       (l) => (!choisies || choisies.has(l.c)) && (demande.avecFoils !== false || l.f === 0),
     );
   }

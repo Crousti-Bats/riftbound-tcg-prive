@@ -9,14 +9,9 @@ import { type CompteCourant, chargerCompteCourant } from "./outils/appels-api";
 import { naviguer, useCheminCourant } from "./outils/navigation";
 import { PageAccueil } from "./pages/page-accueil";
 import { PageAdmin } from "./pages/page-admin";
-import { PageApprendre } from "./pages/page-apprendre";
-import { PageTutoriel } from "./pages/page-tutoriel";
 import { PageCatalogue } from "./pages/page-catalogue";
 import { PageCollection } from "./pages/page-collection";
 import { PageConnexion } from "./pages/page-connexion";
-import { PageDeck } from "./pages/page-deck";
-import { PageDecks } from "./pages/page-decks";
-import { PageTable } from "./pages/page-table";
 import { PageEchanges } from "./pages/page-echanges";
 import { PageNouvelEchange } from "./pages/page-nouvel-echange";
 import { PageInscription } from "./pages/page-inscription";
@@ -74,6 +69,8 @@ export function RacineApplication() {
     // La page de nouveau mot de passe reste accessible même connecté (lien reçu de l'admin).
     if (compte && pagesPubliques.includes(chemin) && chemin !== "/reinitialisation") naviguer("/");
     if (compte && chemin.startsWith("/admin") && compte.role !== "admin") naviguer("/");
+    // Le jeu de cartes (decks, table, tutoriel, règles) a été retiré : ses anciennes adresses mènent aux mini-jeux.
+    if (compte && /^\/(jouer|decks|table|tutoriel|apprendre)(\/|$)/.test(chemin)) naviguer("/minijeux", { remplacer: true });
     // Le salon et les messages privés sont dans la bulle de discussion : les anciennes adresses l'ouvrent.
     if (compte && (chemin.startsWith("/marche/salon") || chemin.startsWith("/marche/prive"))) {
       const avec = chemin.startsWith("/marche/prive/") ? decodeURIComponent(chemin.slice("/marche/prive/".length)) : null;
@@ -122,22 +119,11 @@ function Page({
   }
   if (chemin === "/catalogue") return <PageCatalogue />;
   if (chemin === "/collection") return <PageCollection />;
-  if (chemin === "/jouer" || chemin === "/decks") return <PageDecks />;
-  if (chemin === "/apprendre") return <PageApprendre />;
   if (chemin === "/minijeux") return <PageMiniJeux />;
   if (chemin === "/minijeux/memory") return <PageMemory />;
   if (chemin === "/minijeux/champion") return <PageDevineChampion key="classique" mode="classique" />;
   const modeDevinette = MODES_DEVINETTE.find((m) => chemin === `/minijeux/champion/${m.code}`)?.code;
   if (modeDevinette) return <PageDevineChampion key={modeDevinette} mode={modeDevinette} />;
-  if (chemin === "/tutoriel") return <PageTutoriel pseudo={compte.pseudo} />;
-  if (/^\/table\/[A-Z0-9]{8}$/.test(chemin)) {
-    const code = chemin.slice("/table/".length);
-    return <PageTable key={code} code={code} />;
-  }
-  if (/^\/decks\/\d{1,12}$/.test(chemin)) {
-    const id = Number(chemin.slice("/decks/".length));
-    return <PageDeck key={id} id={id} />;
-  }
   if (chemin === "/echanges") return <PageEchanges />;
   if (chemin === "/echanges/nouveau") return <PageNouvelEchange />;
   if (chemin === "/marche" || chemin.startsWith("/marche/")) return <PageMarche />;

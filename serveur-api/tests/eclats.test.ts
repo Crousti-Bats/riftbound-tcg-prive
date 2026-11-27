@@ -1,4 +1,4 @@
-/** Éclats : recyclage des doublons (1 exemplaire gardé, plus ceux de mes decks), achat de booster, fabrication. */
+/** Éclats : recyclage des doublons (1 exemplaire gardé), achat de booster, fabrication. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { amorcerCataloguePourTest, viderCacheMemoire } from "../catalogue/source-cartes";
 import { coutFabrication, doublonsDe, PRIX_BOOSTER, valeurRecyclage } from "../eclats/regles-eclats";
@@ -48,30 +48,27 @@ describe("Règles des éclats", () => {
 });
 
 describe("API /api/eclats", () => {
-  it("recycle tous les doublons en gardant 1 exemplaire, et plus pour une carte utilisée dans un deck", async () => {
+  it("recycle tous les doublons en gardant 1 exemplaire de chaque carte", async () => {
     const env = creerEnvironnementDeTest();
     const cookie = await env.inscrire("Alice", "motdepasse");
     const id = idDe(env, "Alice");
     ajouter(env, id, "ogn-c0", 0, 5); // 4 doublons × 1
     ajouter(env, id, "ogn-r0", 0, 1);
     ajouter(env, id, "ogn-r0", 1, 1); // 1 doublon : la normale part (5), la foil reste
-    ajouter(env, id, "ogn-e0", 0, 4); // deck en utilise 3 → 1 doublon × 40
+    ajouter(env, id, "ogn-e0", 0, 4); // 3 doublons × 40
     ajouter(env, id, "ogn-rune0", 0, 9); // rune : 1 éclat, on en garde 1
     ajouter(env, id, "sfd-tok0", 0, 4); // token : jamais recyclé
-    env.bd
-      .prepare("INSERT INTO decks (compte_id, nom, contenu, cree_le, modifie_le) VALUES (?, 'D', ?, 0, 0)")
-      .run(id, JSON.stringify({ legende: null, champion: null, principal: [{ code: "ogn-e0", n: 3 }], runes: [], terrains: [] }));
 
     const apercu = (await env.appeler("GET", "/api/eclats", { cookie })).json as { doublons: { exemplaires: number; eclats: number } };
-    expect(apercu.doublons).toMatchObject({ exemplaires: 14, eclats: 57 });
+    expect(apercu.doublons).toMatchObject({ exemplaires: 16, eclats: 137 });
 
     const r = await env.appeler("POST", "/api/eclats/recycler", { cookie, corps: {} });
     expect(r.statut).toBe(200);
-    expect(r.json).toMatchObject({ gain: 57, exemplaires: 14, solde: 57 });
+    expect(r.json).toMatchObject({ gain: 137, exemplaires: 16, solde: 137 });
     expect(quantite(env, id, "ogn-c0", 0)).toBe(1);
     expect(quantite(env, id, "ogn-r0", 0)).toBe(0);
     expect(quantite(env, id, "ogn-r0", 1)).toBe(1);
-    expect(quantite(env, id, "ogn-e0", 0)).toBe(3);
+    expect(quantite(env, id, "ogn-e0", 0)).toBe(1);
     expect(quantite(env, id, "ogn-rune0", 0)).toBe(1);
     expect(quantite(env, id, "sfd-tok0", 0)).toBe(4);
 

@@ -308,8 +308,6 @@
 .mj-etoiles .allumee:nth-child(2) { animation-delay: 0.15s; }
 .mj-etoiles .allumee:nth-child(3) { animation-delay: 0.3s; }
 
-/* ---------- Page Jouer : accès aux mini-jeux ---------- */
-.encart-minijeux { margin-top: 20px; }
 
 /* ---------- Téléphone ---------- */
 @media (max-width: 700px) {

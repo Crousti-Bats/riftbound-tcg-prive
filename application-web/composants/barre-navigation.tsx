@@ -30,11 +30,10 @@ const ICONES = {
       <path d="M8 4.5 9 4h9.5A1.5 1.5 0 0 1 20 5.5V17l-.5 1" />
     </svg>
   ),
-  decks: (
+  minijeux: (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...trait}>
-      <rect x="7" y="3" width="11" height="15" rx="1.5" transform="rotate(8 12.5 10.5)" />
-      <rect x="4" y="5" width="11" height="15" rx="1.5" />
-      <path d="M8 10.5h3M9.5 9v3" />
+      <rect x="3" y="7" width="18" height="11" rx="3.5" />
+      <path d="M8 10.5v4M6 12.5h4M15.5 11.5h.01M18 13.5h.01" />
     </svg>
   ),
   echanges: (
@@ -71,7 +70,7 @@ const ICONES = {
 const LIENS: Lien[] = [
   { chemin: "/", libelle: "Boosters", icone: ICONES.accueil, actif: (c) => c === "/" },
   { chemin: "/collection", libelle: "Collection", icone: ICONES.collection, actif: (c) => c === "/collection" },
-  { chemin: "/jouer", libelle: "Jouer", icone: ICONES.decks, actif: (c) => c === "/jouer" || c === "/apprendre" || c.startsWith("/minijeux") || c === "/tutoriel" || c.startsWith("/decks") || c.startsWith("/table") },
+  { chemin: "/minijeux", libelle: "Mini-jeux", icone: ICONES.minijeux, actif: (c) => c.startsWith("/minijeux") },
   { chemin: "/echanges", libelle: "Échanges", icone: ICONES.echanges, actif: (c) => c.startsWith("/echanges") },
   { chemin: "/marche", libelle: "Marché", icone: ICONES.marche, actif: (c) => c.startsWith("/marche") },
   { chemin: "/catalogue", libelle: "Catalogue", icone: ICONES.catalogue, actif: (c) => c === "/catalogue" },

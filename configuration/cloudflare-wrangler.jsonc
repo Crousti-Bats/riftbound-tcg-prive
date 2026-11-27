@@ -31,9 +31,10 @@
       "migrations_dir": "../base-de-donnees/migrations"
     }
   ],
-  // Table de jeu : une salle (Durable Object) par partie. Stockage SQLite, le seul permis sur le plan gratuit.
-  "durable_objects": {
-    "bindings": [{ "name": "SALLES", "class_name": "SalleDeJeu" }]
-  },
-  "migrations": [{ "tag": "v1-salles", "new_sqlite_classes": ["SalleDeJeu"] }]
+  // Historique des Durable Objects : la table de jeu (une salle par partie) a été retirée avec le jeu de cartes.
+  // On garde la migration de création et on ajoute celle de suppression : Cloudflare efface les salles et leurs données.
+  "migrations": [
+    { "tag": "v1-salles", "new_sqlite_classes": ["SalleDeJeu"] },
+    { "tag": "v2-retrait-salles", "deleted_classes": ["SalleDeJeu"] }
+  ]
 }

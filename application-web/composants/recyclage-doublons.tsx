@@ -86,7 +86,7 @@ export function RecyclageDoublons({ surFermeture, surRecyclage }: { surFermeture
       <div className="modale modale-recyclage" role="dialog" aria-modal="true" aria-label="Recycler mes doublons" onClick={(e) => e.stopPropagation()}>
         <h2>♻ Recycler mes doublons</h2>
         <p className="aide">
-          On garde toujours 1 exemplaire de chaque carte, et autant que ton deck qui en utilise le plus. Les normales partent avant
+          On garde toujours 1 exemplaire de chaque carte. Les normales partent avant
           les foils. Les tokens ne sont jamais recyclés.
         </p>
 

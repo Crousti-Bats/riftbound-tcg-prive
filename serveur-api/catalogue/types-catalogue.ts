@@ -27,7 +27,7 @@ export interface CarteCatalogue {
   type: string;
   /** Étiquettes secondaires de la source (cardTypeLabels sans le type) : Champion, Signature, Token, Basic. */
   etiquettes: string[];
-  /** Tags de la source : nom du champion (Légendes, Champions, Signatures), région… Servent aux règles de deck. */
+  /** Tags de la source : nom du champion (Légendes, Champions, Signatures), région… Servent aux mini-jeux. */
   tags: string[];
   domaines: string[];
   image: string;
